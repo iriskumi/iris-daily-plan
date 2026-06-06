@@ -23,10 +23,19 @@ const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
   shutdown: <LogOut size={13} />,
 }
 
+function getTimeBlockTitle(block: TimeBlock): string {
+  return block.title || block.label
+}
+
+function getTimeBlockRange(block: TimeBlock): string | null {
+  if (!block.startTime || !block.endTime) return null
+  return `${block.startTime}-${block.endTime}`
+}
+
 function getPlanSourceLabel(plan: GeneratedPlan): string {
-  if (plan.aiUsed && plan.provider === 'gemini') return 'AI Gemini'
-  if (plan.aiUsed && plan.provider === 'deepseek') return 'AI DeepSeek'
-  if (plan.aiUsed && plan.provider === 'openai') return 'AI OpenAI'
+  if (plan.aiUsed && plan.provider === 'gemini') return 'AI: Gemini'
+  if (plan.aiUsed && plan.provider === 'deepseek') return 'AI: DeepSeek'
+  if (plan.aiUsed && plan.provider === 'openai') return 'AI: OpenAI'
   return 'Rule-based fallback'
 }
 
@@ -128,8 +137,12 @@ export default function DailyPlanView({ plan, onGenerate, onGoToCheckin }: Props
         {plan.timeBlocks.map((block, i) => (
           <div key={i} className="time-block">
             <div className="time-block-header">
-              {PERIOD_ICONS[block.period]}
-              {block.label}
+              <span className="time-block-icon">{PERIOD_ICONS[block.period]}</span>
+              {getTimeBlockRange(block) && (
+                <span className="time-block-range">{getTimeBlockRange(block)}</span>
+              )}
+              <span>{getTimeBlockTitle(block)}</span>
+              {block.type && <span className="time-block-type">{block.type}</span>}
             </div>
             <div className="time-block-body">
               <ul>

@@ -116,6 +116,10 @@ export interface Bill {
 export interface TimeBlock {
   period: 'morning' | 'afternoon' | 'evening' | 'recovery' | 'shutdown'
   label: string
+  startTime?: string
+  endTime?: string
+  title?: string
+  type?: 'focus' | 'class' | 'work' | 'admin' | 'recovery' | 'meal' | 'buffer' | 'shutdown'
   items: string[]
 }
 

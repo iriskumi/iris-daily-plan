@@ -1156,6 +1156,33 @@ body {
   flex-shrink: 0;
 }
 
+.time-block-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.time-block-range {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--accent);
+  min-width: 5.9rem;
+  flex-shrink: 0;
+}
+
+.time-block-type {
+  margin-left: auto;
+  padding: 0.14rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .time-block-body {
   padding: 0.65rem 1rem 0.75rem;
 }

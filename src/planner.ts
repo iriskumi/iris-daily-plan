@@ -18,6 +18,18 @@ const PROTECTED_EVENT_TERMS = [
   'shift',
   'appointment',
 ]
+type BlockType = NonNullable<TimeBlock['type']>
+
+interface TimeWindow {
+  start: number
+  end: number
+}
+
+interface ScheduledCommitment extends TimeWindow {
+  title: string
+  type: BlockType
+  items: string[]
+}
 
 export function getDaysUntil(dateStr: string, referenceDate = new Date()): number {
   const today = new Date(referenceDate)
@@ -80,55 +92,153 @@ export function isProtectedCalendarEvent(event: CalendarEvent): boolean {
   return PROTECTED_EVENT_TERMS.some(term => title.includes(term))
 }
 
-function formatCalendarTimeRange(event: CalendarEvent): string {
-  const start = new Date(event.start)
-  const end = new Date(event.end)
-  return `${start.toLocaleTimeString('en-AU', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })}-${end.toLocaleTimeString('en-AU', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })}`
+function parseTimeToMinutes(value?: string, fallback = 8 * 60 + 30): number {
+  if (!value) return fallback
+  const match = value.match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return fallback
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return fallback
+  return hours * 60 + minutes
 }
 
-function formatCalendarEventLine(event: CalendarEvent): string {
-  const location = event.location ? ` @ ${event.location}` : ''
-  return `${formatCalendarTimeRange(event)} ${event.title}${location}`
+function toTimeString(minutes: number): string {
+  const safe = Math.max(0, Math.min(24 * 60 - 1, minutes))
+  const hours = Math.floor(safe / 60)
+  const mins = safe % 60
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
-function addFixedCommitmentsToBlocks(
-  blocks: TimeBlock[],
-  checkin: DailyCheckin,
-  calendarEvents: CalendarEvent[],
-): TimeBlock[] {
-  const fixedItems: string[] = []
-  const manual = checkin.fixedCommitments.trim()
-  if (manual) fixedItems.push(...manual.split('\n').map(line => line.trim()).filter(Boolean))
+function minutesFromDate(value: string): number {
+  const date = new Date(value)
+  return date.getHours() * 60 + date.getMinutes()
+}
 
-  const calendarLines = calendarEvents.map(formatCalendarEventLine)
-  if (calendarLines.length > 0 && !manual.includes('Imported Google Calendar:')) {
-    fixedItems.push(...calendarLines.map(line => `Calendar: ${line}`))
+function periodForTime(start: number): TimeBlock['period'] {
+  if (start < 12 * 60) return 'morning'
+  if (start < 17 * 60) return 'afternoon'
+  if (start < 21 * 60) return 'evening'
+  return 'shutdown'
+}
+
+function blockFromWindow(
+  start: number,
+  end: number,
+  title: string,
+  type: BlockType,
+  items: string[],
+): TimeBlock {
+  return {
+    period: type === 'recovery' ? 'recovery' : type === 'shutdown' ? 'shutdown' : periodForTime(start),
+    label: `${toTimeString(start)}-${toTimeString(end)} ${title}`,
+    startTime: toTimeString(start),
+    endTime: toTimeString(end),
+    title,
+    type,
+    items,
   }
+}
 
-  if (fixedItems.length === 0) return blocks
+function inferBlockType(title: string): BlockType {
+  const lower = title.toLowerCase()
+  if (lower.includes('class') || lower.includes('holmesglen') || lower.includes('lecture') || lower.includes('tutorial')) return 'class'
+  if (lower.includes('work') || lower.includes('shift')) return 'work'
+  if (lower.includes('appointment')) return 'admin'
+  if (lower.includes('dinner') || lower.includes('breakfast') || lower.includes('lunch')) return 'meal'
+  return 'admin'
+}
 
-  const protectedEvents = calendarEvents.filter(isProtectedCalendarEvent)
-  const protectedReminder =
-    protectedEvents.length > 0
-      ? ['Do not schedule deep-focus Pomodoro blocks during protected calendar time']
-      : []
+function calendarCommitments(calendarEvents: CalendarEvent[]): ScheduledCommitment[] {
+  return calendarEvents.map(event => {
+    const start = minutesFromDate(event.start)
+    const end = minutesFromDate(event.end)
+    const location = event.location ? `Location: ${event.location}` : 'Fixed commitment from Google Calendar'
+    return {
+      start,
+      end,
+      title: event.title,
+      type: inferBlockType(event.title),
+      items: [location],
+    }
+  })
+}
 
-  const [firstBlock, ...rest] = blocks
-  if (!firstBlock) return blocks
+function manualCommitments(checkin: DailyCheckin): ScheduledCommitment[] {
+  const manualOnly = checkin.fixedCommitments.split('Imported Google Calendar:')[0]
+  return manualOnly
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const match = line.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*(.*)/)
+      if (!match) return null
+      const [, startHour, startMinute, endHour, endMinute, title] = match
+      const start = Number(startHour) * 60 + Number(startMinute)
+      const end = Number(endHour) * 60 + Number(endMinute)
+      return {
+        start,
+        end,
+        title: title.trim() || 'Fixed commitment',
+        type: inferBlockType(title),
+        items: ['Manual fixed commitment'],
+      }
+    })
+    .filter((item): item is ScheduledCommitment => item !== null)
+}
 
-  return [
-    {
-      ...firstBlock,
-      items: [...fixedItems, ...protectedReminder, ...firstBlock.items],
-    },
-    ...rest,
-  ]
+function defaultClassCommitments(checkin: DailyCheckin): ScheduledCommitment[] {
+  if (checkin.dayType === 'saturday-class') {
+    return [{
+      start: 9 * 60,
+      end: 17 * 60 + 30,
+      title: 'Holmesglen online class',
+      type: 'class',
+      items: ['Protected class time', 'Do not schedule other focus work here'],
+    }]
+  }
+  if (checkin.dayType === 'evening-class') {
+    return [{
+      start: 17 * 60 + 30,
+      end: 21 * 60,
+      title: 'Holmesglen evening class',
+      type: 'class',
+      items: ['Protected class time', 'Eat before class and keep a buffer'],
+    }]
+  }
+  return []
+}
+
+function mergeCommitments(commitments: ScheduledCommitment[]): ScheduledCommitment[] {
+  return [...commitments]
+    .filter(item => item.end > item.start)
+    .sort((a, b) => a.start - b.start)
+}
+
+function overlapsCommitment(start: number, end: number, commitments: ScheduledCommitment[]): boolean {
+  return commitments.some(item => start < item.end && end > item.start)
+}
+
+function findNextSlot(
+  cursor: number,
+  duration: number,
+  dayEnd: number,
+  commitments: TimeWindow[],
+): number | null {
+  let start = cursor
+  while (start + duration <= dayEnd) {
+    const conflict = commitments.find(item => start < item.end && start + duration > item.start)
+    if (!conflict) return start
+    start = conflict.end + 10
+  }
+  return null
+}
+
+function focusTitle(task: Task): string {
+  if (task.category === 'cyber-study' || task.category === 'assessment') return 'Cyber assessment focus block'
+  if (task.category === 'english-practice') return 'English Output Pomodoro'
+  if (task.category === 'job-search') return 'Job search Pomodoro'
+  if (task.category === 'consulting-freelance') return 'AI learning / consulting focus'
+  return `${task.title} Pomodoro`
 }
 
 function generateTheme(checkin: DailyCheckin, top3Tasks: Task[]): string {
@@ -162,192 +272,103 @@ function generateTheme(checkin: DailyCheckin, top3Tasks: Task[]): string {
 export function timeBlockGeneration(
   checkin: DailyCheckin,
   top3Tasks: Task[],
-  optionalTasks: Task[],
+  _optionalTasks: Task[],
   includeRecoveryBlock = true,
+  calendarEvents: CalendarEvent[] = [],
+  urgentBills: string[] = [],
 ): TimeBlock[] {
   const { dayType, energyLevel } = checkin
+  const wake = parseTimeToMinutes(checkin.wakeUpTime, 8 * 60 + 30)
+  const sleep = parseTimeToMinutes(checkin.sleepTarget, 23 * 60)
+  const shutdownStart = Math.min(parseTimeToMinutes(checkin.sleepTarget, 22 * 60) - 60, 21 * 60 + 30)
+  const dayEnd = Math.max(shutdownStart, wake + 4 * 60)
+  const importedCommitments = calendarCommitments(calendarEvents)
+  const hasClassCommitment = importedCommitments.some(item => item.type === 'class')
+  const commitments = mergeCommitments([
+    ...importedCommitments,
+    ...manualCommitments(checkin),
+    ...(hasClassCommitment ? [] : defaultClassCommitments(checkin)),
+  ])
   const blocks: TimeBlock[] = []
 
-  if (dayType === 'saturday-class') {
-    blocks.push({
-      period: 'morning',
-      label: 'Morning - class prep',
-      items: ['Quick breakfast and get settled', 'Holmesglen online class starts 9:00am', 'Have water and snacks nearby'],
-    })
-    blocks.push({
-      period: 'afternoon',
-      label: 'Afternoon - class continues',
-      items: ['Continue online class until ~5:30pm', 'Take scheduled breaks', 'No other major tasks during class hours'],
-    })
-    blocks.push({
-      period: 'evening',
-      label: 'Evening - wind down after class',
-      items: [
-        'Light review of class notes (20 min max, optional)',
-        'No new heavy tasks tonight - class was enough',
-        'Decompress and rest',
-      ],
-    })
-  } else if (dayType === 'evening-class') {
-    const morningItems =
-      top3Tasks
-        .filter(t => t.category !== 'recovery')
-        .slice(0, energyLevel === 'low' ? 1 : 2)
-        .map(formatTaskLine)
+  const morningEnd = Math.min(wake + 30, dayEnd)
+  blocks.push(blockFromWindow(wake, morningEnd, 'Wake up + breakfast', 'meal', [
+    'Breakfast, water, medication if needed',
+    'Check calendar before starting focus work',
+  ]))
 
-    blocks.push({
-      period: 'morning',
-      label: 'Morning - main focus block (use this time)',
-      items:
-        morningItems.length > 0
-          ? morningItems
-          : ['Tackle your top priority task now - evening is blocked'],
-    })
-    blocks.push({
-      period: 'afternoon',
-      label: 'Afternoon - lighter tasks + class prep',
-      items: [
-        'Eat a proper meal before class',
-        'Light admin or review tasks only',
-        'Prepare class materials by 4:30pm',
-        'Leave for class with buffer time',
-      ],
-    })
-    blocks.push({
-      period: 'evening',
-      label: 'Evening - Holmesglen class 5:30-9:00pm',
-      items: [
-        'Class 5:30pm-9:00pm',
-        'No new work tasks after class - decompress only',
-        'Shutdown routine when home',
-      ],
-    })
-  } else if (dayType === 'work-shift') {
-    const shiftNote = checkin.fixedCommitments || 'Work shift at Holmesglen (check roster)'
-    const preShiftTask =
-      energyLevel !== 'low' && top3Tasks.length > 0 ? [formatTaskLine(top3Tasks[0])] : []
+  commitments.forEach(commitment => {
+    blocks.push(blockFromWindow(commitment.start, commitment.end, commitment.title, commitment.type, commitment.items))
+  })
 
-    blocks.push({
-      period: 'morning',
-      label: 'Morning - before shift',
-      items:
-        preShiftTask.length > 0
-          ? [...preShiftTask, 'Prepare for shift']
-          : ['Prepare for work shift', 'Light breakfast and get ready'],
-    })
-    blocks.push({
-      period: 'afternoon',
-      label: 'Afternoon - work shift',
-      items: [shiftNote],
-    })
-    blocks.push({
-      period: 'evening',
-      label: 'Evening - after shift',
-      items: [
-        'Decompress first - no jumping into tasks',
-        'Light admin only if energy allows',
-        'Do not start heavy study or job applications after a shift',
-      ],
-    })
-  } else if (dayType === 'low-energy') {
-    blocks.push({
-      period: 'morning',
-      label: 'Morning - slow start, no pressure',
-      items: [
-        'No rushing. Nourishment and movement first',
-        top3Tasks.length > 0
-          ? `One task only if possible: ${formatTaskLine(top3Tasks[0])}`
-          : 'Rest or very light admin only',
-      ],
-    })
-    blocks.push({
-      period: 'afternoon',
-      label: 'Afternoon - optional small tasks',
-      items:
-        optionalTasks.length > 0
-          ? [optionalTasks[0] ? formatTaskLine(optionalTasks[0]) : 'Light review or admin']
-          : ['Rest as needed - low-energy days are valid rest days'],
-    })
-    blocks.push({
-      period: 'evening',
-      label: 'Evening - early wind-down',
-      items: ['No screens after 9pm', 'Early sleep target tonight', 'Tomorrow will be better'],
-    })
-  } else {
-    const isAdmin = dayType === 'admin-catchup'
-    const morningItems = isAdmin
-      ? ['Clear email and messages', 'Handle urgent admin tasks'].concat(
-          top3Tasks.slice(0, 1).map(formatTaskLine),
-        )
-      : top3Tasks
-          .slice(0, energyLevel === 'high' ? 2 : 1)
-          .map(formatTaskLine)
+  const focusTasks = top3Tasks.filter(task => task.category !== 'recovery')
+  const focusLimit =
+    dayType === 'saturday-class'
+      ? 1
+      : energyLevel === 'low'
+        ? 1
+        : energyLevel === 'medium'
+          ? 2
+          : 3
+  const scheduledFocus: TimeWindow[] = []
+  let cursor = morningEnd + 10
 
-    blocks.push({
-      period: 'morning',
-      label:
-        energyLevel === 'high'
-          ? 'Morning - deep work block'
-          : 'Morning - main task',
-      items: morningItems.length > 0 ? morningItems : ['Start with your top priority task'],
-    })
+  focusTasks.slice(0, focusLimit).forEach(task => {
+    const slot = findNextSlot(cursor, 50, dayEnd, [...commitments, ...scheduledFocus])
+    if (slot === null) return
+    const title = focusTitle(task)
+    blocks.push(blockFromWindow(slot, slot + 50, title, 'focus', [
+      formatTaskLine({ ...task, pomodoroEnabled: true, pomodoroLength: 50, breakLength: 10 }),
+      '50-minute Pomodoro - no multitasking',
+    ]))
+    scheduledFocus.push({ start: slot, end: slot + 60 })
+    const breakStart = slot + 50
+    if (breakStart + 10 <= dayEnd && !overlapsCommitment(breakStart, breakStart + 10, commitments)) {
+      blocks.push(blockFromWindow(breakStart, breakStart + 10, 'Break', 'buffer', [
+        'Stand up, water, quick reset',
+      ]))
+    }
+    cursor = slot + (energyLevel === 'low' ? 90 : 70)
+  })
 
-    const afternoonItems = isAdmin
-      ? ['Continue admin tasks', 'Scan 1-2 job leads (15 min max)'].concat(
-          top3Tasks.slice(1, 2).map(formatTaskLine),
-        )
-      : top3Tasks
-          .slice(energyLevel === 'high' ? 2 : 1, energyLevel === 'high' ? 3 : 2)
-          .map(formatTaskLine)
-          .concat(optionalTasks.slice(0, 1).map(formatTaskLine))
+  if (urgentBills.length > 0) {
+    const billSlot = findNextSlot(12 * 60 + 30, 20, dayEnd, [...commitments, ...scheduledFocus])
+    if (billSlot !== null) {
+      blocks.push(blockFromWindow(billSlot, billSlot + 20, 'Bill deadline check', 'admin', urgentBills.slice(0, 3)))
+    }
+  }
 
-    blocks.push({
-      period: 'afternoon',
-      label: 'Afternoon - secondary tasks',
-      items:
-        afternoonItems.length > 0
-          ? afternoonItems
-          : ['Secondary tasks and lighter work', 'Consulting / work leads check (15 min)'],
-    })
-
-    blocks.push({
-      period: 'evening',
-      label: 'Evening - wrap-up',
-      items: [
-        "Review what got done - don't minimise progress",
-        "Check tomorrow's class/shift schedule",
-        'Optional: English practice (30 min)',
-        'No new heavy tasks after 8pm',
-      ],
-    })
+  const dinnerStart = Math.max(17 * 60 + 30, Math.min(dayEnd - 90, wake + 9 * 60))
+  if (dinnerStart > wake && dinnerStart + 60 < shutdownStart && !overlapsCommitment(dinnerStart, dinnerStart + 60, commitments)) {
+    blocks.push(blockFromWindow(dinnerStart, dinnerStart + 60, 'Dinner + reset', 'meal', [
+      dayType === 'saturday-class'
+        ? 'Keep this easy after class'
+        : 'Eat properly and reset before evening',
+    ]))
   }
 
   if (includeRecoveryBlock) {
-    blocks.push({
-      period: 'recovery',
-      label: 'Recovery block - non-negotiable',
-      items: [
-        energyLevel === 'low'
-          ? 'Rest is the priority - this is productive'
-          : 'At least one 20-30 min break today',
-        'Walk, stretch, or lie down - even 10 minutes counts',
-        checkin.notes ? `Personal note: ${checkin.notes}` : 'Protect this time',
-      ],
-    })
+    const recoveryStart = Math.max(20 * 60, Math.min(shutdownStart - 60, dinnerStart + 90))
+    if (recoveryStart + 30 <= shutdownStart && !overlapsCommitment(recoveryStart, recoveryStart + 30, commitments)) {
+      blocks.push(blockFromWindow(recoveryStart, recoveryStart + 30, 'Recovery', 'recovery', [
+        energyLevel === 'low' ? 'Longer buffer. Rest is the priority.' : 'Walk, stretch, shower, or quiet rest',
+        checkin.notes ? `Personal note: ${checkin.notes}` : 'Do not turn this into another task block',
+      ]))
+    }
   }
 
-  blocks.push({
-    period: 'shutdown',
-    label: 'Shutdown routine',
-    items: [
-      'Close all work tabs and apps',
-      "Update task list - what's done, what carries over",
-      'Write one win from today (even small counts)',
-      `Aim for sleep by ${checkin.sleepTarget || '10:30pm'}`,
-    ],
-  })
+  blocks.push(blockFromWindow(shutdownStart, Math.min(shutdownStart + 30, sleep), 'Shutdown', 'shutdown', [
+    'Close work tabs and apps',
+    "Update task list - what's done, what carries over",
+    `Aim for sleep by ${checkin.sleepTarget || '23:00'}`,
+  ]))
 
   return blocks
+    .filter(block => {
+      if (!block.startTime || !block.endTime) return true
+      return parseTimeToMinutes(block.endTime) > parseTimeToMinutes(block.startTime)
+    })
+    .sort((a, b) => parseTimeToMinutes(a.startTime, 0) - parseTimeToMinutes(b.startTime, 0))
 }
 
 export function isBillUrgent(bill: Bill, referenceDate = new Date()): boolean {
@@ -450,7 +471,8 @@ export function markdownExport(plan: Omit<GeneratedPlan, 'notionMarkdown'>, top3
 
   md += `## Time Blocks\n`
   for (const block of plan.timeBlocks) {
-    md += `### ${block.label}\n`
+    const range = block.startTime && block.endTime ? `${block.startTime}-${block.endTime} ` : ''
+    md += `### ${range}${block.title || block.label}\n`
     block.items.forEach(i => (md += `- ${i}\n`))
     md += '\n'
   }
@@ -506,10 +528,14 @@ export function planAssembly(
   const theme = generateTheme(checkin, top3Tasks)
   const includeRecoveryBlock = options.defaultRecoveryBlockEnabled ?? true
   const calendarEvents = options.calendarEvents ?? []
-  const timeBlocks = addFixedCommitmentsToBlocks(
-    timeBlockGeneration(checkin, top3Tasks, optionalTasks, includeRecoveryBlock),
+  const billsToday = billPrioritization(allBills, referenceDate)
+  const timeBlocks = timeBlockGeneration(
     checkin,
+    top3Tasks,
+    optionalTasks,
+    includeRecoveryBlock,
     calendarEvents,
+    billsToday,
   )
   const doNotToday = doNotTasks.slice(0, 5).map(t => t.title)
   if (calendarEvents.some(isProtectedCalendarEvent)) {
@@ -543,7 +569,7 @@ export function planAssembly(
     mustDo: top3Tasks.map(formatTaskLine),
     optional: optionalTasks.map(formatTaskLine),
     workLeadsToday: workLeadSelection(allOpportunities, checkin.energyLevel, referenceDate),
-    billsToday: billPrioritization(allBills, referenceDate),
+    billsToday,
     doNotToday,
     minimumViableDay,
     generatedAt: new Date().toISOString(),

@@ -55,17 +55,24 @@ const PLAN_SCHEMA = {
     timeBlocks: {
       type: 'array',
       minItems: 1,
-      maxItems: 6,
+      maxItems: 16,
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['period', 'label', 'items'],
+        required: ['period', 'label', 'startTime', 'endTime', 'title', 'type', 'items'],
         properties: {
           period: {
             type: 'string',
             enum: ['morning', 'afternoon', 'evening', 'recovery', 'shutdown'],
           },
           label: { type: 'string' },
+          startTime: { type: 'string' },
+          endTime: { type: 'string' },
+          title: { type: 'string' },
+          type: {
+            type: 'string',
+            enum: ['focus', 'class', 'work', 'admin', 'recovery', 'meal', 'buffer', 'shutdown'],
+          },
           items: {
             type: 'array',
             minItems: 1,
@@ -214,7 +221,8 @@ function markdownExport(plan: Omit<GeneratedPlan, 'notionMarkdown'>): string {
 
   md += `## Time Blocks\n`
   plan.timeBlocks.forEach(block => {
-    md += `### ${block.label}\n`
+    const range = block.startTime && block.endTime ? `${block.startTime}-${block.endTime} ` : ''
+    md += `### ${range}${block.title || block.label}\n`
     block.items.forEach(item => {
       md += `- ${item}\n`
     })
@@ -285,9 +293,17 @@ function normalizePlan(raw: unknown, context: GeneratePlanContext): GeneratedPla
             : 'Define the next action before starting',
       }
     }),
-    timeBlocks: (plan.timeBlocks as TimeBlock[]).filter(block =>
-      ['morning', 'afternoon', 'evening', 'recovery', 'shutdown'].includes(block.period),
-    ),
+    timeBlocks: (plan.timeBlocks as TimeBlock[])
+      .filter(block =>
+        ['morning', 'afternoon', 'evening', 'recovery', 'shutdown'].includes(block.period),
+      )
+      .map(block => ({
+        ...block,
+        label:
+          block.startTime && block.endTime && block.title
+            ? `${block.startTime}-${block.endTime} ${block.title}`
+            : block.label,
+      })),
     mustDo: plan.mustDo.filter(item => typeof item === 'string') as string[],
     optional: plan.optional.filter(item => typeof item === 'string') as string[],
     workLeadsToday: plan.workLeadsToday.filter(item => typeof item === 'string') as string[],
@@ -380,13 +396,13 @@ function buildMessages(requestContext: GeneratePlanContext) {
     {
       role: 'system',
     content:
-        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Respect energy level, deadlines, bills, work leads, settings, recovery needs, and imported calendar events. Treat calendar events and fixedCommitments as fixed protected time. Do not schedule deep-focus Pomodoro blocks during class, Holmesglen, lecture, tutorial, work, shift, or appointment events. Do not invent API integrations or external data.',
+        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Build concrete hour-by-hour timeBlocks with startTime, endTime, title, type, label, and items. Use 50-minute Pomodoro focus blocks with 10-minute breaks for cybersecurity, AI learning, English output, and job search. Respect energy level, wake-up time, sleep target, deadlines, bills, work leads, settings, recovery needs, and imported calendar events. Treat calendar events and fixedCommitments as fixed protected time. Do not schedule deep-focus Pomodoro blocks during class, Holmesglen, lecture, tutorial, work, shift, or appointment events. For Saturday class day, block 09:00-17:30 and schedule at most one extra focus block after class. Do not invent API integrations or external data.',
     },
     {
       role: 'user',
       content: JSON.stringify({
         instruction:
-          'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Use only this structured context. Calendar event descriptions are intentionally omitted for privacy; use only title, time, and basic location.',
+          'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Each timeBlocks item must include period, label, startTime, endTime, title, type, and items. Use exact ranges like 07:30-08:00 Wake up + breakfast. Use only this structured context. Calendar event descriptions are intentionally omitted for privacy; use only title, time, and basic location.',
         schema: PLAN_SCHEMA,
         context: requestContext,
       }),
