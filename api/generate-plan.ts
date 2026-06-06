@@ -100,7 +100,7 @@ const PLAN_SCHEMA = {
   },
 }
 
-type AiProvider = 'openai' | 'deepseek'
+type AiProvider = 'openai' | 'deepseek' | 'gemini'
 
 interface ProviderConfig {
   provider: AiProvider
@@ -124,6 +124,18 @@ function getProviderConfig(): ProviderConfig | null {
       apiKey,
       model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
       endpoint: 'https://api.deepseek.com/chat/completions',
+    }
+  }
+
+  if (provider === 'gemini') {
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) return null
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    return {
+      provider,
+      apiKey,
+      model,
+      endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     }
   }
 
@@ -267,11 +279,26 @@ function normalizePlan(raw: unknown, context: GeneratePlanContext): GeneratedPla
 
 function extractOutputText(response: unknown): string | null {
   if (typeof response !== 'object' || response === null) return null
-  const maybe = response as { output_text?: unknown; output?: unknown; choices?: unknown }
+  const maybe = response as {
+    output_text?: unknown
+    output?: unknown
+    choices?: unknown
+    candidates?: unknown
+  }
   if (Array.isArray(maybe.choices)) {
     const first = maybe.choices[0] as { message?: { content?: unknown } } | undefined
     const content = first?.message?.content
     if (typeof content === 'string') return content
+  }
+  if (Array.isArray(maybe.candidates)) {
+    const first = maybe.candidates[0] as {
+      content?: { parts?: Array<{ text?: unknown }> }
+    } | undefined
+    const parts = first?.content?.parts
+    if (Array.isArray(parts)) {
+      const text = parts.map(part => part.text).filter(textPart => typeof textPart === 'string').join('')
+      if (text) return text
+    }
   }
   if (typeof maybe.output_text === 'string') return maybe.output_text
   if (!Array.isArray(maybe.output)) return null
@@ -302,7 +329,73 @@ function buildResponseFormat(provider: AiProvider) {
   return { type: 'json_object' }
 }
 
+function toGeminiSchema(schema: unknown): unknown {
+  if (typeof schema !== 'object' || schema === null) return schema
+  if (Array.isArray(schema)) return schema.map(toGeminiSchema)
+  const current = schema as Record<string, unknown>
+  const next: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(current)) {
+    if (key === 'additionalProperties') continue
+    if (key === 'type' && typeof value === 'string') {
+      next[key] = value.toUpperCase()
+    } else {
+      next[key] = toGeminiSchema(value)
+    }
+  }
+
+  return next
+}
+
+function buildMessages(requestContext: GeneratePlanContext) {
+  return [
+    {
+      role: 'system',
+      content:
+        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Respect energy level, deadlines, bills, work leads, settings, and recovery needs. Do not invent API integrations or external data.',
+    },
+    {
+      role: 'user',
+      content: JSON.stringify({
+        instruction:
+          'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Use only this structured context.',
+        schema: PLAN_SCHEMA,
+        context: requestContext,
+      }),
+    },
+  ]
+}
+
 async function callAiProvider(config: ProviderConfig, requestContext: GeneratePlanContext): Promise<Response> {
+  const messages = buildMessages(requestContext)
+
+  if (config.provider === 'gemini') {
+    return fetch(config.endpoint, {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': config.apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `${messages[0].content}\n\n${messages[1].content}`,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: toGeminiSchema(PLAN_SCHEMA),
+          temperature: 0.4,
+        },
+      }),
+    })
+  }
+
   return fetch(config.endpoint, {
     method: 'POST',
     headers: {
@@ -311,22 +404,7 @@ async function callAiProvider(config: ProviderConfig, requestContext: GeneratePl
     },
     body: JSON.stringify({
       model: config.model,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Respect energy level, deadlines, bills, work leads, settings, and recovery needs. Do not invent API integrations or external data.',
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            instruction:
-              'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Use only this structured context.',
-            schema: PLAN_SCHEMA,
-            context: requestContext,
-          }),
-        },
-      ],
+      messages,
       response_format: buildResponseFormat(config.provider),
       temperature: 0.4,
     }),
@@ -355,7 +433,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     sendJson(res, {
       success: false,
       message:
-        'No valid AI provider key found. Set AI_PROVIDER=openai with OPENAI_API_KEY or AI_PROVIDER=deepseek with DEEPSEEK_API_KEY; using local planner fallback',
+        'No valid AI provider key found. Set AI_PROVIDER=openai with OPENAI_API_KEY, AI_PROVIDER=deepseek with DEEPSEEK_API_KEY, or AI_PROVIDER=gemini with GEMINI_API_KEY; using local planner fallback',
       data: null,
     })
     return
