@@ -47,6 +47,8 @@ export default function Settings() {
     const next = {
       ...calendarMeta,
       connected: status.connected,
+      calendarConnected: status.calendarConnected,
+      gmailConnected: status.gmailConnected,
       accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       warning: status.warning ?? calendarMeta.warning,
     }
@@ -108,6 +110,8 @@ export default function Settings() {
     const status = await getGoogleCalendarStatus()
     const next = {
       connected: true,
+      calendarConnected: status.calendarConnected,
+      gmailConnected: status.gmailConnected,
       accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       lastImportedAt: importedAt,
       warning: status.warning ?? calendarMeta.warning,
@@ -201,6 +205,15 @@ export default function Settings() {
 
         <div className={`integration-status ${calendarMeta.connected ? 'connected' : 'not-connected'}`}>
           {calendarMeta.connected ? 'Connected' : 'Not Connected'}
+        </div>
+
+        <div className="scope-status-list">
+          <div className={`scope-status ${calendarMeta.calendarConnected ? 'connected' : 'not-connected'}`}>
+            Calendar {calendarMeta.calendarConnected ? 'connected' : 'not connected'}
+          </div>
+          <div className={`scope-status ${calendarMeta.gmailConnected ? 'connected' : 'not-connected'}`}>
+            Gmail {calendarMeta.gmailConnected ? 'connected' : 'not connected'}
+          </div>
         </div>
 
         {calendarMeta.accountEmail && (

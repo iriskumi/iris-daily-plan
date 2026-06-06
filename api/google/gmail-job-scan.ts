@@ -18,6 +18,7 @@ interface GoogleTokens {
   access_token: string
   refresh_token?: string
   expires_at: number
+  scope?: string
   account_email?: string
 }
 
@@ -209,6 +210,10 @@ async function fetchCandidateEmails(accessToken: string): Promise<CandidateEmail
     }))
 }
 
+function tokenHasGmailScope(tokens: GoogleTokens): boolean {
+  return Boolean(tokens.scope?.split(/\s+/).includes('https://www.googleapis.com/auth/gmail.readonly'))
+}
+
 function normalizeType(type: unknown): WorkOpportunityType {
   const allowed: WorkOpportunityType[] = [
     'full-time',
@@ -320,7 +325,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const tokens = await getTokens(req, res)
-  if (!tokens) {
+  if (!tokens || !tokenHasGmailScope(tokens)) {
     sendJson(res, {
       success: false,
       message: 'Gmail read-only access is not connected yet.',
@@ -334,7 +339,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (!candidates) {
     sendJson(res, {
       success: false,
-      message: 'Gmail read-only access is not connected yet.',
+      message: 'Gmail read-only access is not connected yet. Reconnect Google to grant Gmail read-only scope.',
       data: null,
       connected: true,
       accountEmail: tokens.account_email,
@@ -353,4 +358,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     accountEmail: tokens.account_email,
   })
 }
-

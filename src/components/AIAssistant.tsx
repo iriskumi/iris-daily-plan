@@ -122,6 +122,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     const next = {
       ...calendarMeta,
       connected: status.connected,
+      calendarConnected: status.calendarConnected,
+      gmailConnected: status.gmailConnected,
       accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       warning: status.warning,
     }
@@ -255,6 +257,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     const status = await getGoogleCalendarStatus()
     const next = {
       connected: true,
+      calendarConnected: status.calendarConnected,
+      gmailConnected: status.gmailConnected,
       accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       lastImportedAt: importedAt,
       warning: status.warning ?? calendarMeta.warning,
@@ -290,6 +294,14 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         </div>
         <div className={`integration-status ${calendarMeta.connected ? 'connected' : 'not-connected'}`}>
           {calendarMessage}
+        </div>
+        <div className="scope-status-list">
+          <div className={`scope-status ${calendarMeta.calendarConnected ? 'connected' : 'not-connected'}`}>
+            Calendar {calendarMeta.calendarConnected ? 'connected' : 'not connected'}
+          </div>
+          <div className={`scope-status ${calendarMeta.gmailConnected ? 'connected' : 'not-connected'}`}>
+            Gmail {calendarMeta.gmailConnected ? 'connected' : 'not connected'}
+          </div>
         </div>
         {calendarMeta.lastImportedAt && (
           <div className="text-xs text-muted">

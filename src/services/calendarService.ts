@@ -8,6 +8,8 @@ const notConnected = <T>(): IntegrationResult<T> => ({
 
 type CalendarApiResult = IntegrationResult<CalendarEvent[]> & {
   connected?: boolean
+  calendarConnected?: boolean
+  gmailConnected?: boolean
   accountEmail?: string
   warning?: string
 }
@@ -22,6 +24,8 @@ export async function getGoogleCalendarStatus(): Promise<GoogleCalendarImportMet
     const result = (await response.json()) as CalendarApiResult
     return {
       connected: response.ok && Boolean(result.connected),
+      calendarConnected: Boolean(result.calendarConnected),
+      gmailConnected: Boolean(result.gmailConnected),
       accountEmail: result.accountEmail,
       warning: result.warning,
     }

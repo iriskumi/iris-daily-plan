@@ -165,6 +165,8 @@ export interface CalendarEvent {
 
 export interface GoogleCalendarImportMeta {
   connected: boolean
+  calendarConnected?: boolean
+  gmailConnected?: boolean
   lastImportedAt?: string
   accountEmail?: string
   warning?: string

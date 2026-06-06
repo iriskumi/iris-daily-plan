@@ -5,6 +5,8 @@ import type { CalendarEvent, IntegrationResult } from '../../src/types.js'
 
 const MELBOURNE_TIMEZONE = 'Australia/Melbourne'
 const TOKEN_COOKIE = 'iris_google_calendar_tokens'
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
 const TOKEN_STORAGE_WARNING =
   'Google Calendar tokens are stored in an encrypted HttpOnly cookie for this local/dev-safe version. Production token storage should use a database-backed session store.'
 
@@ -37,6 +39,8 @@ interface GoogleTokens {
 
 interface CalendarResponse extends IntegrationResult<CalendarEvent[]> {
   connected: boolean
+  calendarConnected?: boolean
+  gmailConnected?: boolean
   accountEmail?: string
   warning?: string
   diagnostic?: ReturnType<typeof getDiagnostic>
@@ -173,6 +177,17 @@ function notConnected(req: VercelRequest): CalendarResponse {
   }
 }
 
+function hasScope(tokens: GoogleTokens, scope: string): boolean {
+  return Boolean(tokens.scope?.split(/\s+/).includes(scope))
+}
+
+function scopeStatus(tokens: GoogleTokens) {
+  return {
+    calendarConnected: hasScope(tokens, CALENDAR_SCOPE),
+    gmailConnected: hasScope(tokens, GMAIL_SCOPE),
+  }
+}
+
 function getRequestUrl(req: VercelRequest): URL {
   const hostHeader = req.headers?.['x-forwarded-host'] ?? req.headers?.host ?? 'localhost'
   const host = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader
@@ -290,11 +305,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     const url = getRequestUrl(req)
     if (url.searchParams.get('status') === '1') {
+      const scopes = scopeStatus(tokens)
       sendJson(res, {
         success: true,
-        message: 'Google Calendar connected',
+        message: scopes.gmailConnected
+          ? 'Google Calendar and Gmail connected'
+          : 'Google Calendar connected. Gmail read-only access needs reconnect.',
         data: [],
         connected: true,
+        ...scopes,
         accountEmail: tokens.account_email,
         warning: TOKEN_STORAGE_WARNING,
         diagnostic: getDiagnostic(req),
@@ -323,11 +342,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     )
 
     if (!calendarResponse.ok) {
+      const scopes = scopeStatus(tokens)
       sendJson(res, {
         success: false,
         message: `Google Calendar returned ${calendarResponse.status}`,
         data: null,
         connected: true,
+        ...scopes,
         accountEmail: tokens.account_email,
         warning: TOKEN_STORAGE_WARNING,
         diagnostic: getDiagnostic(req),
@@ -340,11 +361,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .map(toCalendarEvent)
       .filter((event): event is CalendarEvent => event !== null)
 
+    const scopes = scopeStatus(tokens)
     sendJson(res, {
       success: true,
       message: events.length > 0 ? `Imported ${events.length} calendar event(s) for the next 7 days` : 'No calendar events in the next 7 days',
       data: events,
       connected: true,
+      ...scopes,
       accountEmail: tokens.account_email,
       warning: TOKEN_STORAGE_WARNING,
       diagnostic: getDiagnostic(req),
