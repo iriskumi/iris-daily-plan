@@ -6,8 +6,10 @@ import type {
   Task,
   WorkOpportunity,
   Bill,
+  CalendarEvent,
   GeneratedPlan,
   GeneratePlanContext,
+  GoogleCalendarImportMeta,
   Template,
 } from './types'
 
@@ -21,6 +23,8 @@ const KEYS = {
   plan: 'iris-plan',
   templates: 'iris-templates',
   settings: 'iris-settings',
+  calendarEvents: 'iris-calendar-events',
+  googleCalendarMeta: 'iris-google-calendar-meta',
 }
 
 interface VersionedValue<T> {
@@ -84,22 +88,77 @@ export const savePlan = (p: GeneratedPlan): void => save(KEYS.plan, p)
 export const loadTemplates = (): Template[] => load<Template[]>(KEYS.templates) ?? []
 export const saveTemplates = (t: Template[]): void => save(KEYS.templates, t)
 
+export const loadCalendarEvents = (): CalendarEvent[] =>
+  load<CalendarEvent[]>(KEYS.calendarEvents) ?? []
+export const saveCalendarEvents = (events: CalendarEvent[]): void =>
+  save(KEYS.calendarEvents, events)
+
+export const loadGoogleCalendarMeta = (): GoogleCalendarImportMeta => ({
+  connected: false,
+  ...(load<Partial<GoogleCalendarImportMeta>>(KEYS.googleCalendarMeta) ?? {}),
+})
+export const saveGoogleCalendarMeta = (meta: GoogleCalendarImportMeta): void =>
+  save(KEYS.googleCalendarMeta, meta)
+
 export const loadSettings = (): AppSettings => ({
   ...defaultSettings(),
   ...(load<Partial<AppSettings>>(KEYS.settings) ?? {}),
 })
 export const saveSettings = (s: AppSettings): void => save(KEYS.settings, s)
 
+function formatCalendarCommitment(event: CalendarEvent): string {
+  const start = new Date(event.start)
+  const end = new Date(event.end)
+  const time = `${start.toLocaleTimeString('en-AU', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}-${end.toLocaleTimeString('en-AU', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`
+  const location = event.location ? ` @ ${event.location}` : ''
+  return `${time} ${event.title}${location}`
+}
+
+function sanitizeCalendarEvents(events: CalendarEvent[]): CalendarEvent[] {
+  return events.map(event => ({
+    id: event.id,
+    title: event.title,
+    start: event.start,
+    end: event.end,
+    location: event.location,
+    source: event.source,
+  }))
+}
+
+function addCalendarCommitments(checkin: DailyCheckin, events: CalendarEvent[]): DailyCheckin {
+  if (events.length === 0) return checkin
+  const calendarLines = events.map(formatCalendarCommitment)
+  const fixedCommitments = [
+    checkin.fixedCommitments.trim(),
+    'Imported Google Calendar:',
+    ...calendarLines,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  return {
+    ...checkin,
+    fixedCommitments,
+  }
+}
+
 export function loadGeneratePlanContext(): GeneratePlanContext | null {
   const checkin = loadCheckin()
   if (!checkin) return null
+  const calendarEvents = sanitizeCalendarEvents(loadCalendarEvents())
   return {
-    checkin,
+    checkin: addCalendarCommitments(checkin, calendarEvents),
     tasks: loadTasks(),
     opportunities: loadOpportunities(),
     bills: loadBills(),
     templates: loadTemplates(),
     settings: loadSettings(),
+    calendarEvents,
   }
 }
 
@@ -115,6 +174,8 @@ export function exportBackupData(): AppBackup {
       plan: loadPlan(),
       templates: loadTemplates(),
       settings: loadSettings(),
+      calendarEvents: loadCalendarEvents(),
+      googleCalendarMeta: loadGoogleCalendarMeta(),
     },
   }
 }
@@ -146,6 +207,13 @@ export function validateBackup(input: unknown): AppBackupData | null {
       ...defaultSettings(),
       ...(candidate.settings ?? {}),
     },
+    calendarEvents: isArray(candidate.calendarEvents)
+      ? (candidate.calendarEvents as CalendarEvent[])
+      : [],
+    googleCalendarMeta: {
+      connected: false,
+      ...(candidate.googleCalendarMeta ?? {}),
+    },
   }
 }
 
@@ -159,4 +227,6 @@ export function importBackupData(data: AppBackupData): void {
   else localStorage.removeItem(KEYS.plan)
   saveTemplates(data.templates)
   saveSettings(data.settings)
+  saveCalendarEvents(data.calendarEvents)
+  saveGoogleCalendarMeta(data.googleCalendarMeta)
 }

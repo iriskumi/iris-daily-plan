@@ -3,11 +3,21 @@ import type {
   Task,
   WorkOpportunity,
   Bill,
+  CalendarEvent,
   GeneratedPlan,
   TimeBlock,
 } from './types'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
+const PROTECTED_EVENT_TERMS = [
+  'class',
+  'holmesglen',
+  'lecture',
+  'tutorial',
+  'work',
+  'shift',
+  'appointment',
+]
 
 export function getDaysUntil(dateStr: string, referenceDate = new Date()): number {
   const today = new Date(referenceDate)
@@ -63,6 +73,62 @@ export function formatTaskLine(task: Task): string {
       : `${task.title} - ${focusMin}min focus${sessionsLabel} + ${breakMin}min break`
   }
   return task.nextAction ? `${task.title} -> ${task.nextAction}` : task.title
+}
+
+export function isProtectedCalendarEvent(event: CalendarEvent): boolean {
+  const title = event.title.toLowerCase()
+  return PROTECTED_EVENT_TERMS.some(term => title.includes(term))
+}
+
+function formatCalendarTimeRange(event: CalendarEvent): string {
+  const start = new Date(event.start)
+  const end = new Date(event.end)
+  return `${start.toLocaleTimeString('en-AU', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}-${end.toLocaleTimeString('en-AU', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`
+}
+
+function formatCalendarEventLine(event: CalendarEvent): string {
+  const location = event.location ? ` @ ${event.location}` : ''
+  return `${formatCalendarTimeRange(event)} ${event.title}${location}`
+}
+
+function addFixedCommitmentsToBlocks(
+  blocks: TimeBlock[],
+  checkin: DailyCheckin,
+  calendarEvents: CalendarEvent[],
+): TimeBlock[] {
+  const fixedItems: string[] = []
+  const manual = checkin.fixedCommitments.trim()
+  if (manual) fixedItems.push(...manual.split('\n').map(line => line.trim()).filter(Boolean))
+
+  const calendarLines = calendarEvents.map(formatCalendarEventLine)
+  if (calendarLines.length > 0 && !manual.includes('Imported Google Calendar:')) {
+    fixedItems.push(...calendarLines.map(line => `Calendar: ${line}`))
+  }
+
+  if (fixedItems.length === 0) return blocks
+
+  const protectedEvents = calendarEvents.filter(isProtectedCalendarEvent)
+  const protectedReminder =
+    protectedEvents.length > 0
+      ? ['Do not schedule deep-focus Pomodoro blocks during protected calendar time']
+      : []
+
+  const [firstBlock, ...rest] = blocks
+  if (!firstBlock) return blocks
+
+  return [
+    {
+      ...firstBlock,
+      items: [...fixedItems, ...protectedReminder, ...firstBlock.items],
+    },
+    ...rest,
+  ]
 }
 
 function generateTheme(checkin: DailyCheckin, top3Tasks: Task[]): string {
@@ -431,13 +497,24 @@ export function planAssembly(
   allOpportunities: WorkOpportunity[],
   allBills: Bill[],
   referenceDate = new Date(),
-  options: { defaultRecoveryBlockEnabled?: boolean } = {},
+  options: {
+    defaultRecoveryBlockEnabled?: boolean
+    calendarEvents?: CalendarEvent[]
+  } = {},
 ): GeneratedPlan {
   const { top3Tasks, optionalTasks, doNotTasks } = selectTasks(allTasks, checkin, referenceDate)
   const theme = generateTheme(checkin, top3Tasks)
   const includeRecoveryBlock = options.defaultRecoveryBlockEnabled ?? true
-  const timeBlocks = timeBlockGeneration(checkin, top3Tasks, optionalTasks, includeRecoveryBlock)
+  const calendarEvents = options.calendarEvents ?? []
+  const timeBlocks = addFixedCommitmentsToBlocks(
+    timeBlockGeneration(checkin, top3Tasks, optionalTasks, includeRecoveryBlock),
+    checkin,
+    calendarEvents,
+  )
   const doNotToday = doNotTasks.slice(0, 5).map(t => t.title)
+  if (calendarEvents.some(isProtectedCalendarEvent)) {
+    doNotToday.unshift('Deep-focus Pomodoro blocks during protected calendar time')
+  }
 
   if (checkin.dayType === 'evening-class') {
     doNotToday.unshift('Starting anything major after 4pm - class is tonight')

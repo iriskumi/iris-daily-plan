@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Bot,
   Zap,
@@ -9,7 +9,20 @@ import {
   BookOpen,
   Sparkles,
   Info,
+  CalendarDays,
+  Download,
 } from 'lucide-react'
+import {
+  connectGoogleCalendar,
+  getGoogleCalendarStatus,
+  importCalendarCommitments,
+} from '../services/calendarService'
+import {
+  loadGoogleCalendarMeta,
+  saveCalendarEvents,
+  saveGoogleCalendarMeta,
+} from '../storage'
+import type { GoogleCalendarImportMeta } from '../types'
 
 interface AIAction {
   id: string
@@ -72,10 +85,59 @@ const ACTIONS: AIAction[] = [
 
 export default function AIAssistant() {
   const [activeMsg, setActiveMsg] = useState<string | null>(null)
+  const [calendarMeta, setCalendarMeta] = useState<GoogleCalendarImportMeta>(() =>
+    loadGoogleCalendarMeta(),
+  )
+  const [calendarMessage, setCalendarMessage] = useState('Google Calendar not connected')
+  const [importingCalendar, setImportingCalendar] = useState(false)
+
+  useEffect(() => {
+    void refreshCalendarStatus()
+  }, [])
+
+  async function refreshCalendarStatus() {
+    const status = await getGoogleCalendarStatus()
+    const next = {
+      ...calendarMeta,
+      connected: status.connected,
+      warning: status.warning,
+    }
+    setCalendarMeta(next)
+    saveGoogleCalendarMeta(next)
+    setCalendarMessage(status.connected ? 'Google Calendar connected' : 'Google Calendar not connected')
+  }
 
   function handleClick(action: AIAction) {
     setActiveMsg(action.placeholder)
     setTimeout(() => {}, 0)
+  }
+
+  async function handleImportCalendar() {
+    setImportingCalendar(true)
+    const result = await importCalendarCommitments()
+    setImportingCalendar(false)
+
+    if (!result.success || !result.data) {
+      const next = {
+        ...calendarMeta,
+        connected: false,
+      }
+      setCalendarMeta(next)
+      saveGoogleCalendarMeta(next)
+      setCalendarMessage(result.message || 'Google Calendar not connected')
+      return
+    }
+
+    const importedAt = new Date().toISOString()
+    const next = {
+      connected: true,
+      lastImportedAt: importedAt,
+      warning: calendarMeta.warning,
+    }
+    saveCalendarEvents(result.data)
+    saveGoogleCalendarMeta(next)
+    setCalendarMeta(next)
+    setCalendarMessage(result.message)
   }
 
   return (
@@ -88,12 +150,44 @@ export default function AIAssistant() {
       <div className="ai-header">
         <div className="ai-header-badge">
           <Sparkles size={11} />
-          Local-only
+          AI + automation
         </div>
         <p>
-          Integration not connected yet. Paste data manually for now; Google Calendar, Gmail,
-          Notion, and AI APIs can be connected later through the new service boundaries.
+          Gemini planning is available when configured. Google Calendar can now be connected
+          read-only; Gmail and Notion remain manual placeholders.
         </p>
+      </div>
+
+      <div className="card calendar-integration-card">
+        <div className="card-title">
+          <CalendarDays size={14} />
+          Google Calendar
+        </div>
+        <div className={`integration-status ${calendarMeta.connected ? 'connected' : 'not-connected'}`}>
+          {calendarMessage}
+        </div>
+        {calendarMeta.lastImportedAt && (
+          <div className="text-xs text-muted">
+            Last imported {new Date(calendarMeta.lastImportedAt).toLocaleString('en-AU')}
+          </div>
+        )}
+        {calendarMeta.warning && (
+          <p className="text-xs text-muted calendar-storage-warning">{calendarMeta.warning}</p>
+        )}
+        <div className="calendar-actions">
+          <button className="btn btn-secondary" onClick={connectGoogleCalendar}>
+            <CalendarDays size={14} />
+            Connect Google Calendar
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleImportCalendar}
+            disabled={importingCalendar}
+          >
+            <Download size={14} />
+            {importingCalendar ? 'Importing...' : "Import Today's Calendar"}
+          </button>
+        </div>
       </div>
 
       <div className="ai-panel">

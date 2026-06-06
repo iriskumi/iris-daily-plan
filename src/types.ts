@@ -152,9 +152,16 @@ export interface CalendarEvent {
   title: string
   start: string
   end: string
-  source: 'manual' | 'google-calendar'
+  source: 'manual' | 'google-calendar' | 'google_calendar'
   location?: string
+  description?: string
   notes?: string
+}
+
+export interface GoogleCalendarImportMeta {
+  connected: boolean
+  lastImportedAt?: string
+  warning?: string
 }
 
 export interface EmailMessage {
@@ -197,6 +204,8 @@ export interface AppBackupData {
   plan: GeneratedPlan | null
   templates: Template[]
   settings: AppSettings
+  calendarEvents: CalendarEvent[]
+  googleCalendarMeta: GoogleCalendarImportMeta
 }
 
 export interface AppBackup {
@@ -212,6 +221,7 @@ export interface GeneratePlanContext {
   bills: Bill[]
   templates: Template[]
   settings: AppSettings
+  calendarEvents: CalendarEvent[]
 }
 
 export type GeneratePlanResult = IntegrationResult<GeneratedPlan> & {

@@ -1367,6 +1367,47 @@ body {
   line-height: 1.6;
 }
 
+.calendar-integration-card {
+  margin-bottom: 1rem;
+}
+
+.calendar-integration-card .card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.integration-status {
+  display: inline-flex;
+  margin: 0.45rem 0 0.55rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.integration-status.connected {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.integration-status.not-connected {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.calendar-storage-warning {
+  margin-top: 0.55rem;
+  line-height: 1.5;
+}
+
+.calendar-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.85rem;
+}
+
 /* ── Settings ─────────────────────────────────────────── */
 
 .settings-toggle-list {

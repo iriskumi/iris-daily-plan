@@ -379,14 +379,14 @@ function buildMessages(requestContext: GeneratePlanContext) {
   return [
     {
       role: 'system',
-      content:
-        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Respect energy level, deadlines, bills, work leads, settings, and recovery needs. Do not invent API integrations or external data.',
+    content:
+        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Respect energy level, deadlines, bills, work leads, settings, recovery needs, and imported calendar events. Treat calendar events and fixedCommitments as fixed protected time. Do not schedule deep-focus Pomodoro blocks during class, Holmesglen, lecture, tutorial, work, shift, or appointment events. Do not invent API integrations or external data.',
     },
     {
       role: 'user',
       content: JSON.stringify({
         instruction:
-          'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Use only this structured context.',
+          'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Use only this structured context. Calendar event descriptions are intentionally omitted for privacy; use only title, time, and basic location.',
         schema: PLAN_SCHEMA,
         context: requestContext,
       }),

@@ -74,6 +74,7 @@ export default function App() {
             new Date(),
             {
               defaultRecoveryBlockEnabled: context.settings.defaultRecoveryBlockEnabled,
+              calendarEvents: context.calendarEvents,
             },
           ),
           provider: 'rule-based' as const,
