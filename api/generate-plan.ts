@@ -170,7 +170,7 @@ function getProviderConfig(): ProviderConfig | null {
       provider,
       apiKey,
       model,
-      endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      endpoint: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
     }
   }
 
@@ -373,29 +373,11 @@ function buildResponseFormat(provider: AiProvider) {
   return { type: 'json_object' }
 }
 
-function toGeminiSchema(schema: unknown): unknown {
-  if (typeof schema !== 'object' || schema === null) return schema
-  if (Array.isArray(schema)) return schema.map(toGeminiSchema)
-  const current = schema as Record<string, unknown>
-  const next: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(current)) {
-    if (key === 'additionalProperties') continue
-    if (key === 'type' && typeof value === 'string') {
-      next[key] = value.toUpperCase()
-    } else {
-      next[key] = toGeminiSchema(value)
-    }
-  }
-
-  return next
-}
-
 function buildMessages(requestContext: GeneratePlanContext) {
   return [
     {
       role: 'system',
-    content:
+      content:
         'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Build concrete hour-by-hour timeBlocks with startTime, endTime, title, type, label, and items. Use 50-minute Pomodoro focus blocks with 10-minute breaks for cybersecurity, AI learning, English output, and job search. Respect energy level, wake-up time, sleep target, deadlines, bills, work leads, settings, recovery needs, and imported calendar events. Treat calendar events and fixedCommitments as fixed protected time. Do not schedule deep-focus Pomodoro blocks during class, Holmesglen, lecture, tutorial, work, shift, or appointment events. For Saturday class day, block 09:00-17:30 and schedule at most one extra focus block after class. Do not invent API integrations or external data.',
     },
     {
@@ -417,7 +399,6 @@ async function callAiProvider(config: ProviderConfig, requestContext: GeneratePl
     return fetch(config.endpoint, {
       method: 'POST',
       headers: {
-        'x-goog-api-key': config.apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -433,8 +414,7 @@ async function callAiProvider(config: ProviderConfig, requestContext: GeneratePl
         ],
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: toGeminiSchema(PLAN_SCHEMA),
-          temperature: 0.4,
+          temperature: 0.3,
         },
       }),
     })
@@ -453,6 +433,24 @@ async function callAiProvider(config: ProviderConfig, requestContext: GeneratePl
       temperature: 0.4,
     }),
   })
+}
+
+async function safeAiErrorMessage(response: Response, provider: AiProvider): Promise<string> {
+  try {
+    const payload = (await response.json()) as {
+      error?: {
+        message?: unknown
+        status?: unknown
+      }
+    }
+    const rawMessage = payload.error?.message
+    if (typeof rawMessage === 'string' && rawMessage.trim()) {
+      return `${provider} API returned ${response.status}: ${rawMessage.trim()}; using local planner fallback`
+    }
+  } catch {
+    // Fall through to generic message.
+  }
+  return `${provider} API returned ${response.status}; using local planner fallback`
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -490,7 +488,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const aiResponse = await callAiProvider(providerConfig, requestContext)
 
   if (!aiResponse.ok) {
-    sendJson(res, fallbackResult(`${providerConfig.provider} API returned ${aiResponse.status}; using local planner fallback`))
+    sendJson(res, fallbackResult(await safeAiErrorMessage(aiResponse, providerConfig.provider)))
     return
   }
 
