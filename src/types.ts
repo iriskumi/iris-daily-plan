@@ -190,6 +190,21 @@ export type ExtractedWorkLead = Omit<WorkOpportunity, 'id' | 'createdAt'> & {
   sourceMessageId?: string
 }
 
+export interface GmailScannedWorkLead {
+  messageId: string
+  title: string
+  source: string
+  link?: string
+  type: WorkOpportunityType
+  classification: 'worth-checking-today' | 'later' | 'ignore'
+  reason: string
+  nextAction: string
+  confidence: number
+  sender: string
+  subject: string
+  receivedAt: string
+}
+
 export interface NotionExportResult {
   pageId?: string
   pageUrl?: string

@@ -1413,6 +1413,46 @@ body {
   padding: 0.85rem;
 }
 
+.gmail-lead-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.gmail-lead-review-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.gmail-lead-review-item input {
+  margin-top: 0.2rem;
+  accent-color: var(--accent);
+}
+
+.gmail-lead-title {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.gmail-lead-meta,
+.gmail-lead-reason,
+.gmail-lead-action {
+  margin-top: 0.22rem;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+.gmail-lead-action {
+  color: var(--text-2);
+}
+
 .calendar-integration-card {
   margin-bottom: 1rem;
 }

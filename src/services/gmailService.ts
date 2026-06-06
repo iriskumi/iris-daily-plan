@@ -2,6 +2,7 @@ import type {
   EmailMessage,
   ExtractedBill,
   ExtractedWorkLead,
+  GmailScannedWorkLead,
   IntegrationResult,
 } from '../types'
 
@@ -25,4 +26,28 @@ export async function extractWorkLeadsFromEmailText(
   _text: string,
 ): Promise<IntegrationResult<ExtractedWorkLead[]>> {
   return notConnected<ExtractedWorkLead[]>()
+}
+
+export async function scanGmailForWorkLeads(): Promise<IntegrationResult<GmailScannedWorkLead[]>> {
+  try {
+    const response = await fetch('/api/google/gmail-job-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const result = (await response.json()) as IntegrationResult<GmailScannedWorkLead[]>
+    if (!response.ok || !result.success || !result.data) {
+      return {
+        success: false,
+        message: result.message || 'Gmail read-only access is not connected yet.',
+        data: null,
+      }
+    }
+    return result
+  } catch {
+    return {
+      success: false,
+      message: 'Gmail read-only access is not connected yet.',
+      data: null,
+    }
+  }
 }

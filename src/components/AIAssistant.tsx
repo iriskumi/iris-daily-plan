@@ -15,6 +15,7 @@ import {
   Check,
 } from 'lucide-react'
 import { summarizeToday, reviewUnfinishedTasks } from '../services/aiService'
+import { scanGmailForWorkLeads } from '../services/gmailService'
 import {
   connectGoogleCalendar,
   getGoogleCalendarStatus,
@@ -29,8 +30,14 @@ import {
   loadTasks,
   saveCalendarEvents,
   saveGoogleCalendarMeta,
+  saveOpportunities,
 } from '../storage'
-import type { GoogleCalendarImportMeta } from '../types'
+import type {
+  GmailScannedWorkLead,
+  GoogleCalendarImportMeta,
+  WorkOpportunity,
+  WorkOpportunityStatus,
+} from '../types'
 
 interface AIAction {
   id: string
@@ -69,10 +76,10 @@ const ACTIONS: AIAction[] = [
   {
     id: 'extract-leads',
     icon: <Briefcase />,
-    title: 'Extract work leads',
-    desc: 'Paste data manually now; automated extraction can connect later',
+    title: 'Scan Gmail for Work Leads',
+    desc: 'Read-only scan of recent job-related emails',
     placeholder:
-      'Integration not connected yet. Paste job details manually into Work Leads, or connect Gmail/AI later.',
+      'Scanning recent job-related Gmail messages...',
   },
   {
     id: 'extract-bills',
@@ -96,6 +103,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
   const [activeMsg, setActiveMsg] = useState<string | null>(null)
   const [resultTitle, setResultTitle] = useState<string | null>(null)
   const [resultText, setResultText] = useState<string | null>(null)
+  const [scannedLeads, setScannedLeads] = useState<GmailScannedWorkLead[]>([])
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([])
   const [copied, setCopied] = useState(false)
   const [runningAction, setRunningAction] = useState<string | null>(null)
   const [calendarMeta, setCalendarMeta] = useState<GoogleCalendarImportMeta>(() =>
@@ -135,6 +144,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     setActiveMsg(null)
     setResultTitle(null)
     setResultText(null)
+    setScannedLeads([])
+    setSelectedLeadIds([])
     setRunningAction(action.id)
 
     if (action.id === 'generate') {
@@ -158,6 +169,23 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       return
     }
 
+    if (action.id === 'extract-leads') {
+      const response = await scanGmailForWorkLeads()
+      setRunningAction(null)
+      if (!response.success || !response.data) {
+        setActiveMsg(response.message || 'Gmail read-only access is not connected yet.')
+        return
+      }
+      setScannedLeads(response.data)
+      setSelectedLeadIds(
+        response.data
+          .filter(lead => lead.classification !== 'ignore')
+          .map(lead => lead.messageId),
+      )
+      setActiveMsg(response.message)
+      return
+    }
+
     setRunningAction(null)
     setActiveMsg(action.placeholder)
   }
@@ -167,6 +195,44 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     await navigator.clipboard.writeText(resultText)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function toggleLead(id: string) {
+    setSelectedLeadIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id],
+    )
+  }
+
+  function statusFromClassification(classification: GmailScannedWorkLead['classification']): WorkOpportunityStatus {
+    if (classification === 'worth-checking-today') return 'worth-checking'
+    if (classification === 'later') return 'later'
+    return 'ignore'
+  }
+
+  function saveSelectedLeads() {
+    const existing = loadOpportunities()
+    const selected = scannedLeads.filter(lead => selectedLeadIds.includes(lead.messageId))
+    const imported: WorkOpportunity[] = selected.map(lead => ({
+      id: crypto.randomUUID(),
+      title: lead.title,
+      source: lead.source || 'Gmail',
+      link: lead.link,
+      type: lead.type,
+      fitScore: Math.max(1, Math.min(5, Math.round(lead.confidence * 5))),
+      effortRequired: 'medium',
+      nextAction: lead.nextAction,
+      status: statusFromClassification(lead.classification),
+      notes: [
+        `Gmail scan: ${lead.reason}`,
+        `Sender: ${lead.sender}`,
+        `Subject: ${lead.subject}`,
+      ].join('\n'),
+      createdAt: new Date().toISOString(),
+    }))
+    saveOpportunities([...imported, ...existing])
+    setActiveMsg(`Saved ${imported.length} lead${imported.length === 1 ? '' : 's'} to Work Collection.`)
+    setScannedLeads([])
+    setSelectedLeadIds([])
   }
 
   async function handleImportCalendar() {
@@ -281,6 +347,51 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
             <button className="btn btn-primary" onClick={handleCopyResult}>
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'Copied!' : 'Copy to Notion'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {scannedLeads.length > 0 && (
+        <div className="card mt-1">
+          <div className="card-header">
+            <span className="card-title">Review Gmail Work Leads</span>
+          </div>
+          <p className="text-xs text-muted" style={{ lineHeight: 1.6, marginBottom: '0.75rem' }}>
+            Review before saving. Only selected leads are added to Work Collection.
+          </p>
+          <div className="gmail-lead-review-list">
+            {scannedLeads.map(lead => (
+              <label key={lead.messageId} className="gmail-lead-review-item">
+                <input
+                  type="checkbox"
+                  checked={selectedLeadIds.includes(lead.messageId)}
+                  onChange={() => toggleLead(lead.messageId)}
+                />
+                <div>
+                  <div className="gmail-lead-title">{lead.title}</div>
+                  <div className="gmail-lead-meta">
+                    {lead.classification.replaceAll('-', ' ')} · {lead.source} · confidence {Math.round(lead.confidence * 100)}%
+                  </div>
+                  <div className="gmail-lead-reason">{lead.reason}</div>
+                  <div className="gmail-lead-action">{lead.nextAction}</div>
+                  {lead.link && (
+                    <a href={lead.link} target="_blank" rel="noreferrer" className="text-xs">
+                      Open link
+                    </a>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="form-actions">
+            <button
+              className="btn btn-primary"
+              onClick={saveSelectedLeads}
+              disabled={selectedLeadIds.length === 0}
+            >
+              <Check size={14} />
+              Save Selected to Work Collection
             </button>
           </div>
         </div>

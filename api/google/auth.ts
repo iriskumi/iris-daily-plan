@@ -20,7 +20,8 @@ interface GoogleConfig {
 }
 
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
-const GOOGLE_OAUTH_SCOPE = `${CALENDAR_SCOPE} openid email`
+const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
+const GOOGLE_OAUTH_SCOPE = `${CALENDAR_SCOPE} ${GMAIL_SCOPE} openid email`
 const STATE_COOKIE = 'iris_google_calendar_state'
 
 function getDiagnostic() {
