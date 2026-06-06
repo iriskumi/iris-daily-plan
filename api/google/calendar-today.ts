@@ -178,7 +178,8 @@ function notConnected(req: VercelRequest): CalendarResponse {
 }
 
 function hasScope(tokens: GoogleTokens, scope: string): boolean {
-  return Boolean(tokens.scope?.split(/\s+/).includes(scope))
+  if (!tokens.scope) return true
+  return tokens.scope.split(/\s+/).includes(scope)
 }
 
 function scopeStatus(tokens: GoogleTokens) {

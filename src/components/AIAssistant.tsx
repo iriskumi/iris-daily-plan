@@ -129,7 +129,13 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     }
     setCalendarMeta(next)
     saveGoogleCalendarMeta(next)
-    setCalendarMessage(status.connected ? 'Google Calendar connected' : 'Google Calendar not connected')
+    setCalendarMessage(
+      status.gmailConnected
+        ? 'Google Calendar and Gmail connected'
+        : status.connected
+          ? 'Google Calendar connected. Gmail may need reconnect.'
+          : 'Google Calendar not connected',
+    )
   }
 
   function buildSummaryContext() {

@@ -210,10 +210,6 @@ async function fetchCandidateEmails(accessToken: string): Promise<CandidateEmail
     }))
 }
 
-function tokenHasGmailScope(tokens: GoogleTokens): boolean {
-  return Boolean(tokens.scope?.split(/\s+/).includes('https://www.googleapis.com/auth/gmail.readonly'))
-}
-
 function normalizeType(type: unknown): WorkOpportunityType {
   const allowed: WorkOpportunityType[] = [
     'full-time',
@@ -325,7 +321,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const tokens = await getTokens(req, res)
-  if (!tokens || !tokenHasGmailScope(tokens)) {
+  if (!tokens) {
     sendJson(res, {
       success: false,
       message: 'Gmail read-only access is not connected yet.',

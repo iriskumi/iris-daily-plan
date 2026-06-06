@@ -2,6 +2,7 @@
 
 import {
   CALENDAR_SCOPE,
+  GMAIL_SCOPE,
   STATE_COOKIE,
   TOKEN_COOKIE,
   clearCookie,
@@ -93,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     access_token: payload.access_token,
     refresh_token: payload.refresh_token,
     expires_at: Date.now() + payload.expires_in * 1000,
-    scope: payload.scope ?? CALENDAR_SCOPE,
+    scope: payload.scope ?? `${CALENDAR_SCOPE} ${GMAIL_SCOPE}`,
     token_type: payload.token_type,
     account_email: accountEmail,
   }
