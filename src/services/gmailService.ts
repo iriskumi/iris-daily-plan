@@ -38,7 +38,7 @@ export async function scanGmailForWorkLeads(): Promise<IntegrationResult<GmailSc
     if (!response.ok || !result.success || !result.data) {
       return {
         success: false,
-        message: result.message || 'Gmail read-only access is not connected yet.',
+        message: result.message || 'Gmail scan failed. Check Google connection and try again.',
         data: null,
       }
     }
@@ -46,7 +46,7 @@ export async function scanGmailForWorkLeads(): Promise<IntegrationResult<GmailSc
   } catch {
     return {
       success: false,
-      message: 'Gmail read-only access is not connected yet.',
+      message: 'Gmail scan failed. Check Google connection and try again.',
       data: null,
     }
   }
