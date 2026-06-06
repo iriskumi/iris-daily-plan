@@ -11,8 +11,9 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react'
 import type { GeneratedPlan, Bill } from './types'
-import { loadBills, loadPlan, savePlan, loadCheckin, loadTasks, loadOpportunities, loadSettings } from './storage'
+import { loadBills, loadPlan, savePlan, loadGeneratePlanContext } from './storage'
 import { getDaysUntil, planAssembly } from './planner'
+import { generatePlanWithAI } from './services/aiService'
 import DailyCheckin from './components/DailyCheckin'
 import TaskInbox from './components/TaskInbox'
 import WorkCollection from './components/WorkCollection'
@@ -53,16 +54,20 @@ export default function App() {
     setUrgentBills(getUrgentBills(loadBills()))
   }, [tab])
 
-  const handleGeneratePlan = () => {
-    const checkin = loadCheckin()
-    if (!checkin) return
-    const tasks = loadTasks()
-    const opportunities = loadOpportunities()
-    const bills = loadBills()
-    const settings = loadSettings()
-    const generated = planAssembly(checkin, tasks, opportunities, bills, new Date(), {
-      defaultRecoveryBlockEnabled: settings.defaultRecoveryBlockEnabled,
-    })
+  const handleGeneratePlan = async () => {
+    const context = loadGeneratePlanContext()
+    if (!context) return
+    const aiResult = await generatePlanWithAI(context)
+    const generated = aiResult.data ?? planAssembly(
+      context.checkin,
+      context.tasks,
+      context.opportunities,
+      context.bills,
+      new Date(),
+      {
+        defaultRecoveryBlockEnabled: context.settings.defaultRecoveryBlockEnabled,
+      },
+    )
     savePlan(generated)
     setPlan(generated)
     setTab('plan')

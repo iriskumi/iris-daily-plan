@@ -199,3 +199,14 @@ export interface AppBackup {
   exportedAt: string
   data: AppBackupData
 }
+
+export interface GeneratePlanContext {
+  checkin: DailyCheckin
+  tasks: Task[]
+  opportunities: WorkOpportunity[]
+  bills: Bill[]
+  templates: Template[]
+  settings: AppSettings
+}
+
+export type GeneratePlanResult = IntegrationResult<GeneratedPlan>

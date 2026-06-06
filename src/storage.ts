@@ -7,6 +7,7 @@ import type {
   WorkOpportunity,
   Bill,
   GeneratedPlan,
+  GeneratePlanContext,
   Template,
 } from './types'
 
@@ -88,6 +89,19 @@ export const loadSettings = (): AppSettings => ({
   ...(load<Partial<AppSettings>>(KEYS.settings) ?? {}),
 })
 export const saveSettings = (s: AppSettings): void => save(KEYS.settings, s)
+
+export function loadGeneratePlanContext(): GeneratePlanContext | null {
+  const checkin = loadCheckin()
+  if (!checkin) return null
+  return {
+    checkin,
+    tasks: loadTasks(),
+    opportunities: loadOpportunities(),
+    bills: loadBills(),
+    templates: loadTemplates(),
+    settings: loadSettings(),
+  }
+}
 
 export function exportBackupData(): AppBackup {
   return {

@@ -1,12 +1,10 @@
 import type {
-  Bill,
-  DailyCheckin,
   ExtractedBill,
   ExtractedWorkLead,
-  GeneratedPlan,
+  GeneratePlanContext,
+  GeneratePlanResult,
   IntegrationResult,
   Task,
-  WorkOpportunity,
 } from '../types'
 
 const notConnected = <T>(): IntegrationResult<T> => ({
@@ -15,21 +13,45 @@ const notConnected = <T>(): IntegrationResult<T> => ({
   data: null,
 })
 
-export interface PlanningContext {
-  checkin: DailyCheckin | null
-  tasks: Task[]
-  opportunities: WorkOpportunity[]
-  bills: Bill[]
-}
-
 export async function generatePlanWithAI(
-  _context: PlanningContext,
-): Promise<IntegrationResult<GeneratedPlan>> {
-  return notConnected<GeneratedPlan>()
+  context: GeneratePlanContext,
+): Promise<GeneratePlanResult> {
+  try {
+    const response = await fetch('/api/generate-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(context),
+    })
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: `AI plan API returned ${response.status}; using local planner fallback`,
+        data: null,
+      }
+    }
+
+    const result = (await response.json()) as GeneratePlanResult
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: result.message || 'AI plan integration unavailable; using local planner fallback',
+        data: null,
+      }
+    }
+
+    return result
+  } catch {
+    return {
+      success: false,
+      message: 'AI plan API unavailable; using local planner fallback',
+      data: null,
+    }
+  }
 }
 
 export async function summarizeToday(
-  _context: PlanningContext,
+  _context: GeneratePlanContext,
 ): Promise<IntegrationResult<string>> {
   return notConnected<string>()
 }
