@@ -2,7 +2,7 @@
 
 import crypto from 'node:crypto'
 import {
-  CALENDAR_SCOPE,
+  GOOGLE_OAUTH_SCOPE,
   STATE_COOKIE,
   createCookie,
   redirect,
@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
     response_type: 'code',
-    scope: CALENDAR_SCOPE,
+    scope: GOOGLE_OAUTH_SCOPE,
     access_type: 'offline',
     prompt: 'consent',
     state,

@@ -19,6 +19,7 @@ const MELBOURNE_TIMEZONE = 'Australia/Melbourne'
 
 interface CalendarResponse extends IntegrationResult<CalendarEvent[]> {
   connected: boolean
+  accountEmail?: string
   warning?: string
 }
 
@@ -169,16 +170,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       message: 'Google Calendar connected',
       data: [],
       connected: true,
+      accountEmail: tokens.account_email,
       warning: TOKEN_STORAGE_WARNING,
     })
     return
   }
 
   const today = getMelbourneYmd()
-  const tomorrow = addDaysToYmd(today, 1)
+  const rangeEnd = addDaysToYmd(today, 7)
   const params = new URLSearchParams({
     timeMin: `${today}T00:00:00${getMelbourneOffset(today)}`,
-    timeMax: `${tomorrow}T00:00:00${getMelbourneOffset(tomorrow)}`,
+    timeMax: `${rangeEnd}T00:00:00${getMelbourneOffset(rangeEnd)}`,
     singleEvents: 'true',
     orderBy: 'startTime',
     timeZone: MELBOURNE_TIMEZONE,
@@ -200,6 +202,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       message: `Google Calendar returned ${calendarResponse.status}`,
       data: null,
       connected: true,
+      accountEmail: tokens.account_email,
       warning: TOKEN_STORAGE_WARNING,
     }, calendarResponse.status)
     return
@@ -212,9 +215,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   sendJson(res, {
     success: true,
-    message: events.length > 0 ? `Imported ${events.length} calendar event(s)` : 'No calendar events today',
+    message: events.length > 0 ? `Imported ${events.length} calendar event(s) for the next 7 days` : 'No calendar events in the next 7 days',
     data: events,
     connected: true,
+    accountEmail: tokens.account_email,
     warning: TOKEN_STORAGE_WARNING,
   })
 }

@@ -100,6 +100,7 @@ export default function AIAssistant() {
     const next = {
       ...calendarMeta,
       connected: status.connected,
+      accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       warning: status.warning,
     }
     setCalendarMeta(next)
@@ -129,10 +130,12 @@ export default function AIAssistant() {
     }
 
     const importedAt = new Date().toISOString()
+    const status = await getGoogleCalendarStatus()
     const next = {
       connected: true,
+      accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       lastImportedAt: importedAt,
-      warning: calendarMeta.warning,
+      warning: status.warning ?? calendarMeta.warning,
     }
     saveCalendarEvents(result.data)
     saveGoogleCalendarMeta(next)
@@ -171,6 +174,9 @@ export default function AIAssistant() {
             Last imported {new Date(calendarMeta.lastImportedAt).toLocaleString('en-AU')}
           </div>
         )}
+        {calendarMeta.accountEmail && (
+          <div className="text-xs text-muted">Account: {calendarMeta.accountEmail}</div>
+        )}
         {calendarMeta.warning && (
           <p className="text-xs text-muted calendar-storage-warning">{calendarMeta.warning}</p>
         )}
@@ -185,7 +191,7 @@ export default function AIAssistant() {
             disabled={importingCalendar}
           >
             <Download size={14} />
-            {importingCalendar ? 'Importing...' : "Import Today's Calendar"}
+            {importingCalendar ? 'Importing...' : 'Import Next 7 Days'}
           </button>
         </div>
       </div>

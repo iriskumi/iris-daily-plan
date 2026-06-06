@@ -23,6 +23,17 @@ function getRequestUrl(req: VercelRequest): URL {
   return new URL(req.url ?? '/api/google/callback', `${proto}://${host}`)
 }
 
+async function fetchGoogleAccountEmail(accessToken: string): Promise<string | undefined> {
+  const response = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+  if (!response.ok) return undefined
+  const payload = (await response.json()) as { email?: unknown }
+  return typeof payload.email === 'string' ? payload.email : undefined
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const config = requiredGoogleConfig()
   if (!config) {
@@ -77,12 +88,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return
   }
 
+  const accountEmail = await fetchGoogleAccountEmail(payload.access_token)
   const tokens: GoogleTokens = {
     access_token: payload.access_token,
     refresh_token: payload.refresh_token,
     expires_at: Date.now() + payload.expires_in * 1000,
     scope: payload.scope ?? CALENDAR_SCOPE,
     token_type: payload.token_type,
+    account_email: accountEmail,
   }
 
   redirect(res, appRedirect, [

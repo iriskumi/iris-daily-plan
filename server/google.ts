@@ -22,9 +22,11 @@ export interface GoogleTokens {
   expires_at: number
   scope?: string
   token_type?: string
+  account_email?: string
 }
 
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+export const GOOGLE_OAUTH_SCOPE = `${CALENDAR_SCOPE} openid email`
 export const TOKEN_COOKIE = 'iris_google_calendar_tokens'
 export const STATE_COOKIE = 'iris_google_calendar_state'
 export const TOKEN_STORAGE_WARNING =
@@ -135,4 +137,3 @@ export function redirect(res: VercelResponse, location: string, cookies: string[
   res.setHeader('Location', location)
   res.status(302).end()
 }
-

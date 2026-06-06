@@ -1,10 +1,18 @@
-import { useState } from 'react'
-import { Check, Download, Upload, X } from 'lucide-react'
-import type { AppSettings, AppBackup } from '../types'
+import { useEffect, useState } from 'react'
+import { CalendarDays, Check, Download, RefreshCw, Upload, X } from 'lucide-react'
+import type { AppSettings, AppBackup, GoogleCalendarImportMeta } from '../types'
+import {
+  connectGoogleCalendar,
+  getGoogleCalendarStatus,
+  importCalendarCommitments,
+} from '../services/calendarService'
 import {
   exportBackupData,
   importBackupData,
+  loadGoogleCalendarMeta,
   loadSettings,
+  saveCalendarEvents,
+  saveGoogleCalendarMeta,
   saveSettings,
   validateBackup,
 } from '../storage'
@@ -23,8 +31,28 @@ function downloadJson(filename: string, data: AppBackup) {
 
 export default function Settings() {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
+  const [calendarMeta, setCalendarMeta] = useState<GoogleCalendarImportMeta>(() =>
+    loadGoogleCalendarMeta(),
+  )
   const [importText, setImportText] = useState('')
   const [message, setMessage] = useState<string | null>(null)
+  const [syncingCalendar, setSyncingCalendar] = useState(false)
+
+  useEffect(() => {
+    void refreshCalendarStatus()
+  }, [])
+
+  async function refreshCalendarStatus() {
+    const status = await getGoogleCalendarStatus()
+    const next = {
+      ...calendarMeta,
+      connected: status.connected,
+      accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
+      warning: status.warning ?? calendarMeta.warning,
+    }
+    setCalendarMeta(next)
+    saveGoogleCalendarMeta(next)
+  }
 
   function persist(next: AppSettings) {
     setSettings(next)
@@ -58,6 +86,36 @@ export default function Settings() {
     } catch {
       setMessage('Backup JSON could not be read')
     }
+  }
+
+  async function handleCalendarSync() {
+    setSyncingCalendar(true)
+    const result = await importCalendarCommitments()
+    setSyncingCalendar(false)
+
+    if (!result.success || !result.data) {
+      const next = {
+        ...calendarMeta,
+        connected: false,
+      }
+      setCalendarMeta(next)
+      saveGoogleCalendarMeta(next)
+      setMessage(result.message || 'Google Calendar not connected')
+      return
+    }
+
+    const importedAt = new Date().toISOString()
+    const status = await getGoogleCalendarStatus()
+    const next = {
+      connected: true,
+      accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
+      lastImportedAt: importedAt,
+      warning: status.warning ?? calendarMeta.warning,
+    }
+    saveCalendarEvents(result.data)
+    saveGoogleCalendarMeta(next)
+    setCalendarMeta(next)
+    setMessage(result.message)
   }
 
   return (
@@ -131,6 +189,53 @@ export default function Settings() {
             <span>Default recovery block enabled</span>
           </label>
         </div>
+      </div>
+
+      <div className="card mt-1 calendar-integration-card">
+        <div className="card-header">
+          <span className="card-title">
+            <CalendarDays size={14} />
+            Google Calendar
+          </span>
+        </div>
+
+        <div className={`integration-status ${calendarMeta.connected ? 'connected' : 'not-connected'}`}>
+          {calendarMeta.connected ? 'Connected' : 'Not Connected'}
+        </div>
+
+        {calendarMeta.accountEmail && (
+          <div className="text-xs text-muted">Account: {calendarMeta.accountEmail}</div>
+        )}
+
+        <div className="text-xs text-muted mt-sm">
+          Last sync:{' '}
+          {calendarMeta.lastImportedAt
+            ? new Date(calendarMeta.lastImportedAt).toLocaleString('en-AU')
+            : 'Never'}
+        </div>
+
+        {calendarMeta.warning && (
+          <p className="text-xs text-muted calendar-storage-warning">{calendarMeta.warning}</p>
+        )}
+
+        <div className="calendar-actions">
+          <button className="btn btn-secondary" onClick={connectGoogleCalendar}>
+            <CalendarDays size={14} />
+            Connect Google Calendar
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleCalendarSync}
+            disabled={syncingCalendar}
+          >
+            <RefreshCw size={14} />
+            {syncingCalendar ? 'Syncing...' : 'Sync Next 7 Days'}
+          </button>
+        </div>
+
+        <p className="text-xs text-muted mt-sm" style={{ lineHeight: 1.6 }}>
+          Read-only calendar access. Imported events are used as fixed commitments for planning.
+        </p>
       </div>
 
       <div className="card mt-1">

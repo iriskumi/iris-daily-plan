@@ -131,6 +131,14 @@ function sanitizeCalendarEvents(events: CalendarEvent[]): CalendarEvent[] {
   }))
 }
 
+function calendarEventsForDate(events: CalendarEvent[], date: string): CalendarEvent[] {
+  return events.filter(event => {
+    const startDate = event.start.slice(0, 10)
+    const endDate = event.end.slice(0, 10)
+    return startDate <= date && endDate >= date
+  })
+}
+
 function addCalendarCommitments(checkin: DailyCheckin, events: CalendarEvent[]): DailyCheckin {
   if (events.length === 0) return checkin
   const calendarLines = events.map(formatCalendarCommitment)
@@ -151,14 +159,15 @@ export function loadGeneratePlanContext(): GeneratePlanContext | null {
   const checkin = loadCheckin()
   if (!checkin) return null
   const calendarEvents = sanitizeCalendarEvents(loadCalendarEvents())
+  const planDateEvents = calendarEventsForDate(calendarEvents, checkin.date)
   return {
-    checkin: addCalendarCommitments(checkin, calendarEvents),
+    checkin: addCalendarCommitments(checkin, planDateEvents),
     tasks: loadTasks(),
     opportunities: loadOpportunities(),
     bills: loadBills(),
     templates: loadTemplates(),
     settings: loadSettings(),
-    calendarEvents,
+    calendarEvents: planDateEvents,
   }
 }
 
