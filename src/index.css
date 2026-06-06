@@ -1027,6 +1027,42 @@ body {
   margin-top: 0.4rem;
 }
 
+.plan-page-header {
+  margin-bottom: 0.75rem;
+}
+
+.planner-source-panel {
+  display: block;
+  margin-top: 0.55rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.planner-source-panel.ai {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.planner-source-panel.fallback {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.planner-source-text {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.planner-source-reason {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
 .plan-source-badge {
   display: inline-flex;
   align-items: center;

@@ -24,9 +24,9 @@ const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
 }
 
 function getPlanSourceLabel(plan: GeneratedPlan): string {
-  if (plan.aiUsed && plan.provider === 'gemini') return 'AI: Gemini'
-  if (plan.aiUsed && plan.provider === 'deepseek') return 'AI: DeepSeek'
-  if (plan.aiUsed && plan.provider === 'openai') return 'AI: OpenAI'
+  if (plan.aiUsed && plan.provider === 'gemini') return 'AI Gemini'
+  if (plan.aiUsed && plan.provider === 'deepseek') return 'AI DeepSeek'
+  if (plan.aiUsed && plan.provider === 'openai') return 'AI OpenAI'
   return 'Rule-based fallback'
 }
 
@@ -83,17 +83,21 @@ export default function DailyPlanView({ plan, onGenerate, onGoToCheckin }: Props
 
   return (
     <div className="page">
+      <div className="page-header plan-page-header">
+        <h2 className="page-title">Daily Plan</h2>
+        <div className={`planner-source-panel ${plan.aiUsed ? 'ai' : 'fallback'}`}>
+          <div className="planner-source-text">Planner source: {sourceLabel}</div>
+          {plan.fallbackReason && (
+            <div className="planner-source-reason">{plan.fallbackReason}</div>
+          )}
+        </div>
+      </div>
+
       {/* Header */}
       <div className="plan-header">
         <div className="plan-date-label">{planDate}</div>
         <div className="plan-theme">{plan.theme}</div>
         <div className="plan-meta">Generated at {generatedTime}</div>
-        <div
-          className={`plan-source-badge ${plan.aiUsed ? 'ai' : 'fallback'}`}
-          title={plan.fallbackReason}
-        >
-          {sourceLabel}
-        </div>
       </div>
 
       {/* Top 3 Priorities */}
