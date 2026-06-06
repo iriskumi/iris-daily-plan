@@ -42,17 +42,25 @@ function getPlanSourceLabel(plan: GeneratedPlan): string {
 interface Props {
   plan: GeneratedPlan | null
   onGenerate: () => void
+  onRegenerate: (feedback: string) => void
   onGoToCheckin: () => void
 }
 
-export default function DailyPlanView({ plan, onGenerate, onGoToCheckin }: Props) {
+export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCheckin }: Props) {
   const [copied, setCopied] = useState(false)
+  const [feedback, setFeedback] = useState('')
 
   async function handleCopy() {
     if (!plan) return
     await navigator.clipboard.writeText(plan.notionMarkdown)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleRegenerate() {
+    const trimmed = feedback.trim()
+    if (!trimmed) return
+    onRegenerate(trimmed)
   }
 
   if (!plan) {
@@ -265,6 +273,35 @@ export default function DailyPlanView({ plan, onGenerate, onGoToCheckin }: Props
             <button className="btn btn-secondary" onClick={onGenerate}>
               <Zap size={14} />
               Re-generate
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="plan-section">
+        <div className="plan-section-title">Regenerate with feedback</div>
+        <div className="notion-export-card">
+          <div className="form-group">
+            <label>Feedback for Gemini</label>
+            <textarea
+              placeholder="e.g. Keep the evening lighter, move English before lunch, bills first, only one Pomodoro today."
+              value={feedback}
+              onChange={e => setFeedback(e.target.value)}
+              style={{ minHeight: 90 }}
+            />
+          </div>
+          <div className="flex gap-sm">
+            <button
+              className="btn btn-primary"
+              onClick={handleRegenerate}
+              disabled={!feedback.trim()}
+            >
+              <Zap size={14} />
+              Regenerate Plan
+            </button>
+            <button className="btn btn-secondary" onClick={handleCopy}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'Copied!' : 'Copy to Notion'}
             </button>
           </div>
         </div>

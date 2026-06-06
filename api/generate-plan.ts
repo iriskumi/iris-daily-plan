@@ -119,6 +119,12 @@ interface ProviderConfig {
   endpoint: string
 }
 
+interface GeneratePlanRequest {
+  context: GeneratePlanContext
+  originalPlan?: GeneratedPlan | null
+  feedback?: string
+}
+
 function sendJson(res: VercelResponse, body: GeneratePlanResult, status = 200): void {
   res.status(status).json(body)
 }
@@ -373,27 +379,47 @@ function buildResponseFormat(provider: AiProvider) {
   return { type: 'json_object' }
 }
 
-function buildMessages(requestContext: GeneratePlanContext) {
+function isGeneratePlanRequest(value: unknown): value is GeneratePlanRequest {
+  if (typeof value !== 'object' || value === null) return false
+  const request = value as Partial<GeneratePlanRequest>
+  return isContext(request.context)
+}
+
+function buildMessages(
+  requestContext: GeneratePlanContext,
+  originalPlan?: GeneratedPlan | null,
+  feedback = '',
+) {
+  const isRevision = Boolean(originalPlan && feedback.trim())
   return [
     {
       role: 'system',
       content:
-        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Build concrete hour-by-hour timeBlocks with startTime, endTime, title, type, label, and items. Use 50-minute Pomodoro focus blocks with 10-minute breaks for cybersecurity, AI learning, English output, and job search. Respect energy level, wake-up time, sleep target, deadlines, bills, work leads, settings, recovery needs, and imported calendar events. Treat calendar events and fixedCommitments as fixed protected time. Do not schedule deep-focus Pomodoro blocks during class, Holmesglen, lecture, tutorial, work, shift, or appointment events. For Saturday class day, block 09:00-17:30 and schedule at most one extra focus block after class. Do not invent API integrations or external data.',
+        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Build concrete hour-by-hour timeBlocks with startTime, endTime, title, type, label, and items. Use 50-minute Pomodoro focus blocks with 10-minute breaks for cybersecurity, AI learning, English output, and job search. Respect energy level, wake-up time, sleep target, planningInstructions, deadlines, bills, work leads, settings, recovery needs, and imported calendar events. Treat calendar events, fixedCommitments, lunch, and dinner as protected time. Lunch should usually be around 12:00 and dinner around 17:00; if class/work conflicts, move the meal earlier or later with a buffer. Do not schedule Pomodoro or deep work over lunch, dinner, class, Holmesglen, lecture, tutorial, work, shift, or appointment events. Meals are fixed recovery/energy blocks, not optional tasks. For Saturday class day, block 09:00-17:30 and schedule at most one extra focus block after class. Full bill tracking stays in Notion; only include bills that affect today’s plan. Do not invent API integrations or external data.',
     },
     {
       role: 'user',
       content: JSON.stringify({
         instruction:
-          'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Each timeBlocks item must include period, label, startTime, endTime, title, type, and items. Use exact ranges like 07:30-08:00 Wake up + breakfast. Use only this structured context. Calendar event descriptions are intentionally omitted for privacy; use only title, time, and basic location.',
+          isRevision
+            ? 'Revise the original plan using the user feedback. Preserve what still works, keep the same GeneratedPlan JSON format, and do not start from scratch unless the feedback requires it.'
+            : 'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Each timeBlocks item must include period, label, startTime, endTime, title, type, and items. Use exact ranges like 07:30-08:00 Wake up + breakfast. Use only this structured context. Calendar event descriptions are intentionally omitted for privacy; use only title, time, and basic location.',
         schema: PLAN_SCHEMA,
         context: requestContext,
+        originalPlan: originalPlan ?? null,
+        feedback,
       }),
     },
   ]
 }
 
-async function callAiProvider(config: ProviderConfig, requestContext: GeneratePlanContext): Promise<Response> {
-  const messages = buildMessages(requestContext)
+async function callAiProvider(
+  config: ProviderConfig,
+  requestContext: GeneratePlanContext,
+  originalPlan?: GeneratedPlan | null,
+  feedback = '',
+): Promise<Response> {
+  const messages = buildMessages(requestContext, originalPlan, feedback)
 
   if (config.provider === 'gemini') {
     return fetch(config.endpoint, {
@@ -473,19 +499,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   let requestContext: GeneratePlanContext
+  let originalPlan: GeneratedPlan | null | undefined
+  let feedback = ''
   try {
     const body = getBody(req)
-    if (!isContext(body)) {
+    if (isGeneratePlanRequest(body)) {
+      requestContext = body.context
+      originalPlan = body.originalPlan
+      feedback = typeof body.feedback === 'string' ? body.feedback : ''
+    } else if (isContext(body)) {
+      requestContext = body
+    } else {
       sendJson(res, fallbackResult('Invalid planning context; using local planner fallback'), 400)
       return
     }
-    requestContext = body
   } catch {
     sendJson(res, fallbackResult('Could not read planning context; using local planner fallback'), 400)
     return
   }
 
-  const aiResponse = await callAiProvider(providerConfig, requestContext)
+  const aiResponse = await callAiProvider(providerConfig, requestContext, originalPlan, feedback)
 
   if (!aiResponse.ok) {
     sendJson(res, fallbackResult(await safeAiErrorMessage(aiResponse, providerConfig.provider)))

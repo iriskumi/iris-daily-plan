@@ -54,10 +54,22 @@ export default function App() {
     setUrgentBills(getUrgentBills(loadBills()))
   }, [tab])
 
-  const handleGeneratePlan = async () => {
+  const handleGeneratePlan = async (feedback = '', originalPlan?: GeneratedPlan) => {
     const context = loadGeneratePlanContext()
     if (!context) return
-    const aiResult = await generatePlanWithAI(context)
+    const feedbackContext = feedback.trim()
+      ? {
+          ...context,
+          checkin: {
+            ...context.checkin,
+            planningInstructions: [
+              context.checkin.planningInstructions,
+              `Regeneration feedback: ${feedback.trim()}`,
+            ].filter(Boolean).join('\n'),
+          },
+        }
+      : context
+    const aiResult = await generatePlanWithAI(feedbackContext, { originalPlan, feedback })
     const generated = aiResult.data
       ? {
           ...aiResult.data,
@@ -67,14 +79,14 @@ export default function App() {
         }
       : {
           ...planAssembly(
-            context.checkin,
-            context.tasks,
-            context.opportunities,
-            context.bills,
+            feedbackContext.checkin,
+            feedbackContext.tasks,
+            feedbackContext.opportunities,
+            feedbackContext.bills,
             new Date(),
             {
-              defaultRecoveryBlockEnabled: context.settings.defaultRecoveryBlockEnabled,
-              calendarEvents: context.calendarEvents,
+              defaultRecoveryBlockEnabled: feedbackContext.settings.defaultRecoveryBlockEnabled,
+              calendarEvents: feedbackContext.calendarEvents,
             },
           ),
           provider: 'rule-based' as const,
@@ -145,6 +157,7 @@ export default function App() {
           <DailyPlanView
             plan={plan}
             onGenerate={handleGeneratePlan}
+            onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
             onGoToCheckin={() => setTab('checkin')}
           />
         )}

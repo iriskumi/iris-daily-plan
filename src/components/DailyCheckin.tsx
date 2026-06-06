@@ -41,6 +41,7 @@ function defaultCheckin(): DailyCheckinType {
     energyLevel: 'medium',
     availableFocusTime: '3–4 hours',
     fixedCommitments: '',
+    planningInstructions: '',
     notes: '',
   }
 }
@@ -52,7 +53,7 @@ interface Props {
 export default function DailyCheckin({ onGenerate }: Props) {
   const [checkin, setCheckin] = useState<DailyCheckinType>(() => {
     const saved = loadCheckin()
-    if (saved) return { ...saved, date: todayString() }
+    if (saved) return { ...defaultCheckin(), ...saved, date: todayString() }
     return defaultCheckin()
   })
 
@@ -168,6 +169,16 @@ export default function DailyCheckin({ onGenerate }: Props) {
             placeholder="Classes, shifts, appointments, calls…"
             value={checkin.fixedCommitments}
             onChange={e => set('fixedCommitments', e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Planning instructions</label>
+          <textarea
+            placeholder="e.g. Keep today light, prioritise Cybersecurity assessment, no deep work after 7pm, bills first"
+            value={checkin.planningInstructions}
+            onChange={e => set('planningInstructions', e.target.value)}
+            style={{ minHeight: 70 }}
           />
         </div>
 

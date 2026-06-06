@@ -19,12 +19,17 @@ const notConnected = <T>(): IntegrationResult<T> => ({
 
 export async function generatePlanWithAI(
   context: GeneratePlanContext,
+  options: { originalPlan?: GeneratedPlan; feedback?: string } = {},
 ): Promise<GeneratePlanResult> {
   try {
     const response = await fetch('/api/generate-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(context),
+      body: JSON.stringify(
+        options.originalPlan || options.feedback
+          ? { context, originalPlan: options.originalPlan ?? null, feedback: options.feedback ?? '' }
+          : context,
+      ),
     })
 
     if (!response.ok) {

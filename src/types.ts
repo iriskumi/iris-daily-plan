@@ -31,6 +31,7 @@ export interface DailyCheckin {
   energyLevel: EnergyLevel
   availableFocusTime: string
   fixedCommitments: string
+  planningInstructions: string
   notes: string
 }
 

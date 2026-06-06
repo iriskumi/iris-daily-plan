@@ -39,8 +39,9 @@ export function getDaysUntil(dateStr: string, referenceDate = new Date()): numbe
   return Math.ceil((due.getTime() - today.getTime()) / MS_PER_DAY)
 }
 
-export function taskScoring(task: Task, referenceDate = new Date()): number {
+export function taskScoring(task: Task, referenceDate = new Date(), planningInstructions = ''): number {
   let score = 0
+  const instructions = planningInstructions.toLowerCase()
 
   const categoryBase: Record<string, number> = {
     assessment: 10,
@@ -70,6 +71,10 @@ export function taskScoring(task: Task, referenceDate = new Date()): number {
   }
 
   if (task.difficulty === 'hard') score -= 1
+  if (instructions.includes('cyber') && (task.category === 'cyber-study' || task.category === 'assessment')) score += 10
+  if (instructions.includes('english') && task.category === 'english-practice') score += 8
+  if (instructions.includes('job') && task.category === 'job-search') score += 6
+  if (instructions.includes('bills') && task.category === 'finance-bills') score += 8
 
   return score
 }
@@ -214,7 +219,7 @@ function mergeCommitments(commitments: ScheduledCommitment[]): ScheduledCommitme
     .sort((a, b) => a.start - b.start)
 }
 
-function overlapsCommitment(start: number, end: number, commitments: ScheduledCommitment[]): boolean {
+function overlapsCommitment(start: number, end: number, commitments: TimeWindow[]): boolean {
   return commitments.some(item => start < item.end && end > item.start)
 }
 
@@ -231,6 +236,26 @@ function findNextSlot(
     start = conflict.end + 10
   }
   return null
+}
+
+function findMealSlot(
+  preferredStart: number,
+  duration: number,
+  earliest: number,
+  latestEnd: number,
+  busy: TimeWindow[],
+): TimeWindow {
+  const candidates: number[] = [preferredStart]
+  for (let offset = 30; offset <= 180; offset += 30) {
+    candidates.push(preferredStart - offset, preferredStart + offset)
+  }
+  const slot = candidates.find(start =>
+    start >= earliest &&
+    start + duration <= latestEnd &&
+    !busy.some(item => start < item.end + 10 && start + duration > item.start - 10),
+  )
+  const start = slot ?? Math.max(earliest, Math.min(preferredStart, latestEnd - duration))
+  return { start, end: start + duration }
 }
 
 function focusTitle(task: Task): string {
@@ -278,6 +303,7 @@ export function timeBlockGeneration(
   urgentBills: string[] = [],
 ): TimeBlock[] {
   const { dayType, energyLevel } = checkin
+  const instructions = checkin.planningInstructions.toLowerCase()
   const wake = parseTimeToMinutes(checkin.wakeUpTime, 8 * 60 + 30)
   const sleep = parseTimeToMinutes(checkin.sleepTarget, 23 * 60)
   const shutdownStart = Math.min(parseTimeToMinutes(checkin.sleepTarget, 22 * 60) - 60, 21 * 60 + 30)
@@ -301,8 +327,28 @@ export function timeBlockGeneration(
     blocks.push(blockFromWindow(commitment.start, commitment.end, commitment.title, commitment.type, commitment.items))
   })
 
-  const focusTasks = top3Tasks.filter(task => task.category !== 'recovery')
-  const focusLimit =
+  const lunch = findMealSlot(12 * 60, 45, wake + 60, shutdownStart, commitments)
+  const dinner = findMealSlot(17 * 60, 60, wake + 4 * 60, shutdownStart, [...commitments, lunch])
+  const mealWindows: TimeWindow[] = [lunch, dinner]
+  blocks.push(blockFromWindow(lunch.start, lunch.end, 'Lunch + reset', 'meal', [
+    'Protected meal block - not optional',
+    'No Pomodoro or deep work over lunch',
+  ]))
+  blocks.push(blockFromWindow(dinner.start, dinner.end, 'Dinner + reset', 'meal', [
+    dayType === 'saturday-class'
+      ? 'Keep this easy after class'
+      : 'Protected meal block - not optional',
+    'No Pomodoro or deep work over dinner',
+  ]))
+
+  const focusTasks = [...top3Tasks]
+    .filter(task => task.category !== 'recovery')
+    .sort((a, b) => {
+      if (instructions.includes('english') && a.category === 'english-practice') return -1
+      if (instructions.includes('english') && b.category === 'english-practice') return 1
+      return 0
+    })
+  const baseFocusLimit =
     dayType === 'saturday-class'
       ? 1
       : energyLevel === 'low'
@@ -310,11 +356,19 @@ export function timeBlockGeneration(
         : energyLevel === 'medium'
           ? 2
           : 3
+  const focusLimit = instructions.includes('only one pomodoro') || instructions.includes('one pomodoro')
+    ? 1
+    : instructions.includes('keep today light')
+      ? Math.min(baseFocusLimit, 1)
+      : baseFocusLimit
+  const focusEnd = instructions.includes('no deep work after 7') || instructions.includes('no deep work after 19')
+    ? Math.min(dayEnd, 19 * 60)
+    : dayEnd
   const scheduledFocus: TimeWindow[] = []
   let cursor = morningEnd + 10
 
   focusTasks.slice(0, focusLimit).forEach(task => {
-    const slot = findNextSlot(cursor, 50, dayEnd, [...commitments, ...scheduledFocus])
+    const slot = findNextSlot(cursor, 50, focusEnd, [...commitments, ...mealWindows, ...scheduledFocus])
     if (slot === null) return
     const title = focusTitle(task)
     blocks.push(blockFromWindow(slot, slot + 50, title, 'focus', [
@@ -323,7 +377,7 @@ export function timeBlockGeneration(
     ]))
     scheduledFocus.push({ start: slot, end: slot + 60 })
     const breakStart = slot + 50
-    if (breakStart + 10 <= dayEnd && !overlapsCommitment(breakStart, breakStart + 10, commitments)) {
+    if (breakStart + 10 <= dayEnd && !overlapsCommitment(breakStart, breakStart + 10, [...commitments, ...mealWindows])) {
       blocks.push(blockFromWindow(breakStart, breakStart + 10, 'Break', 'buffer', [
         'Stand up, water, quick reset',
       ]))
@@ -332,24 +386,16 @@ export function timeBlockGeneration(
   })
 
   if (urgentBills.length > 0) {
-    const billSlot = findNextSlot(12 * 60 + 30, 20, dayEnd, [...commitments, ...scheduledFocus])
+    const billCursor = instructions.includes('bills first') ? morningEnd + 10 : 12 * 60 + 30
+    const billSlot = findNextSlot(billCursor, 20, dayEnd, [...commitments, ...mealWindows, ...scheduledFocus])
     if (billSlot !== null) {
       blocks.push(blockFromWindow(billSlot, billSlot + 20, 'Bill deadline check', 'admin', urgentBills.slice(0, 3)))
     }
   }
 
-  const dinnerStart = Math.max(17 * 60 + 30, Math.min(dayEnd - 90, wake + 9 * 60))
-  if (dinnerStart > wake && dinnerStart + 60 < shutdownStart && !overlapsCommitment(dinnerStart, dinnerStart + 60, commitments)) {
-    blocks.push(blockFromWindow(dinnerStart, dinnerStart + 60, 'Dinner + reset', 'meal', [
-      dayType === 'saturday-class'
-        ? 'Keep this easy after class'
-        : 'Eat properly and reset before evening',
-    ]))
-  }
-
   if (includeRecoveryBlock) {
-    const recoveryStart = Math.max(20 * 60, Math.min(shutdownStart - 60, dinnerStart + 90))
-    if (recoveryStart + 30 <= shutdownStart && !overlapsCommitment(recoveryStart, recoveryStart + 30, commitments)) {
+    const recoveryStart = Math.max(20 * 60, Math.min(shutdownStart - 60, dinner.end + 60))
+    if (recoveryStart + 30 <= shutdownStart && !overlapsCommitment(recoveryStart, recoveryStart + 30, [...commitments, ...mealWindows])) {
       blocks.push(blockFromWindow(recoveryStart, recoveryStart + 30, 'Recovery', 'recovery', [
         energyLevel === 'low' ? 'Longer buffer. Rest is the priority.' : 'Walk, stretch, shower, or quiet rest',
         checkin.notes ? `Personal note: ${checkin.notes}` : 'Do not turn this into another task block',
@@ -423,7 +469,11 @@ export function workLeadSelection(
 
 function selectTasks(tasks: Task[], checkin: DailyCheckin, referenceDate = new Date()) {
   const pending = tasks.filter(t => !t.done)
-  const scored = [...pending].sort((a, b) => taskScoring(b, referenceDate) - taskScoring(a, referenceDate))
+  const scored = [...pending].sort(
+    (a, b) =>
+      taskScoring(b, referenceDate, checkin.planningInstructions) -
+      taskScoring(a, referenceDate, checkin.planningInstructions),
+  )
   const cap = checkin.energyLevel === 'low' ? 1 : checkin.energyLevel === 'medium' ? 2 : 3
   const pomoCapTotal = checkin.energyLevel === 'low' ? 1 : 3
   let pomoCount = 0

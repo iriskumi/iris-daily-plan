@@ -156,8 +156,12 @@ function addCalendarCommitments(checkin: DailyCheckin, events: CalendarEvent[]):
 }
 
 export function loadGeneratePlanContext(): GeneratePlanContext | null {
-  const checkin = loadCheckin()
-  if (!checkin) return null
+  const savedCheckin = loadCheckin()
+  if (!savedCheckin) return null
+  const checkin: DailyCheckin = {
+    ...savedCheckin,
+    planningInstructions: savedCheckin.planningInstructions ?? '',
+  }
   const calendarEvents = sanitizeCalendarEvents(loadCalendarEvents())
   const planDateEvents = calendarEventsForDate(calendarEvents, checkin.date)
   return {
