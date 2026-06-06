@@ -11,14 +11,22 @@ import {
   Info,
   CalendarDays,
   Download,
+  Copy,
+  Check,
 } from 'lucide-react'
+import { summarizeToday, reviewUnfinishedTasks } from '../services/aiService'
 import {
   connectGoogleCalendar,
   getGoogleCalendarStatus,
   importCalendarCommitments,
 } from '../services/calendarService'
 import {
+  loadBills,
+  loadCalendarEvents,
   loadGoogleCalendarMeta,
+  loadOpportunities,
+  loadPlan,
+  loadTasks,
   saveCalendarEvents,
   saveGoogleCalendarMeta,
 } from '../storage'
@@ -32,30 +40,31 @@ interface AIAction {
   placeholder: string
 }
 
+interface Props {
+  onGeneratePlan: () => Promise<void>
+}
+
 const ACTIONS: AIAction[] = [
   {
     id: 'generate',
     icon: <Zap />,
-    title: 'Generate plan with AI later',
-    desc: 'Integration not connected yet — use the local planner for now',
-    placeholder:
-      'Integration not connected yet. Paste data manually or connect an AI API later.',
+    title: "Generate Today’s Plan with Gemini",
+    desc: 'Runs the same generator used by Today’s Plan',
+    placeholder: 'Generating today’s plan...',
   },
   {
     id: 'summarise',
     icon: <FileText />,
     title: 'Summarise today',
-    desc: 'Integration not connected yet — manual summaries can be added later',
-    placeholder:
-      'Integration not connected yet. Use the generated local plan, or connect an AI API later.',
+    desc: 'Summarise completed, unfinished, carry-over, reflection, and shutdown',
+    placeholder: 'Summarising today...',
   },
   {
     id: 'review',
     icon: <ListChecks />,
     title: 'Review unfinished tasks',
-    desc: 'Integration not connected yet — task review remains manual',
-    placeholder:
-      'Integration not connected yet. Review pending tasks manually or connect an AI API later.',
+    desc: 'Group unfinished tasks into urgent, carry-over, smaller, and ignore',
+    placeholder: 'Reviewing unfinished tasks...',
   },
   {
     id: 'extract-leads',
@@ -83,8 +92,12 @@ const ACTIONS: AIAction[] = [
   },
 ]
 
-export default function AIAssistant() {
+export default function AIAssistant({ onGeneratePlan }: Props) {
   const [activeMsg, setActiveMsg] = useState<string | null>(null)
+  const [resultTitle, setResultTitle] = useState<string | null>(null)
+  const [resultText, setResultText] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [runningAction, setRunningAction] = useState<string | null>(null)
   const [calendarMeta, setCalendarMeta] = useState<GoogleCalendarImportMeta>(() =>
     loadGoogleCalendarMeta(),
   )
@@ -108,9 +121,52 @@ export default function AIAssistant() {
     setCalendarMessage(status.connected ? 'Google Calendar connected' : 'Google Calendar not connected')
   }
 
-  function handleClick(action: AIAction) {
+  function buildSummaryContext() {
+    return {
+      plan: loadPlan(),
+      tasks: loadTasks(),
+      bills: loadBills(),
+      opportunities: loadOpportunities(),
+      calendarEvents: loadCalendarEvents(),
+    }
+  }
+
+  async function handleClick(action: AIAction) {
+    setActiveMsg(null)
+    setResultTitle(null)
+    setResultText(null)
+    setRunningAction(action.id)
+
+    if (action.id === 'generate') {
+      await onGeneratePlan()
+      setRunningAction(null)
+      return
+    }
+
+    if (action.id === 'summarise' || action.id === 'review') {
+      const response =
+        action.id === 'summarise'
+          ? await summarizeToday(buildSummaryContext())
+          : await reviewUnfinishedTasks(buildSummaryContext())
+      setRunningAction(null)
+      if (!response.success || !response.data) {
+        setActiveMsg(response.message)
+        return
+      }
+      setResultTitle(action.id === 'summarise' ? 'Today Summary' : 'Unfinished Task Review')
+      setResultText(response.data)
+      return
+    }
+
+    setRunningAction(null)
     setActiveMsg(action.placeholder)
-    setTimeout(() => {}, 0)
+  }
+
+  async function handleCopyResult() {
+    if (!resultText) return
+    await navigator.clipboard.writeText(resultText)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   async function handleImportCalendar() {
@@ -147,7 +203,7 @@ export default function AIAssistant() {
     <div className="page">
       <div className="page-header">
         <h2 className="page-title">AI Assistant</h2>
-        <p className="page-subtitle">Automation boundaries — APIs are not connected yet</p>
+        <p className="page-subtitle">Generate, summarise, and review today with Gemini fallback support.</p>
       </div>
 
       <div className="ai-header">
@@ -202,15 +258,33 @@ export default function AIAssistant() {
             key={action.id}
             className="ai-btn"
             onClick={() => handleClick(action)}
+            disabled={runningAction !== null}
           >
             <div className="ai-btn-icon">{action.icon}</div>
             <div>
               <div className="ai-btn-title">{action.title}</div>
-              <div className="ai-btn-desc">{action.desc}</div>
+              <div className="ai-btn-desc">
+                {runningAction === action.id ? action.placeholder : action.desc}
+              </div>
             </div>
           </button>
         ))}
       </div>
+
+      {resultText && (
+        <div className="card mt-1">
+          <div className="card-header">
+            <span className="card-title">{resultTitle}</span>
+          </div>
+          <pre className="ai-result">{resultText}</pre>
+          <div className="form-actions">
+            <button className="btn btn-primary" onClick={handleCopyResult}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'Copied!' : 'Copy to Notion'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeMsg && (
         <div className="ai-toast mt-1">
@@ -226,15 +300,15 @@ export default function AIAssistant() {
       <div className="card mt-2">
         <div className="card-title" style={{ marginBottom: '0.6rem' }}>What connects here</div>
         <ul className="plan-list" style={{ lineHeight: 1.8 }}>
-          <li>AI service boundary for future natural language planning</li>
+          <li>Gemini daily plan generation through the existing planner endpoint</li>
+          <li>Gemini or local fallback summaries and unfinished task reviews</li>
           <li>Gmail service boundary for future bill and work-lead extraction</li>
-          <li>Google Calendar service boundary for future commitment import</li>
+          <li>Google Calendar read-only commitment import</li>
           <li>Notion service boundary for future direct plan export</li>
-          <li>Manual paste workflows remain available now</li>
+          <li>Copy-to-Notion Markdown workflows remain available now</li>
         </ul>
         <p className="text-xs text-muted mt-sm" style={{ lineHeight: 1.6 }}>
-          Current behavior is local-only. Service functions return "Integration not connected yet"
-          until real API auth and backend handling are added.
+          Gmail and Notion actions still use manual workflows until those APIs are connected.
         </p>
       </div>
 

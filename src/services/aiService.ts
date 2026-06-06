@@ -1,9 +1,13 @@
 import type {
   ExtractedBill,
   ExtractedWorkLead,
+  CalendarEvent,
   GeneratePlanContext,
   GeneratePlanResult,
+  GeneratedPlan,
   IntegrationResult,
+  Bill,
+  WorkOpportunity,
   Task,
 } from '../types'
 
@@ -62,16 +66,52 @@ export async function generatePlanWithAI(
   }
 }
 
-export async function summarizeToday(
-  _context: GeneratePlanContext,
+interface SummaryContext {
+  plan: GeneratedPlan | null
+  tasks: Task[]
+  bills: Bill[]
+  opportunities: WorkOpportunity[]
+  calendarEvents: CalendarEvent[]
+}
+
+async function runSummaryAction(
+  mode: 'summary' | 'review',
+  context: SummaryContext,
 ): Promise<IntegrationResult<string>> {
-  return notConnected<string>()
+  try {
+    const response = await fetch('/api/summarise-today', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, context }),
+    })
+    const result = (await response.json()) as IntegrationResult<string>
+    if (!response.ok || !result.success || !result.data) {
+      return {
+        success: false,
+        message: result.message || 'AI action unavailable',
+        data: null,
+      }
+    }
+    return result
+  } catch {
+    return {
+      success: false,
+      message: 'AI action unavailable',
+      data: null,
+    }
+  }
+}
+
+export async function summarizeToday(
+  context: SummaryContext,
+): Promise<IntegrationResult<string>> {
+  return runSummaryAction('summary', context)
 }
 
 export async function reviewUnfinishedTasks(
-  _tasks: Task[],
-): Promise<IntegrationResult<string[]>> {
-  return notConnected<string[]>()
+  context: SummaryContext,
+): Promise<IntegrationResult<string>> {
+  return runSummaryAction('review', context)
 }
 
 export async function extractBillsFromText(

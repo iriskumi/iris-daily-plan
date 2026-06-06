@@ -1348,6 +1348,11 @@ body {
   background: var(--accent-bg);
 }
 
+.ai-btn:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .ai-btn-icon {
   width: 34px;
   height: 34px;
@@ -1392,6 +1397,20 @@ body {
   font-size: 0.82rem;
   color: var(--text-3);
   line-height: 1.6;
+}
+
+.ai-result {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  max-height: 320px;
+  overflow-y: auto;
+  line-height: 1.7;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
 }
 
 .calendar-integration-card {

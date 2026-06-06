@@ -148,7 +148,7 @@ export default function App() {
             onGoToCheckin={() => setTab('checkin')}
           />
         )}
-        {tab === 'ai' && <AIAssistant />}
+        {tab === 'ai' && <AIAssistant onGeneratePlan={handleGeneratePlan} />}
         {tab === 'settings' && <Settings />}
       </main>
     </div>
