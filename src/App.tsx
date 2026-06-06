@@ -58,16 +58,28 @@ export default function App() {
     const context = loadGeneratePlanContext()
     if (!context) return
     const aiResult = await generatePlanWithAI(context)
-    const generated = aiResult.data ?? planAssembly(
-      context.checkin,
-      context.tasks,
-      context.opportunities,
-      context.bills,
-      new Date(),
-      {
-        defaultRecoveryBlockEnabled: context.settings.defaultRecoveryBlockEnabled,
-      },
-    )
+    const generated = aiResult.data
+      ? {
+          ...aiResult.data,
+          provider: aiResult.provider,
+          aiUsed: aiResult.aiUsed,
+          fallbackReason: aiResult.fallbackReason,
+        }
+      : {
+          ...planAssembly(
+            context.checkin,
+            context.tasks,
+            context.opportunities,
+            context.bills,
+            new Date(),
+            {
+              defaultRecoveryBlockEnabled: context.settings.defaultRecoveryBlockEnabled,
+            },
+          ),
+          provider: 'rule-based' as const,
+          aiUsed: false,
+          fallbackReason: aiResult.fallbackReason || aiResult.message,
+        }
     savePlan(generated)
     setPlan(generated)
     setTab('plan')

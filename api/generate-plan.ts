@@ -1,9 +1,12 @@
+/// <reference types="node" />
+
 import type {
   GeneratedPlan,
   GeneratePlanContext,
   GeneratePlanResult,
+  PlanProvider,
   TimeBlock,
-} from '../src/types'
+} from '../src/types.js'
 
 interface VercelRequest {
   method?: string
@@ -111,6 +114,31 @@ interface ProviderConfig {
 
 function sendJson(res: VercelResponse, body: GeneratePlanResult, status = 200): void {
   res.status(status).json(body)
+}
+
+function fallbackResult(message: string): GeneratePlanResult {
+  return {
+    success: false,
+    message,
+    data: null,
+    provider: 'rule-based',
+    aiUsed: false,
+    fallbackReason: message,
+  }
+}
+
+function successResult(provider: Exclude<PlanProvider, 'rule-based'>, plan: GeneratedPlan): GeneratePlanResult {
+  return {
+    success: true,
+    message: `Generated plan with ${provider}`,
+    data: {
+      ...plan,
+      provider,
+      aiUsed: true,
+    },
+    provider,
+    aiUsed: true,
+  }
 }
 
 function getProviderConfig(): ProviderConfig | null {
@@ -420,22 +448,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   if (req.method !== 'POST') {
-    sendJson(res, {
-      success: false,
-      message: 'Method not allowed; using local planner fallback',
-      data: null,
-    }, 405)
+    sendJson(res, fallbackResult('Method not allowed; using local planner fallback'), 405)
     return
   }
 
   const providerConfig = getProviderConfig()
   if (!providerConfig) {
-    sendJson(res, {
-      success: false,
-      message:
-        'No valid AI provider key found. Set AI_PROVIDER=openai with OPENAI_API_KEY, AI_PROVIDER=deepseek with DEEPSEEK_API_KEY, or AI_PROVIDER=gemini with GEMINI_API_KEY; using local planner fallback',
-      data: null,
-    })
+    sendJson(res, fallbackResult('No valid AI provider key found. Set AI_PROVIDER=openai with OPENAI_API_KEY, AI_PROVIDER=deepseek with DEEPSEEK_API_KEY, or AI_PROVIDER=gemini with GEMINI_API_KEY; using local planner fallback'))
     return
   }
 
@@ -443,31 +462,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const body = getBody(req)
     if (!isContext(body)) {
-      sendJson(res, {
-        success: false,
-        message: 'Invalid planning context; using local planner fallback',
-        data: null,
-      }, 400)
+      sendJson(res, fallbackResult('Invalid planning context; using local planner fallback'), 400)
       return
     }
     requestContext = body
   } catch {
-    sendJson(res, {
-      success: false,
-      message: 'Could not read planning context; using local planner fallback',
-      data: null,
-    }, 400)
+    sendJson(res, fallbackResult('Could not read planning context; using local planner fallback'), 400)
     return
   }
 
   const aiResponse = await callAiProvider(providerConfig, requestContext)
 
   if (!aiResponse.ok) {
-    sendJson(res, {
-      success: false,
-      message: `${providerConfig.provider} API returned ${aiResponse.status}; using local planner fallback`,
-      data: null,
-    })
+    sendJson(res, fallbackResult(`${providerConfig.provider} API returned ${aiResponse.status}; using local planner fallback`))
     return
   }
 
@@ -475,35 +482,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const payload = (await aiResponse.json()) as unknown
     const outputText = extractOutputText(payload)
     if (!outputText) {
-      sendJson(res, {
-        success: false,
-        message: `${providerConfig.provider} response had no plan output; using local planner fallback`,
-        data: null,
-      })
+      sendJson(res, fallbackResult(`${providerConfig.provider} response had no plan output; using local planner fallback`))
       return
     }
 
     const rawPlan = JSON.parse(outputText) as unknown
     const plan = normalizePlan(rawPlan, requestContext)
     if (!plan) {
-      sendJson(res, {
-        success: false,
-        message: `${providerConfig.provider} response did not match GeneratedPlan shape; using local planner fallback`,
-        data: null,
-      })
+      sendJson(res, fallbackResult(`${providerConfig.provider} response did not match GeneratedPlan shape; using local planner fallback`))
       return
     }
 
-    sendJson(res, {
-      success: true,
-      message: `Generated plan with ${providerConfig.provider}`,
-      data: plan,
-    })
+    sendJson(res, successResult(providerConfig.provider, plan))
   } catch {
-    sendJson(res, {
-      success: false,
-      message: `Could not parse ${providerConfig.provider} plan; using local planner fallback`,
-      data: null,
-    })
+    sendJson(res, fallbackResult(`Could not parse ${providerConfig.provider} plan; using local planner fallback`))
   }
 }

@@ -23,6 +23,13 @@ const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
   shutdown: <LogOut size={13} />,
 }
 
+function getPlanSourceLabel(plan: GeneratedPlan): string {
+  if (plan.aiUsed && plan.provider === 'gemini') return 'AI: Gemini'
+  if (plan.aiUsed && plan.provider === 'deepseek') return 'AI: DeepSeek'
+  if (plan.aiUsed && plan.provider === 'openai') return 'AI: OpenAI'
+  return 'Rule-based fallback'
+}
+
 interface Props {
   plan: GeneratedPlan | null
   onGenerate: () => void
@@ -72,6 +79,7 @@ export default function DailyPlanView({ plan, onGenerate, onGoToCheckin }: Props
     hour: '2-digit',
     minute: '2-digit',
   })
+  const sourceLabel = getPlanSourceLabel(plan)
 
   return (
     <div className="page">
@@ -80,6 +88,12 @@ export default function DailyPlanView({ plan, onGenerate, onGoToCheckin }: Props
         <div className="plan-date-label">{planDate}</div>
         <div className="plan-theme">{plan.theme}</div>
         <div className="plan-meta">Generated at {generatedTime}</div>
+        <div
+          className={`plan-source-badge ${plan.aiUsed ? 'ai' : 'fallback'}`}
+          title={plan.fallbackReason}
+        >
+          {sourceLabel}
+        </div>
       </div>
 
       {/* Top 3 Priorities */}

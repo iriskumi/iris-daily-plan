@@ -119,6 +119,8 @@ export interface TimeBlock {
   items: string[]
 }
 
+export type PlanProvider = 'gemini' | 'deepseek' | 'openai' | 'rule-based'
+
 export interface GeneratedPlan {
   date: string
   theme: string
@@ -132,6 +134,9 @@ export interface GeneratedPlan {
   minimumViableDay: string[]
   notionMarkdown: string
   generatedAt: string
+  provider?: PlanProvider
+  aiUsed?: boolean
+  fallbackReason?: string
 }
 
 export interface AppSettings {
@@ -209,4 +214,8 @@ export interface GeneratePlanContext {
   settings: AppSettings
 }
 
-export type GeneratePlanResult = IntegrationResult<GeneratedPlan>
+export type GeneratePlanResult = IntegrationResult<GeneratedPlan> & {
+  provider: PlanProvider
+  aiUsed: boolean
+  fallbackReason?: string
+}

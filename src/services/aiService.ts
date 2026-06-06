@@ -24,28 +24,40 @@ export async function generatePlanWithAI(
     })
 
     if (!response.ok) {
+      const message = `AI plan API returned ${response.status}; using local planner fallback`
       return {
         success: false,
-        message: `AI plan API returned ${response.status}; using local planner fallback`,
+        message,
         data: null,
+        provider: 'rule-based',
+        aiUsed: false,
+        fallbackReason: message,
       }
     }
 
     const result = (await response.json()) as GeneratePlanResult
     if (!result.success || !result.data) {
+      const message = result.message || 'AI plan integration unavailable; using local planner fallback'
       return {
         success: false,
-        message: result.message || 'AI plan integration unavailable; using local planner fallback',
+        message,
         data: null,
+        provider: 'rule-based',
+        aiUsed: false,
+        fallbackReason: result.fallbackReason || message,
       }
     }
 
     return result
   } catch {
+    const message = 'AI plan API unavailable; using local planner fallback'
     return {
       success: false,
-      message: 'AI plan API unavailable; using local planner fallback',
+      message,
       data: null,
+      provider: 'rule-based',
+      aiUsed: false,
+      fallbackReason: message,
     }
   }
 }
