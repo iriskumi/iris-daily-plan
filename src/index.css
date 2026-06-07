@@ -13,11 +13,11 @@
   --border: #EFE8DF;
   --border-strong: #DDD3C5;
 
-  --text: #2E2218;
-  --text-2: #5A4F44;
-  --text-3: #8C7F72;
-  --text-hint: #8C7F72;
-  --section-label: #B8AB9D;
+  --text: #241A12;
+  --text-2: #463A30;
+  --text-3: #75685C;
+  --text-hint: #75685C;
+  --section-label: #9E9082;
 
   --accent: #B8904E;
   --accent-2: #3D3028;
@@ -59,7 +59,7 @@
 }
 
 html {
-  font-size: 14px;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -138,7 +138,7 @@ body {
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #8C7F72;
   white-space: nowrap;
@@ -216,7 +216,7 @@ body {
 }
 
 .page-subtitle {
-  font-size: 13px;
+  font-size: 14px;
   color: #5A4F44;
   font-weight: 400;
 }
@@ -306,7 +306,7 @@ body {
   padding: 0.68rem 0.8rem;
   border: 1px solid #DDD5C8;
   border-radius: 12px;
-  font-size: 13px;
+  font-size: 14px;
   font-family: var(--font);
   font-weight: 300;
   color: #5A4F44;
@@ -429,7 +429,7 @@ body {
 }
 
 .energy-option-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -533,7 +533,7 @@ body {
   gap: 0.4rem;
   padding: 10px 20px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   font-family: var(--font);
   letter-spacing: 0.06em;
@@ -629,7 +629,7 @@ body {
 .btn-generate {
   background: #B8904E;
   color: #FFFCF9;
-  font-size: 13px;
+  font-size: 14px;
   padding: 10px 20px;
   border-radius: 10px;
   border: none;
@@ -874,7 +874,7 @@ body {
 }
 
 .task-next-action {
-  font-size: 13px;
+  font-size: 14px;
   color: #3D3028;
   font-weight: 400;
   margin-top: 0.2rem;
@@ -1198,7 +1198,7 @@ body {
   border-radius: 10px;
   color: var(--accent-2);
   padding: 0.55rem 0.65rem;
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -1249,7 +1249,7 @@ body {
 }
 
 .top3-action {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-3);
   line-height: 1.4;
 }
@@ -1272,7 +1272,7 @@ body {
   padding: 0.65rem 1rem;
   background: var(--surface-2);
   border-bottom: 0.5px solid var(--border);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text);
   display: flex;
@@ -1364,7 +1364,7 @@ body {
 }
 
 .time-block-body li {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-3);
   padding: 0.18rem 0;
   list-style: none;
@@ -1447,7 +1447,7 @@ body {
 }
 
 .plan-list li {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-3);
   padding: 0.18rem 0;
   list-style: none;
@@ -1481,7 +1481,7 @@ body {
 }
 
 .plan-mvd li {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--accent-2);
   padding: 0.18rem 0;
   list-style: none;
@@ -1901,7 +1901,7 @@ body {
 }
 
 .empty-state p {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -1963,15 +1963,15 @@ body {
 }
 
 .text-sm {
-  font-size: 0.82rem;
+  font-size: 0.86rem;
 }
 
 .text-xs {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .text-muted {
-  color: #5A4F44;
+  color: var(--text-2);
 }
 
 .text-accent {
@@ -2361,7 +2361,7 @@ body {
 }
 
 .task-checklist li {
-  font-size: 13px;
+  font-size: 14px;
   color: #5A4F44;
   font-weight: 400;
   padding: 0.1rem 0;
