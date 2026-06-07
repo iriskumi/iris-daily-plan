@@ -13,10 +13,26 @@ import {
   CreditCard,
   XCircle,
   Shield,
+  BookOpen,
 } from 'lucide-react'
 import type { DailyLog, GeneratedPlan, TimeBlock } from '../types'
-import { loadDailyLog, loadFocusSessions, saveDailyLog } from '../storage'
+import {
+  loadBills,
+  loadCalendarEvents,
+  loadDailyLog,
+  loadFocusSessions,
+  loadOpportunities,
+  loadTasks,
+  saveDailyLog,
+  saveTasks,
+} from '../storage'
 import { formatFocusStatsMarkdown, getFocusStats } from '../focus'
+import {
+  formatCarryOverSuggestions,
+  getCarryOverSuggestions,
+  getRealityCheck,
+} from '../productivity'
+import { exportPlanToNotion } from '../services/notionService'
 import FocusGarden from './FocusGarden'
 
 const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
@@ -92,11 +108,21 @@ interface Props {
   onGenerate: () => void
   onRegenerate: (feedback: string) => void
   onGoToCheckin: () => void
+  onReducePlan: () => void
 }
 
-export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCheckin }: Props) {
+export default function DailyPlanView({
+  plan,
+  onGenerate,
+  onRegenerate,
+  onGoToCheckin,
+  onReducePlan,
+}: Props) {
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [notionStatus, setNotionStatus] = useState<string | null>(null)
+  const [notionUrl, setNotionUrl] = useState<string | null>(null)
+  const [pushingNotion, setPushingNotion] = useState(false)
   const [dailyLog, setDailyLog] = useState<DailyLog | null>(() =>
     plan ? loadDailyLog(plan.date) : null,
   )
@@ -108,6 +134,11 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
   const markdownForCopy = useMemo(() => {
     if (!plan) return ''
     return planMarkdownWithDailyLog(plan, dailyLog ?? loadDailyLog(plan.date))
+  }, [plan, dailyLog])
+
+  const carryOverSuggestions = useMemo(() => {
+    if (!plan) return []
+    return getCarryOverSuggestions(loadTasks(), dailyLog ?? loadDailyLog(plan.date))
   }, [plan, dailyLog])
 
   async function handleCopy() {
@@ -131,6 +162,58 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
     const trimmed = feedback.trim()
     if (!trimmed) return
     onRegenerate(trimmed)
+  }
+
+  async function handlePushNotion() {
+    if (!plan) return
+    setPushingNotion(true)
+    setNotionStatus(null)
+    setNotionUrl(null)
+    const result = await exportPlanToNotion(
+      plan,
+      dailyLog ?? loadDailyLog(plan.date),
+      getFocusStats(loadFocusSessions()),
+      {
+        tasks: loadTasks(),
+        calendarEvents: loadCalendarEvents(),
+        opportunities: loadOpportunities(),
+        bills: loadBills(),
+        markdown: markdownForCopy,
+      },
+    )
+    setPushingNotion(false)
+    setNotionStatus(result.message)
+    setNotionUrl(result.data?.pageUrl ?? null)
+  }
+
+  function handleApplyCarryOverSuggestions() {
+    if (!dailyLog) return
+    const suggestions = getCarryOverSuggestions(loadTasks(), dailyLog)
+    const updatedTasks = loadTasks().map(task => {
+      const suggestion = suggestions.find(item => item.taskId === task.id)
+      if (!suggestion) return task
+      if (suggestion.classification === 'reduce') {
+        return {
+          ...task,
+          estimatedMinutes: Math.min(task.estimatedMinutes, 25),
+          nextAction: suggestion.suggestedAction,
+        }
+      }
+      if (suggestion.classification === 'postpone') {
+        return { ...task, urgency: 'low' as const }
+      }
+      if (suggestion.classification === 'delete-ignore') {
+        return { ...task, done: true }
+      }
+      return task
+    })
+    saveTasks(updatedTasks)
+    const updatedLog = {
+      ...dailyLog,
+      carryOverToTomorrow: formatCarryOverSuggestions(suggestions),
+    }
+    setDailyLog(updatedLog)
+    saveDailyLog(updatedLog)
   }
 
   if (!plan) {
@@ -170,6 +253,7 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
   const log = dailyLog ?? loadDailyLog(plan.date)
   const isStalePlan = plan.date < todayString()
   const focusStats = getFocusStats(loadFocusSessions())
+  const realityCheck = getRealityCheck(plan)
 
   return (
     <div className="page">
@@ -195,6 +279,33 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
         <div className="plan-theme">{plan.theme}</div>
         <div className="plan-meta">Generated at {generatedTime}</div>
       </div>
+
+      {realityCheck && (
+        <div className={`reality-card ${realityCheck.load === 'Too much' ? 'too-much' : ''}`}>
+          <div>
+            <div className="plan-section-title">Reality Check</div>
+            <div className="reality-load">Today load: {realityCheck.load}</div>
+            <div className="reality-meta">
+              {realityCheck.estimatedFocusBlocks} focus blocks · {realityCheck.estimatedFocusMinutes} focus minutes
+            </div>
+            <ul className="plan-list">
+              {realityCheck.riskNotes.map(note => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="reality-actions">
+            {realityCheck.load === 'Too much' && (
+              <button className="btn btn-primary" onClick={onReducePlan}>
+                Reduce plan
+              </button>
+            )}
+            <button className="btn btn-secondary" onClick={onReducePlan}>
+              Low Energy Mode
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Top 3 Priorities */}
       {plan.top3.length > 0 && (
@@ -273,7 +384,7 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
       <div className="plan-section">
         <div className="plan-section-title">
           <Briefcase size={12} />
-          Work / Consulting leads to check
+          Work reminders
         </div>
         <div className="card" style={{ padding: '0.875rem 1rem' }}>
           {plan.workLeadsToday.length > 0 ? (
@@ -383,15 +494,37 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
               style={{ minHeight: 88 }}
             />
           </div>
+          {carryOverSuggestions.length > 0 && (
+            <div className="carryover-review">
+              <div className="plan-section-title">Carry-over suggestions</div>
+              <div className="carryover-list">
+                {carryOverSuggestions.map(item => (
+                  <div key={item.taskId} className="carryover-item">
+                    <span className="carryover-type">{item.classification.replace('-', ' / ')}</span>
+                    <span className="carryover-title">{item.taskTitle}</span>
+                    <span className="carryover-reason">{item.reason}</span>
+                    <span className="carryover-action">{item.suggestedAction}</span>
+                  </div>
+                ))}
+              </div>
+              <button className="btn btn-secondary" onClick={handleApplyCarryOverSuggestions}>
+                Apply carry-over suggestions
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Copy to Notion */}
       <div className="plan-section">
-        <div className="plan-section-title">Copy to Notion</div>
+        <div className="plan-section-title">Notion Daily Log</div>
         <div className="notion-export-card">
           <pre className="notion-preview">{markdownForCopy}</pre>
           <div className="flex gap-sm">
+            <button className="btn btn-primary" onClick={handlePushNotion} disabled={pushingNotion}>
+              <BookOpen size={14} />
+              {pushingNotion ? 'Pushing...' : 'Push Daily Log to Notion'}
+            </button>
             <button className="btn btn-primary" onClick={handleCopy}>
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'Copied!' : 'Copy Markdown'}
@@ -401,6 +534,19 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
               Re-generate
             </button>
           </div>
+          {notionStatus && (
+            <div className="notion-status">
+              {notionStatus}
+              {notionUrl && (
+                <>
+                  {' '}
+                  <a href={notionUrl} target="_blank" rel="noreferrer">
+                    Open Notion page
+                  </a>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

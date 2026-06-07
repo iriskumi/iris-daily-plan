@@ -31,10 +31,12 @@ import {
   loadPlan,
   loadTasks,
   saveCalendarEvents,
+  saveDailyLog,
   saveGoogleCalendarMeta,
   saveOpportunities,
 } from '../storage'
 import { getFocusStats } from '../focus'
+import { exportPlanToNotion } from '../services/notionService'
 import type {
   GmailScannedWorkLead,
   GoogleCalendarImportMeta,
@@ -95,10 +97,10 @@ const ACTIONS: AIAction[] = [
   {
     id: 'notion',
     icon: <BookOpen />,
-    title: 'Draft Notion plan',
-    desc: 'Integration not connected yet — Markdown copy still works',
+    title: 'Push Daily Log to Notion',
+    desc: 'Create one Notion Daily Log page for today',
     placeholder:
-      "Integration not connected yet. Use Today's Plan to copy Markdown manually, or connect Notion later.",
+      'Pushing Daily Log to Notion...',
   },
 ]
 
@@ -188,6 +190,15 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         setActiveMsg(response.message)
         return
       }
+      const plan = loadPlan()
+      const date = plan?.date ?? new Date().toISOString().slice(0, 10)
+      const log = loadDailyLog(date)
+      saveDailyLog({
+        ...log,
+        ...(action.id === 'summarise'
+          ? { eveningSummary: response.data }
+          : { unfinishedReview: response.data }),
+      })
       setResultTitle(action.id === 'summarise' ? 'Today Summary' : 'Unfinished Task Review')
       setResultText(response.data)
       return
@@ -219,6 +230,32 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       )
       setActiveMsg(response.message)
       setGmailScanMsg(response.message)
+      return
+    }
+
+    if (action.id === 'notion') {
+      const plan = loadPlan()
+      if (!plan) {
+        setRunningAction(null)
+        setActiveMsg('Generate a daily plan before pushing a Notion Daily Log.')
+        return
+      }
+      const date = plan.date
+      const log = loadDailyLog(date)
+      const response = await exportPlanToNotion(
+        plan,
+        log,
+        getFocusStats(loadFocusSessions()),
+        {
+          tasks: loadTasks(),
+          calendarEvents: loadCalendarEvents(),
+          opportunities: loadOpportunities(),
+          bills: loadBills(),
+          markdown: plan.notionMarkdown,
+        },
+      )
+      setRunningAction(null)
+      setActiveMsg(response.data?.pageUrl ? `${response.message} ${response.data.pageUrl}` : response.message)
       return
     }
 
@@ -315,7 +352,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         </div>
         <p>
           Gemini planning is available when configured. Google Calendar can now be connected
-          read-only; Gmail and Notion remain manual placeholders.
+          read-only; Gmail scan and Notion Daily Log export are available when configured.
         </p>
       </div>
 
@@ -472,11 +509,11 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           <li>Gemini or local fallback summaries and unfinished task reviews</li>
           <li>Gmail service boundary for future bill and work-lead extraction</li>
           <li>Google Calendar read-only commitment import</li>
-          <li>Notion service boundary for future direct plan export</li>
+          <li>Notion Daily Log page creation from the current plan and reflection</li>
           <li>Copy-to-Notion Markdown workflows remain available now</li>
         </ul>
         <p className="text-xs text-muted mt-sm" style={{ lineHeight: 1.6 }}>
-          Gmail and Notion actions still use manual workflows until those APIs are connected.
+          Notion push requires NOTION_API_KEY and NOTION_DATABASE_ID in Vercel.
         </p>
       </div>
 

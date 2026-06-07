@@ -1382,6 +1382,19 @@ body {
   padding: 1rem 1.25rem;
 }
 
+.notion-status {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.notion-status a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
 .notion-preview {
   font-family: var(--font);
   font-size: 0.7rem;
@@ -1487,6 +1500,85 @@ body {
 .ai-btn-desc {
   font-size: 0.75rem;
   color: var(--text-3);
+}
+
+.reality-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.reality-card.too-much {
+  background: #FDF6EC;
+  border-color: #E8D5B0;
+}
+
+.reality-load {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.reality-meta {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  margin-bottom: 0.55rem;
+}
+
+.reality-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.carryover-review {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 0.5px solid var(--border);
+}
+
+.carryover-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.carryover-item {
+  display: grid;
+  grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
+  gap: 0.25rem 0.6rem;
+  padding: 0.65rem 0;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.carryover-type {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.carryover-title {
+  font-size: 0.86rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.carryover-reason,
+.carryover-action {
+  grid-column: 2;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-2);
 }
 
 .ai-toast {
@@ -1902,6 +1994,16 @@ body {
   transition: width 1s linear;
 }
 
+.pomo-distraction-note {
+  margin-top: 0.45rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+}
+
 .pomo-btn-row {
   display: flex;
   gap: 0.4rem;
@@ -2312,6 +2414,66 @@ body {
   padding-bottom: 0.25rem;
 }
 
+.start-today-card,
+.next-action-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.start-today-card h3,
+.next-action-card h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+
+.start-today-card p,
+.next-action-card p {
+  font-size: 0.84rem;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.start-flow-steps {
+  display: grid;
+  gap: 0.35rem;
+  margin: -0.25rem 0 1rem;
+}
+
+.start-flow-step {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.next-action-time {
+  display: inline-flex;
+  margin-top: 0.45rem;
+  padding: 0.18rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+
+.next-action-focus {
+  min-width: 190px;
+}
+
+.next-action-focus .pomo-box {
+  margin-top: 0.6rem;
+}
+
 .command-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2404,6 +2566,28 @@ body {
   padding: 1rem;
 }
 
+.light-reminder-list {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem 1rem 0;
+}
+
+.light-reminder-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+
+.light-reminder-item span:first-child {
+  color: var(--text);
+  font-weight: 500;
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 600px) {
   .page {
@@ -2460,6 +2644,20 @@ body {
 
   .command-grid {
     grid-template-columns: 1fr;
+  }
+
+  .start-today-card,
+  .next-action-card,
+  .reality-card {
+    grid-template-columns: 1fr;
+  }
+
+  .reality-actions {
+    justify-content: flex-start;
+  }
+
+  .next-action-focus {
+    min-width: 0;
   }
 
   .subnav-shell {

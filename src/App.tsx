@@ -10,19 +10,35 @@ import {
   LayoutTemplate,
   Settings as SettingsIcon,
   ChevronRight,
+  Play,
 } from 'lucide-react'
 import type { GeneratedPlan, Bill, WorkOpportunity } from './types'
 import {
   loadBills,
+  loadCheckin,
   loadFocusSessions,
   loadOpportunities,
   loadPlan,
+  loadTasks,
+  loadDailyLog,
+  loadGoogleCalendarMeta,
+  saveCalendarEvents,
+  saveGoogleCalendarMeta,
   savePlan,
   loadGeneratePlanContext,
 } from './storage'
 import { getFocusStats } from './focus'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
+import { getGoogleCalendarStatus, importCalendarCommitments } from './services/calendarService'
+import {
+  formatCarryOverSuggestions,
+  getCarryOverSuggestions,
+  getNextAction,
+  getTodayBillReminders,
+  getTodayWorkReminders,
+  reducePlanForLowEnergy,
+} from './productivity'
 import DailyCheckin from './components/DailyCheckin'
 import TaskInbox from './components/TaskInbox'
 import WorkCollection from './components/WorkCollection'
@@ -32,6 +48,7 @@ import AIAssistant from './components/AIAssistant'
 import RecurringTemplates from './components/RecurringTemplates'
 import Settings from './components/Settings'
 import FocusGarden from './components/FocusGarden'
+import PomodoroTimer from './components/PomodoroTimer'
 import './index.css'
 
 type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
@@ -77,7 +94,11 @@ export default function App() {
     setFocusStats(getFocusStats(loadFocusSessions()))
   }
 
-  const handleGeneratePlan = async (feedback = '', originalPlan?: GeneratedPlan) => {
+  const handleGeneratePlan = async (
+    feedback = '',
+    originalPlan?: GeneratedPlan,
+    options: { stayOnTab?: boolean } = {},
+  ) => {
     const context = loadGeneratePlanContext()
     if (!context) return
     const feedbackContext = feedback.trim()
@@ -118,7 +139,14 @@ export default function App() {
         }
     savePlan(generated)
     setPlan(generated)
-    setTab('plan')
+    if (!options.stayOnTab) setTab('plan')
+  }
+
+  function handleLowEnergyMode() {
+    if (!plan) return
+    const reduced = reducePlanForLowEnergy(plan)
+    savePlan(reduced)
+    setPlan(reduced)
   }
 
   const today = new Date().toLocaleDateString('en-AU', {
@@ -178,6 +206,59 @@ export default function App() {
             focusStats={focusStats}
             onGenerate={handleGeneratePlan}
             onRemindersChange={refreshReminders}
+            currentPlan={plan}
+            onStartToday={async () => {
+              const steps: string[] = []
+              const meta = loadGoogleCalendarMeta()
+              if (meta.calendarConnected) {
+                const result = await importCalendarCommitments()
+                if (result.success && result.data) {
+                  saveCalendarEvents(result.data)
+                  const status = await getGoogleCalendarStatus()
+                  saveGoogleCalendarMeta({
+                    connected: true,
+                    calendarConnected: status.calendarConnected,
+                    gmailConnected: status.gmailConnected,
+                    accountEmail: status.accountEmail ?? meta.accountEmail,
+                    lastImportedAt: new Date().toISOString(),
+                    warning: status.warning ?? meta.warning,
+                  })
+                  steps.push('Calendar synced.')
+                } else {
+                  steps.push('Calendar sync skipped or unavailable.')
+                }
+              } else {
+                steps.push('Calendar not connected; kept local commitments.')
+              }
+
+              const checkin = loadCheckin()
+              steps.push(checkin ? 'Today check-in found.' : 'No check-in yet; use the check-in below.')
+
+              const yesterday = new Date()
+              yesterday.setDate(yesterday.getDate() - 1)
+              const yesterdayLog = loadDailyLog(yesterday.toISOString().slice(0, 10))
+              const suggestions = getCarryOverSuggestions(loadTasks(), yesterdayLog)
+              steps.push(
+                suggestions.length > 0
+                  ? `Loaded ${suggestions.length} carry-over suggestion${suggestions.length === 1 ? '' : 's'}.`
+                  : 'No carry-over backlog detected.',
+              )
+
+              if (checkin && (!plan || plan.date !== checkin.date)) {
+                await handleGeneratePlan(
+                  suggestions.length > 0
+                    ? `Start Today carry-over:\n${formatCarryOverSuggestions(suggestions)}`
+                    : '',
+                  undefined,
+                  { stayOnTab: true },
+                )
+                steps.push('Generated or refreshed today’s plan.')
+              } else {
+                steps.push('Today’s plan is already available.')
+              }
+
+              return steps
+            }}
           />
         )}
         {tab === 'plan' && (
@@ -186,6 +267,7 @@ export default function App() {
             onGenerate={handleGeneratePlan}
             onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
             onGoToCheckin={() => setTab('today')}
+            onReducePlan={handleLowEnergyMode}
           />
         )}
         {tab === 'tasks' && (
@@ -224,6 +306,8 @@ interface TodayCommandCentreProps {
   focusStats: ReturnType<typeof getFocusStats>
   onGenerate: () => void
   onRemindersChange: () => void
+  currentPlan: GeneratedPlan | null
+  onStartToday: () => Promise<string[]>
 }
 
 function TodayCommandCentre({
@@ -232,21 +316,88 @@ function TodayCommandCentre({
   focusStats,
   onGenerate,
   onRemindersChange,
+  currentPlan,
+  onStartToday,
 }: TodayCommandCentreProps) {
   const [expanded, setExpanded] = useState<'bills' | 'work' | null>(null)
+  const [startSteps, setStartSteps] = useState<string[]>([])
+  const [starting, setStarting] = useState(false)
+  const [showNextFocus, setShowNextFocus] = useState(false)
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
-  const applyTodayLeads = activeWorkLeads.filter(o => o.status === 'apply-today')
+  const workReminders = getTodayWorkReminders(activeWorkLeads)
+  const billReminders = getTodayBillReminders(urgentBills)
+  const nextAction = getNextAction(currentPlan)
+
+  async function handleStartToday() {
+    setStarting(true)
+    const steps = await onStartToday()
+    setStartSteps([...steps, `Next action: ${getNextAction(loadPlan()).title}`])
+    setStarting(false)
+  }
 
   return (
     <>
       <div className="page command-page">
         <div className="page-header">
           <h2 className="page-title">Today</h2>
-          <p className="page-subtitle">Check in, notice deadlines, then generate the plan.</p>
+          <p className="page-subtitle">Start the day, check the next action, then protect your energy.</p>
         </div>
 
         <FocusGarden stats={focusStats} />
+
+        <div className="start-today-card">
+          <div>
+            <div className="plan-section-title">Daily command centre</div>
+            <h3>Start Today</h3>
+            <p>Sync commitments, check carry-over, refresh the plan, and surface the first useful action.</p>
+          </div>
+          <button className="btn btn-primary" onClick={handleStartToday} disabled={starting}>
+            <Play size={14} />
+            {starting ? 'Starting...' : 'Start Today'}
+          </button>
+        </div>
+
+        {startSteps.length > 0 && (
+          <div className="start-flow-steps">
+            {startSteps.map(step => (
+              <div key={step} className="start-flow-step">{step}</div>
+            ))}
+          </div>
+        )}
+
+        <div className="next-action-card">
+          <div className="next-action-main">
+            <div className="plan-section-title">Next Action</div>
+            <h3>{nextAction.title}</h3>
+            <p>{nextAction.detail}</p>
+            {(nextAction.startTime || nextAction.endTime) && (
+              <div className="next-action-time">
+                {nextAction.startTime ?? '--'}-{nextAction.endTime ?? '--'}
+              </div>
+            )}
+          </div>
+          {nextAction.canStartFocus && (
+            <div className="next-action-focus">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowNextFocus(value => !value)}
+              >
+                {showNextFocus ? 'Hide Pomodoro' : 'Start Pomodoro'}
+              </button>
+              {showNextFocus && (
+                <PomodoroTimer
+                  pomodoroLength={nextAction.focusMinutes ?? 25}
+                  breakLength={5}
+                  sessions={1}
+                  taskId={nextAction.taskId}
+                  taskTitle={nextAction.taskTitle ?? nextAction.title}
+                  category={nextAction.category ?? 'cyber-study'}
+                />
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="command-grid">
           <button
@@ -273,12 +424,12 @@ function TodayCommandCentre({
           >
             <span className="command-card-icon"><Briefcase /></span>
             <span className="command-card-body">
-              <span className="command-card-title">Work leads</span>
+              <span className="command-card-title">Work reminders</span>
               <span className="command-card-text">
-                {applyTodayLeads.length > 0
-                  ? `${applyTodayLeads.length} apply today`
+                {workReminders.length > 0
+                  ? `${workReminders.length} to check`
                   : activeWorkLeads.length > 0
-                    ? `${activeWorkLeads.length} active`
+                    ? `${activeWorkLeads.length} light reminders`
                     : 'No active reminders'}
                 </span>
             </span>
@@ -288,12 +439,32 @@ function TodayCommandCentre({
 
         {expanded === 'bills' && (
           <div className="command-inline-manager">
+            {billReminders.length > 0 && (
+              <div className="light-reminder-list">
+                {billReminders.map(bill => (
+                  <div key={bill.id} className="light-reminder-item">
+                    <span>{bill.name}</span>
+                    <span>${bill.amount} · due {bill.dueDate}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <BillsFinance onBillsChange={onRemindersChange} />
           </div>
         )}
 
         {expanded === 'work' && (
           <div className="command-inline-manager">
+            {workReminders.length > 0 && (
+              <div className="light-reminder-list">
+                {workReminders.map(item => (
+                  <div key={item.id} className="light-reminder-item">
+                    <span>{item.title}</span>
+                    <span>{item.nextAction ?? item.source}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <WorkCollection onOpportunitiesChange={onRemindersChange} />
           </div>
         )}

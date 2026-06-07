@@ -42,7 +42,42 @@ export interface DailyLog {
   energyAfterDoing: string
   notes: string
   carryOverToTomorrow: string
+  eveningSummary?: string
+  unfinishedReview?: string
   updatedAt: string
+}
+
+export type CarryOverClassification =
+  | 'carry-over'
+  | 'reduce'
+  | 'postpone'
+  | 'delete-ignore'
+
+export interface CarryOverSuggestion {
+  taskId: string
+  taskTitle: string
+  classification: CarryOverClassification
+  reason: string
+  suggestedAction: string
+}
+
+export interface RealityCheck {
+  load: 'Light' | 'Reasonable' | 'Too much'
+  estimatedFocusBlocks: number
+  estimatedFocusMinutes: number
+  riskNotes: string[]
+}
+
+export interface NextAction {
+  title: string
+  detail: string
+  startTime?: string
+  endTime?: string
+  taskId?: string
+  taskTitle?: string
+  category?: TaskCategory
+  focusMinutes?: number
+  canStartFocus: boolean
 }
 
 export interface FocusSession {
@@ -238,6 +273,17 @@ export interface NotionExportResult {
   pageId?: string
   pageUrl?: string
   exportedAt?: string
+}
+
+export interface NotionDailyLogPayload {
+  plan: GeneratedPlan
+  dailyLog: DailyLog
+  focusStats: FocusStats
+  tasks: Task[]
+  calendarEvents: CalendarEvent[]
+  opportunities: WorkOpportunity[]
+  bills: Bill[]
+  markdown: string
 }
 
 export interface IntegrationResult<T> {

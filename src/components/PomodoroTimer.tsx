@@ -33,6 +33,8 @@ export default function PomodoroTimer({
   const [timeLeft, setTimeLeft] = useState(pomodoroLength * 60)
   const [running, setRunning] = useState(false)
   const [sessionsCompleted, setSessionsCompleted] = useState(0)
+  const [distractionCount, setDistractionCount] = useState(0)
+  const [distractionMsg, setDistractionMsg] = useState<string | null>(null)
   const [focusStats, setFocusStats] = useState<FocusStats>(() =>
     getFocusStats(loadFocusSessions()),
   )
@@ -40,12 +42,30 @@ export default function PomodoroTimer({
   const phaseRef = useRef(phase)
   const sessionsRef = useRef(sessionsCompleted)
   const sessionsTargetRef = useRef(sessions)
+  const distractionRef = useRef(distractionCount)
 
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { sessionsRef.current = sessionsCompleted }, [sessionsCompleted])
   useEffect(() => { sessionsTargetRef.current = sessions }, [sessions])
+  useEffect(() => { distractionRef.current = distractionCount }, [distractionCount])
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden && running && phaseRef.current === 'focus') {
+        setRunning(false)
+        setDistractionCount(count => count + 1)
+        setDistractionMsg('Focus paused after leaving the page. You can resume once; repeated distractions will not count for the garden.')
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [running])
 
   function recordFocusSession() {
+    if (distractionRef.current > 1) {
+      setDistractionMsg('Session completed, but repeated distractions mean it will not count toward Focus Garden.')
+      return
+    }
     const completedAt = new Date()
     const next = addFocusSession({
       id: crypto.randomUUID(),
@@ -100,6 +120,8 @@ export default function PomodoroTimer({
   function startFocus() {
     setPhase('focus')
     setTimeLeft(pomodoroLength * 60)
+    setDistractionCount(0)
+    setDistractionMsg(null)
     setRunning(true)
   }
 
@@ -114,6 +136,8 @@ export default function PomodoroTimer({
     setPhase('idle')
     setTimeLeft(pomodoroLength * 60)
     setSessionsCompleted(0)
+    setDistractionCount(0)
+    setDistractionMsg(null)
   }
 
   if (phase === 'all-done') {
@@ -186,6 +210,9 @@ export default function PomodoroTimer({
           <div className="pomo-progress-bar">
             <div className="pomo-progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
+          {distractionMsg && (
+            <div className="pomo-distraction-note">{distractionMsg}</div>
+          )}
         </>
       )}
 
