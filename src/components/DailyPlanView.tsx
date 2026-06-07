@@ -19,6 +19,7 @@ import type { DailyLog, GeneratedPlan, TimeBlock } from '../types'
 import {
   loadBills,
   loadCalendarEvents,
+  loadCheckin,
   loadDailyLog,
   loadFocusSessions,
   loadOpportunities,
@@ -174,6 +175,7 @@ export default function DailyPlanView({
       dailyLog ?? loadDailyLog(plan.date),
       getFocusStats(loadFocusSessions()),
       {
+        checkin: loadCheckin(),
         tasks: loadTasks(),
         calendarEvents: loadCalendarEvents(),
         opportunities: loadOpportunities(),

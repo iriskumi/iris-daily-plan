@@ -279,6 +279,7 @@ export interface NotionDailyLogPayload {
   plan: GeneratedPlan
   dailyLog: DailyLog
   focusStats: FocusStats
+  checkin?: DailyCheckin | null
   tasks: Task[]
   calendarEvents: CalendarEvent[]
   opportunities: WorkOpportunity[]

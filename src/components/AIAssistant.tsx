@@ -23,6 +23,7 @@ import {
 import {
   loadBills,
   loadCalendarEvents,
+  loadCheckin,
   loadDailyLog,
   loadFocusSessions,
   loadGoogleCalendarMeta,
@@ -192,14 +193,35 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       const plan = loadPlan()
       const date = plan?.date ?? new Date().toISOString().slice(0, 10)
       const log = loadDailyLog(date)
-      saveDailyLog({
+      const updatedLog = {
         ...log,
         ...(action.id === 'summarise'
           ? { eveningSummary: response.data }
           : { unfinishedReview: response.data }),
-      })
+      }
+      saveDailyLog(updatedLog)
       setResultTitle(action.id === 'summarise' ? 'Today Summary' : 'Unfinished Task Review')
       setResultText(response.data)
+      if (action.id === 'summarise' && plan) {
+        const notionResult = await exportPlanToNotion(
+          plan,
+          updatedLog,
+          getFocusStats(loadFocusSessions()),
+          {
+            checkin: loadCheckin(),
+            tasks: loadTasks(),
+            calendarEvents: loadCalendarEvents(),
+            opportunities: loadOpportunities(),
+            bills: loadBills(),
+            markdown: plan.notionMarkdown,
+          },
+        )
+        setActiveMsg(
+          notionResult.data?.pageUrl
+            ? `${notionResult.message} ${notionResult.data.pageUrl}`
+            : notionResult.message,
+        )
+      }
       return
     }
 
@@ -246,6 +268,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         log,
         getFocusStats(loadFocusSessions()),
         {
+          checkin: loadCheckin(),
           tasks: loadTasks(),
           calendarEvents: loadCalendarEvents(),
           opportunities: loadOpportunities(),
