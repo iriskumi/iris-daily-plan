@@ -75,9 +75,9 @@ export default function DailyCheckin({ onGenerate }: Props) {
   }
 
   const energyOptions: { value: EnergyLevel; label: string; desc: string }[] = [
-    { value: 'low', label: 'Low', desc: 'Foggy, tired, need rest' },
-    { value: 'medium', label: 'Medium', desc: 'Functional, steady pace' },
-    { value: 'high', label: 'High', desc: 'Sharp, ready to push' },
+    { value: 'low', label: 'Low', desc: 'Foggy, need rest' },
+    { value: 'medium', label: 'Medium', desc: 'Steady pace' },
+    { value: 'high', label: 'High', desc: 'Sharp, ready' },
   ]
 
   return (
@@ -92,7 +92,7 @@ export default function DailyCheckin({ onGenerate }: Props) {
       <div className="card">
         <div className="card-header">
           <div>
-            <span className="step-indicator">Step 1/4</span>
+            <span className="step-indicator">step 1 / 4</span>
             <span className="card-title">What kind of day is today?</span>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function DailyCheckin({ onGenerate }: Props) {
       <div className="card mt-1">
         <div className="card-header">
           <div>
-            <span className="step-indicator">Step 2/4</span>
+            <span className="step-indicator">step 2 / 4</span>
             <span className="card-title">Energy & Time</span>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function DailyCheckin({ onGenerate }: Props) {
       <div className="card mt-1">
         <div className="card-header">
           <div>
-            <span className="step-indicator">Step 3/4</span>
+            <span className="step-indicator">step 3 / 4</span>
             <span className="card-title">Today's Constraints</span>
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function DailyCheckin({ onGenerate }: Props) {
         </div>
 
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <div className="step-indicator step-indicator-inline">Step 4/4</div>
+          <div className="step-indicator step-indicator-inline">step 4 / 4</div>
           <label>Notes (body, mood, anything relevant)</label>
           <textarea
             placeholder="Feeling off, bad sleep, anxious about assessment, etc. This shapes the plan."

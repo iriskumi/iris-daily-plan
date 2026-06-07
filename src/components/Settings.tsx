@@ -167,7 +167,8 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="settings-toggle-list mt-1">
+        <div className="section-label mt-1">Schedule defaults</div>
+        <div className="settings-toggle-list">
           <label className="settings-toggle">
             <input
               type="checkbox"
@@ -203,10 +204,6 @@ export default function Settings() {
           </span>
         </div>
 
-        <div className={`integration-status ${calendarMeta.connected ? 'connected' : 'not-connected'}`}>
-          {calendarMeta.connected ? 'Connected' : 'Not Connected'}
-        </div>
-
         <div className="scope-status-list">
           <div className={`scope-status ${calendarMeta.calendarConnected ? 'connected' : 'not-connected'}`}>
             Calendar {calendarMeta.calendarConnected ? 'connected' : 'not connected'}
@@ -226,10 +223,6 @@ export default function Settings() {
             ? new Date(calendarMeta.lastImportedAt).toLocaleString('en-AU')
             : 'Never'}
         </div>
-
-        {calendarMeta.warning && (
-          <p className="text-xs text-muted calendar-storage-warning">{calendarMeta.warning}</p>
-        )}
 
         <div className="calendar-actions">
           <button className="btn btn-secondary" onClick={connectGoogleCalendar}>

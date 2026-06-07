@@ -430,7 +430,10 @@ export default function TaskInbox() {
 
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <span className="empty-state-emoji">✅</span>
+          <svg className="empty-state-check" viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="24" r="18" />
+            <path d="M16.5 24.5 21.5 29.5 32 18.5" />
+          </svg>
           <h3>
             {filter === 'done'
               ? 'Nothing completed yet'

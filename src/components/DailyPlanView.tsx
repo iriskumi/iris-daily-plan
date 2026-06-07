@@ -3,6 +3,7 @@ import {
   Copy,
   Check,
   Zap,
+  Sparkles,
   Sun,
   Cloud,
   Moon,
@@ -34,10 +35,14 @@ function getTimeBlockRange(block: TimeBlock): string | null {
 }
 
 function getPlanSourceLabel(plan: GeneratedPlan): string {
-  if (plan.aiUsed && plan.provider === 'gemini') return 'AI: Gemini'
-  if (plan.aiUsed && plan.provider === 'deepseek') return 'AI: DeepSeek'
-  if (plan.aiUsed && plan.provider === 'openai') return 'AI: OpenAI'
-  return 'Rule-based fallback'
+  if (plan.aiUsed && plan.provider === 'gemini') return 'Gemini'
+  if (plan.aiUsed && plan.provider === 'deepseek') return 'DeepSeek'
+  if (plan.aiUsed && plan.provider === 'openai') return 'OpenAI'
+  return 'Local'
+}
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 function logHasContent(log: DailyLog): boolean {
@@ -157,16 +162,23 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
   })
   const sourceLabel = getPlanSourceLabel(plan)
   const log = dailyLog ?? loadDailyLog(plan.date)
+  const isStalePlan = plan.date < todayString()
 
   return (
     <div className="page">
       <div className="page-header plan-page-header">
-        <h2 className="page-title">Daily Plan</h2>
-        <div className={`planner-source-panel ${plan.aiUsed ? 'ai' : 'fallback'}`}>
-          <div className="planner-source-text">Planner source: {sourceLabel}</div>
-          {plan.fallbackReason && (
-            <div className="planner-source-reason">{plan.fallbackReason}</div>
+        <div>
+          <h2 className="page-title">Daily Plan</h2>
+          {isStalePlan && (
+            <div className="stale-plan-warning">
+              <span>This plan is from yesterday — regenerate for today?</span>
+              <button onClick={onGenerate}>Regenerate</button>
+            </div>
           )}
+        </div>
+        <div className="plan-source-pill">
+          <Sparkles size={11} />
+          {sourceLabel}
         </div>
       </div>
 
@@ -187,7 +199,7 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
           <div className="top3-list">
             {plan.top3.map((item, i) => (
               <div key={i} className="top3-item">
-                <div className="top3-num">Priority {i + 1}</div>
+                <div className="top3-num">priority {i + 1}</div>
                 <div className="top3-task">{item.task}</div>
                 <div className="top3-action">{item.nextAction}</div>
               </div>

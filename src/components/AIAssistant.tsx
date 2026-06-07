@@ -111,7 +111,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
   const [calendarMeta, setCalendarMeta] = useState<GoogleCalendarImportMeta>(() =>
     loadGoogleCalendarMeta(),
   )
-  const [calendarMessage, setCalendarMessage] = useState('Google Calendar not connected')
   const [importingCalendar, setImportingCalendar] = useState(false)
 
   useEffect(() => {
@@ -120,12 +119,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
 
   function googleScopeLine(meta: GoogleCalendarImportMeta): string {
     return `Calendar: ${meta.calendarConnected ? 'connected' : 'not connected'} · Gmail: ${meta.gmailConnected ? 'connected' : 'not connected'}`
-  }
-
-  function messageForGoogleStatus(status: GoogleCalendarImportMeta): string {
-    if (status.gmailConnected) return 'Google Calendar and Gmail connected'
-    if (status.connected) return 'Google Calendar connected. Gmail may need reconnect.'
-    return 'Google Calendar not connected'
   }
 
   async function refreshGoogleStatus(): Promise<GoogleCalendarImportMeta> {
@@ -140,7 +133,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     }
     setCalendarMeta(next)
     saveGoogleCalendarMeta(next)
-    setCalendarMessage(messageForGoogleStatus(next))
     return next
   }
 
@@ -275,7 +267,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       }
       setCalendarMeta(next)
       saveGoogleCalendarMeta(next)
-      setCalendarMessage(result.message || 'Google Calendar not connected')
       return
     }
 
@@ -292,7 +283,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     saveCalendarEvents(result.data)
     saveGoogleCalendarMeta(next)
     setCalendarMeta(next)
-    setCalendarMessage(result.message)
   }
 
   return (
@@ -318,9 +308,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           <CalendarDays size={14} />
           Google Calendar
         </div>
-        <div className={`integration-status ${calendarMeta.connected ? 'connected' : 'not-connected'}`}>
-          {calendarMessage}
-        </div>
         <div className="scope-status-list">
           <div className={`scope-status ${calendarMeta.calendarConnected ? 'connected' : 'not-connected'}`}>
             Calendar {calendarMeta.calendarConnected ? 'connected' : 'not connected'}
@@ -336,9 +323,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         )}
         {calendarMeta.accountEmail && (
           <div className="text-xs text-muted">Account: {calendarMeta.accountEmail}</div>
-        )}
-        {calendarMeta.warning && (
-          <p className="text-xs text-muted calendar-storage-warning">{calendarMeta.warning}</p>
         )}
         <div className="calendar-actions">
           <button className="btn btn-secondary" onClick={connectGoogleCalendar}>

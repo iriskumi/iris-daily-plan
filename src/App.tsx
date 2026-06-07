@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   LayoutTemplate,
   Settings as SettingsIcon,
+  ChevronRight,
 } from 'lucide-react'
 import type { GeneratedPlan, Bill, WorkOpportunity } from './types'
 import {
@@ -250,8 +251,9 @@ function TodayCommandCentre({
                   : dueSoonBills.length > 0
                     ? `${dueSoonBills.length} due soon`
                     : 'No urgent bills'}
-              </span>
+                </span>
             </span>
+            <ChevronRight className="command-card-chevron" />
           </button>
 
           <button
@@ -267,8 +269,9 @@ function TodayCommandCentre({
                   : activeWorkLeads.length > 0
                     ? `${activeWorkLeads.length} active`
                     : 'No active reminders'}
-              </span>
+                </span>
             </span>
+            <ChevronRight className="command-card-chevron" />
           </button>
         </div>
 
