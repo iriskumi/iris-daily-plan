@@ -5,6 +5,7 @@ import type {
   DailyCheckin,
   DailyLog,
   FocusSession,
+  TimeBlockFollowUp,
   Task,
   WorkOpportunity,
   Bill,
@@ -28,6 +29,7 @@ const KEYS = {
   calendarEvents: 'iris-calendar-events',
   googleCalendarMeta: 'iris-google-calendar-meta',
   dailyLogs: 'iris-daily-logs',
+  timeBlockFollowUps: 'iris-time-block-follow-ups',
   focusSessions: 'iris-focus-sessions',
 }
 
@@ -131,6 +133,30 @@ export const saveDailyLog = (log: DailyLog): void => {
   })
 }
 
+export const loadTimeBlockFollowUps = (date: string): Record<string, TimeBlockFollowUp> =>
+  load<Record<string, Record<string, TimeBlockFollowUp>>>(KEYS.timeBlockFollowUps)?.[date] ?? {}
+
+export const loadAllTimeBlockFollowUps = (): Record<string, Record<string, TimeBlockFollowUp>> =>
+  load<Record<string, Record<string, TimeBlockFollowUp>>>(KEYS.timeBlockFollowUps) ?? {}
+
+export const saveAllTimeBlockFollowUps = (
+  followUps: Record<string, Record<string, TimeBlockFollowUp>>,
+): void => save(KEYS.timeBlockFollowUps, followUps)
+
+export const saveTimeBlockFollowUp = (followUp: TimeBlockFollowUp): void => {
+  const all = load<Record<string, Record<string, TimeBlockFollowUp>>>(KEYS.timeBlockFollowUps) ?? {}
+  save(KEYS.timeBlockFollowUps, {
+    ...all,
+    [followUp.date]: {
+      ...(all[followUp.date] ?? {}),
+      [followUp.blockKey]: {
+        ...followUp,
+        updatedAt: new Date().toISOString(),
+      },
+    },
+  })
+}
+
 export const loadTemplates = (): Template[] => load<Template[]>(KEYS.templates) ?? []
 export const saveTemplates = (t: Template[]): void => save(KEYS.templates, t)
 
@@ -228,6 +254,7 @@ export function exportBackupData(): AppBackup {
     data: {
       checkin: loadCheckin(),
       dailyLogs: Object.values(loadDailyLogs()),
+      timeBlockFollowUps: loadAllTimeBlockFollowUps(),
       focusSessions: loadFocusSessions(),
       tasks: loadTasks(),
       opportunities: loadOpportunities(),
@@ -264,6 +291,7 @@ export function validateBackup(input: unknown): AppBackupData | null {
     dailyLogs: isArray(candidate.dailyLogs)
       ? (candidate.dailyLogs as DailyLog[])
       : [],
+    timeBlockFollowUps: candidate.timeBlockFollowUps ?? {},
     focusSessions: isArray(candidate.focusSessions)
       ? (candidate.focusSessions as FocusSession[])
       : [],
@@ -292,6 +320,7 @@ export function importBackupData(data: AppBackupData): void {
   saveDailyLogs(
     Object.fromEntries(data.dailyLogs.map(log => [log.date, log])),
   )
+  saveAllTimeBlockFollowUps(data.timeBlockFollowUps ?? {})
   saveFocusSessions(data.focusSessions)
   saveTasks(data.tasks)
   saveOpportunities(data.opportunities)

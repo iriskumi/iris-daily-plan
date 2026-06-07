@@ -47,6 +47,16 @@ export interface DailyLog {
   updatedAt: string
 }
 
+export type TimeBlockFollowUpStatus = 'followed' | 'partial' | 'skipped' | 'changed' | ''
+
+export interface TimeBlockFollowUp {
+  date: string
+  blockKey: string
+  status: TimeBlockFollowUpStatus
+  notes: string
+  updatedAt: string
+}
+
 export type CarryOverClassification =
   | 'carry-over'
   | 'reduce'
@@ -286,6 +296,7 @@ export interface NotionDailyLogPayload {
   plan: GeneratedPlan
   dailyLog: DailyLog
   focusStats: FocusStats
+  followUps?: TimeBlockFollowUp[]
   checkin?: DailyCheckin | null
   tasks: Task[]
   calendarEvents: CalendarEvent[]
@@ -303,6 +314,7 @@ export interface IntegrationResult<T> {
 export interface AppBackupData {
   checkin: DailyCheckin | null
   dailyLogs: DailyLog[]
+  timeBlockFollowUps?: Record<string, Record<string, TimeBlockFollowUp>>
   focusSessions: FocusSession[]
   tasks: Task[]
   opportunities: WorkOpportunity[]

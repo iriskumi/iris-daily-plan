@@ -15,7 +15,7 @@ import {
   Shield,
   BookOpen,
 } from 'lucide-react'
-import type { DailyLog, GeneratedPlan, TimeBlock } from '../types'
+import type { DailyLog, GeneratedPlan, TimeBlock, TimeBlockFollowUp } from '../types'
 import {
   loadBills,
   loadCalendarEvents,
@@ -24,8 +24,10 @@ import {
   loadFocusSessions,
   loadOpportunities,
   loadTasks,
+  loadTimeBlockFollowUps,
   saveDailyLog,
   saveTasks,
+  saveTimeBlockFollowUp,
 } from '../storage'
 import { formatFocusStatsMarkdown, getFocusStats } from '../focus'
 import {
@@ -34,6 +36,7 @@ import {
   getRealityCheck,
 } from '../productivity'
 import { exportPlanToNotion } from '../services/notionService'
+import { summarizeToday } from '../services/aiService'
 import FocusGarden from './FocusGarden'
 
 const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
@@ -52,6 +55,24 @@ function getTimeBlockRange(block: TimeBlock): string | null {
   if (!block.startTime || !block.endTime) return null
   return `${block.startTime}-${block.endTime}`
 }
+
+function getTimeBlockKey(block: TimeBlock, index: number): string {
+  return [
+    block.startTime ?? 'no-start',
+    block.endTime ?? 'no-end',
+    block.period,
+    block.type ?? 'block',
+    block.title ?? block.label,
+    index,
+  ].join('|')
+}
+
+const FOLLOW_UP_OPTIONS = [
+  { value: 'followed', label: 'Followed' },
+  { value: 'partial', label: 'Partial' },
+  { value: 'skipped', label: 'Skipped' },
+  { value: 'changed', label: 'Changed' },
+] as const
 
 function getPlanSourceLabel(plan: GeneratedPlan): string {
   if (plan.aiUsed && plan.provider === 'gemini') return 'Gemini'
@@ -104,6 +125,18 @@ function planMarkdownWithDailyLog(plan: GeneratedPlan, dailyLog: DailyLog): stri
   ].join('\n\n')
 }
 
+function followUpsMarkdown(plan: GeneratedPlan, followUps: Record<string, TimeBlockFollowUp>): string {
+  const lines = plan.timeBlocks.map((block, index) => {
+    const blockKey = getTimeBlockKey(block, index)
+    const followUp = followUps[blockKey]
+    const range = getTimeBlockRange(block) ?? block.label
+    const status = followUp?.status || 'not recorded'
+    const notes = followUp?.notes.trim() ? ` - ${followUp.notes.trim()}` : ''
+    return `- ${range} ${getTimeBlockTitle(block)}: ${status}${notes}`
+  })
+  return ['## Time Block Follow-up', ...lines].join('\n')
+}
+
 interface Props {
   plan: GeneratedPlan | null
   onGenerate: () => void
@@ -124,18 +157,26 @@ export default function DailyPlanView({
   const [notionStatus, setNotionStatus] = useState<string | null>(null)
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
   const [pushingNotion, setPushingNotion] = useState(false)
+  const [finishingDay, setFinishingDay] = useState(false)
+  const [followUps, setFollowUps] = useState(() =>
+    plan ? loadTimeBlockFollowUps(plan.date) : {},
+  )
   const [dailyLog, setDailyLog] = useState<DailyLog | null>(() =>
     plan ? loadDailyLog(plan.date) : null,
   )
 
   useEffect(() => {
     setDailyLog(plan ? loadDailyLog(plan.date) : null)
+    setFollowUps(plan ? loadTimeBlockFollowUps(plan.date) : {})
   }, [plan?.date])
 
   const markdownForCopy = useMemo(() => {
     if (!plan) return ''
-    return planMarkdownWithDailyLog(plan, dailyLog ?? loadDailyLog(plan.date))
-  }, [plan, dailyLog])
+    return [
+      planMarkdownWithDailyLog(plan, dailyLog ?? loadDailyLog(plan.date)),
+      followUpsMarkdown(plan, followUps),
+    ].join('\n\n')
+  }, [plan, dailyLog, followUps])
 
   const carryOverSuggestions = useMemo(() => {
     if (!plan) return []
@@ -157,6 +198,31 @@ export default function DailyPlanView({
     }
     setDailyLog(updated)
     saveDailyLog(updated)
+  }
+
+  function updateFollowUp(
+    block: TimeBlock,
+    index: number,
+    patch: Partial<Pick<TimeBlockFollowUp, 'status' | 'notes'>>,
+  ) {
+    if (!plan) return
+    const blockKey = getTimeBlockKey(block, index)
+    const current = followUps[blockKey] ?? {
+      date: plan.date,
+      blockKey,
+      status: '',
+      notes: '',
+      updatedAt: new Date().toISOString(),
+    }
+    const next = {
+      ...current,
+      ...patch,
+      date: plan.date,
+      blockKey,
+      updatedAt: new Date().toISOString(),
+    }
+    setFollowUps(prev => ({ ...prev, [blockKey]: next }))
+    saveTimeBlockFollowUp(next)
   }
 
   function handleRegenerate() {
@@ -181,9 +247,54 @@ export default function DailyPlanView({
         opportunities: loadOpportunities(),
         bills: loadBills(),
         markdown: markdownForCopy,
+        followUps: Object.values(followUps),
       },
     )
     setPushingNotion(false)
+    setNotionStatus(result.message)
+    setNotionUrl(result.data?.pageUrl ?? null)
+  }
+
+  async function handleFinishDay() {
+    if (!plan) return
+    setFinishingDay(true)
+    setNotionStatus(null)
+    setNotionUrl(null)
+    const currentLog = dailyLog ?? loadDailyLog(plan.date)
+    const focusStatsNow = getFocusStats(loadFocusSessions())
+    const response = await summarizeToday({
+      plan,
+      tasks: loadTasks(),
+      bills: loadBills(),
+      opportunities: loadOpportunities(),
+      calendarEvents: loadCalendarEvents(),
+      dailyLog: currentLog,
+      focusStats: focusStatsNow,
+    })
+    const updatedLog = {
+      ...currentLog,
+      eveningSummary: response.data ?? response.message,
+    }
+    setDailyLog(updatedLog)
+    saveDailyLog(updatedLog)
+    const result = await exportPlanToNotion(
+      plan,
+      updatedLog,
+      focusStatsNow,
+      {
+        checkin: loadCheckin(),
+        tasks: loadTasks(),
+        calendarEvents: loadCalendarEvents(),
+        opportunities: loadOpportunities(),
+        bills: loadBills(),
+        markdown: [
+          planMarkdownWithDailyLog(plan, updatedLog),
+          followUpsMarkdown(plan, followUps),
+        ].join('\n\n'),
+        followUps: Object.values(followUps),
+      },
+    )
+    setFinishingDay(false)
     setNotionStatus(result.message)
     setNotionUrl(result.data?.pageUrl ?? null)
   }
@@ -339,7 +450,16 @@ export default function DailyPlanView({
           <Sun size={12} />
           Time Blocks
         </div>
-        {plan.timeBlocks.map((block, i) => (
+        {plan.timeBlocks.map((block, i) => {
+          const blockKey = getTimeBlockKey(block, i)
+          const followUp = followUps[blockKey] ?? {
+            date: plan.date,
+            blockKey,
+            status: '',
+            notes: '',
+            updatedAt: '',
+          }
+          return (
           <div key={i} className="time-block">
             <div className="time-block-header">
               <span className="time-block-icon">{PERIOD_ICONS[block.period]}</span>
@@ -359,9 +479,28 @@ export default function DailyPlanView({
                   <li key={j}>{item}</li>
                 ))}
               </ul>
+              <div className="time-block-follow-up">
+                <div className="follow-up-options" role="group" aria-label={`Follow-up for ${getTimeBlockTitle(block)}`}>
+                  {FOLLOW_UP_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      className={followUp.status === option.value ? 'active' : ''}
+                      onClick={() => updateFollowUp(block, i, { status: option.value })}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  placeholder="Notes: what actually happened in this block?"
+                  value={followUp.notes}
+                  onChange={e => updateFollowUp(block, i, { notes: e.target.value })}
+                />
+              </div>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Must-do + Optional */}
@@ -462,11 +601,11 @@ export default function DailyPlanView({
       </div>
 
       <div className="plan-section">
-        <div className="plan-section-title">Actual Done & Notes</div>
+        <div className="plan-section-title">Daily Reality</div>
         <div className="actual-log-card">
           <FocusGarden stats={focusStats} compact />
           <div className="form-group">
-            <label>Actual Done</label>
+            <label>What I actually did</label>
             <textarea
               value={log.actualDone}
               onChange={e => updateDailyLog('actualDone', e.target.value)}
@@ -474,7 +613,7 @@ export default function DailyPlanView({
             />
           </div>
           <div className="form-group">
-            <label>What changed?</label>
+            <label>What changed from the plan</label>
             <textarea
               value={log.whatChanged}
               onChange={e => updateDailyLog('whatChanged', e.target.value)}
@@ -482,23 +621,23 @@ export default function DailyPlanView({
             />
           </div>
           <div className="form-group">
-            <label>Energy after doing</label>
+            <label>Why I drifted</label>
             <textarea
-              value={log.energyAfterDoing}
-              onChange={e => updateDailyLog('energyAfterDoing', e.target.value)}
+              value={log.notes}
+              onChange={e => updateDailyLog('notes', e.target.value)}
               style={{ minHeight: 64 }}
             />
           </div>
           <div className="form-group">
-            <label>Notes</label>
+            <label>Energy / mood notes</label>
             <textarea
-              value={log.notes}
-              onChange={e => updateDailyLog('notes', e.target.value)}
+              value={log.energyAfterDoing}
+              onChange={e => updateDailyLog('energyAfterDoing', e.target.value)}
               style={{ minHeight: 88 }}
             />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Carry over to tomorrow</label>
+            <label>Carry-over notes</label>
             <textarea
               value={log.carryOverToTomorrow}
               onChange={e => updateDailyLog('carryOverToTomorrow', e.target.value)}
@@ -532,6 +671,10 @@ export default function DailyPlanView({
         <div className="notion-export-card">
           <pre className="notion-preview">{markdownForCopy}</pre>
           <div className="flex gap-sm">
+            <button className="btn btn-primary" onClick={handleFinishDay} disabled={finishingDay}>
+              <BookOpen size={14} />
+              {finishingDay ? 'Finishing...' : 'Finish Day & Push to Notion'}
+            </button>
             <button className="btn btn-primary" onClick={handlePushNotion} disabled={pushingNotion}>
               <BookOpen size={14} />
               {pushingNotion ? 'Pushing...' : 'Push Daily Log to Notion'}

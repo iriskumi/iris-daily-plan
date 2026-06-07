@@ -6,6 +6,7 @@ import type {
   IntegrationResult,
   NotionDailyLogPayload,
   NotionExportResult,
+  TimeBlock,
   WorkOpportunity,
 } from '../../src/types.js'
 
@@ -93,6 +94,17 @@ function workLine(item: WorkOpportunity): string {
   return `${item.title} - ${item.source}${item.nextAction ? ` -> ${item.nextAction}` : ''}`
 }
 
+function timeBlockKey(blockItem: TimeBlock, index: number): string {
+  return [
+    blockItem.startTime ?? 'no-start',
+    blockItem.endTime ?? 'no-end',
+    blockItem.period,
+    blockItem.type ?? 'block',
+    blockItem.title ?? blockItem.label,
+    index,
+  ].join('|')
+}
+
 function isPayload(value: unknown): value is NotionDailyLogPayload {
   if (typeof value !== 'object' || value === null) return false
   const payload = value as Partial<NotionDailyLogPayload>
@@ -126,6 +138,18 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
     const title = blockItem.title || blockItem.label
     return `${time} ${title}: ${blockItem.items.join('; ')}`
   })
+  const followUpByKey = new Map((payload.followUps ?? []).map(item => [item.blockKey, item]))
+  const followUpLines = plan.timeBlocks.map((blockItem, index) => {
+    const key = timeBlockKey(blockItem, index)
+    const followUp = followUpByKey.get(key)
+    const time = blockItem.startTime && blockItem.endTime
+      ? `${blockItem.startTime}-${blockItem.endTime}`
+      : blockItem.label
+    const title = blockItem.title || blockItem.label
+    const status = followUp?.status || 'not recorded'
+    const notes = followUp?.notes ? ` | Notes: ${followUp.notes}` : ''
+    return `${time} | ${title} | ${status}${notes}`
+  })
   const unfinished = payload.tasks
     .filter(task => !task.done)
     .slice(0, 12)
@@ -154,6 +178,8 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
     ...splitParagraphs(dailyLog.carryOverToTomorrow),
     block('heading_3', 'Generated daily plan'),
     ...splitParagraphs(plan.theme),
+    block('heading_3', 'Time block follow-up table'),
+    ...bullets(followUpLines),
     block('heading_3', 'Hour-by-hour schedule'),
     ...bullets(schedule),
     block('heading_3', 'Notes'),
