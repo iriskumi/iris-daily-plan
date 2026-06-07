@@ -12,7 +12,7 @@ import {
   ChevronRight,
   Play,
 } from 'lucide-react'
-import type { GeneratedPlan, Bill, WorkOpportunity } from './types'
+import type { GeneratedPlan, Bill, WorkOpportunity, GeneratePlanOutcome } from './types'
 import {
   loadBills,
   loadCheckin,
@@ -81,6 +81,8 @@ export default function App() {
   const [urgentBills, setUrgentBills] = useState<Bill[]>([])
   const [activeWorkLeads, setActiveWorkLeads] = useState<WorkOpportunity[]>([])
   const [focusStats, setFocusStats] = useState(() => getFocusStats(loadFocusSessions()))
+  const [generatingPlan, setGeneratingPlan] = useState(false)
+  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setUrgentBills(getUrgentBills(loadBills()))
@@ -98,9 +100,16 @@ export default function App() {
     feedback = '',
     originalPlan?: GeneratedPlan,
     options: { stayOnTab?: boolean } = {},
-  ) => {
+  ): Promise<GeneratePlanOutcome> => {
+    setGeneratingPlan(true)
+    setGenerationMessage(null)
     const context = loadGeneratePlanContext()
-    if (!context) return
+    if (!context) {
+      const message = 'Plan generation needs today’s check-in first. Fill in Daily Check-in, then try again.'
+      setGenerationMessage(message)
+      setGeneratingPlan(false)
+      return { success: false, message }
+    }
     const feedbackContext = feedback.trim()
       ? {
           ...context,
@@ -113,33 +122,54 @@ export default function App() {
           },
         }
       : context
-    const aiResult = await generatePlanWithAI(feedbackContext, { originalPlan, feedback })
-    const generated = aiResult.data
-      ? {
-          ...aiResult.data,
-          provider: aiResult.provider,
-          aiUsed: aiResult.aiUsed,
-          fallbackReason: aiResult.fallbackReason,
-        }
-      : {
-          ...planAssembly(
-            feedbackContext.checkin,
-            feedbackContext.tasks,
-            feedbackContext.opportunities,
-            feedbackContext.bills,
-            new Date(),
-            {
-              defaultRecoveryBlockEnabled: feedbackContext.settings.defaultRecoveryBlockEnabled,
-              calendarEvents: feedbackContext.calendarEvents,
-            },
-          ),
-          provider: 'rule-based' as const,
-          aiUsed: false,
-          fallbackReason: aiResult.fallbackReason || aiResult.message,
-        }
-    savePlan(generated)
-    setPlan(generated)
-    if (!options.stayOnTab) setTab('plan')
+    try {
+      const aiResult = await generatePlanWithAI(feedbackContext, { originalPlan, feedback })
+      const generated = aiResult.data
+        ? {
+            ...aiResult.data,
+            provider: aiResult.provider,
+            aiUsed: aiResult.aiUsed,
+            fallbackReason: aiResult.fallbackReason,
+          }
+        : {
+            ...planAssembly(
+              feedbackContext.checkin,
+              feedbackContext.tasks,
+              feedbackContext.opportunities,
+              feedbackContext.bills,
+              new Date(),
+              {
+                defaultRecoveryBlockEnabled: feedbackContext.settings.defaultRecoveryBlockEnabled,
+                calendarEvents: feedbackContext.calendarEvents,
+              },
+            ),
+            provider: 'rule-based' as const,
+            aiUsed: false,
+            fallbackReason: aiResult.fallbackReason || aiResult.message,
+          }
+      const fallbackReason = generated.fallbackReason || aiResult.fallbackReason
+      const message = fallbackReason
+        ? `Plan generated with local fallback. ${fallbackReason}`
+        : 'Plan generated successfully.'
+      savePlan(generated)
+      setPlan(generated)
+      setGenerationMessage(message)
+      if (!options.stayOnTab) setTab('plan')
+      return {
+        success: true,
+        message,
+        plan: generated,
+        fallbackReason,
+      }
+    } catch (error) {
+      const message = error instanceof Error
+        ? `Plan generation failed: ${error.message}`
+        : 'Plan generation failed.'
+      setGenerationMessage(message)
+      return { success: false, message }
+    } finally {
+      setGeneratingPlan(false)
+    }
   }
 
   function handleLowEnergyMode() {
@@ -207,6 +237,9 @@ export default function App() {
             onGenerate={handleGeneratePlan}
             onRemindersChange={refreshReminders}
             currentPlan={plan}
+            generatingPlan={generatingPlan}
+            generationMessage={generationMessage}
+            onViewPlan={() => setTab('plan')}
             onStartToday={async () => {
               const steps: string[] = []
               const meta = loadGoogleCalendarMeta()
@@ -304,9 +337,12 @@ interface TodayCommandCentreProps {
   urgentBills: Bill[]
   activeWorkLeads: WorkOpportunity[]
   focusStats: ReturnType<typeof getFocusStats>
-  onGenerate: () => void
+  onGenerate: () => Promise<GeneratePlanOutcome>
   onRemindersChange: () => void
   currentPlan: GeneratedPlan | null
+  generatingPlan: boolean
+  generationMessage: string | null
+  onViewPlan: () => void
   onStartToday: () => Promise<string[]>
 }
 
@@ -317,6 +353,9 @@ function TodayCommandCentre({
   onGenerate,
   onRemindersChange,
   currentPlan,
+  generatingPlan,
+  generationMessage,
+  onViewPlan,
   onStartToday,
 }: TodayCommandCentreProps) {
   const [expanded, setExpanded] = useState<'bills' | 'work' | null>(null)
@@ -478,7 +517,13 @@ function TodayCommandCentre({
         )}
       </div>
 
-      <DailyCheckin onGenerate={onGenerate} />
+      <DailyCheckin
+        onGenerate={onGenerate}
+        isGenerating={generatingPlan}
+        generationMessage={generationMessage}
+        hasPlan={Boolean(currentPlan)}
+        onViewPlan={onViewPlan}
+      />
     </>
   )
 }

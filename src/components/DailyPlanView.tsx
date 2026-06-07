@@ -280,6 +280,11 @@ export default function DailyPlanView({
         <div className="plan-date-label">{planDate}</div>
         <div className="plan-theme">{plan.theme}</div>
         <div className="plan-meta">Generated at {generatedTime}</div>
+        {plan.fallbackReason && (
+          <div className="plan-fallback-note">
+            {plan.fallbackReason}
+          </div>
+        )}
       </div>
 
       {realityCheck && (

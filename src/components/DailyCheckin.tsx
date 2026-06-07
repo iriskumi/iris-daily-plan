@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Zap } from 'lucide-react'
-import type { DailyCheckin as DailyCheckinType, DayType, EnergyLevel } from '../types'
+import type {
+  DailyCheckin as DailyCheckinType,
+  DayType,
+  EnergyLevel,
+  GeneratePlanOutcome,
+} from '../types'
 import { loadCheckin, loadSettings, saveCheckin } from '../storage'
 
 const DAY_TYPES: { id: DayType; emoji: string; label: string; commitments: string }[] = [
@@ -47,10 +52,20 @@ function defaultCheckin(): DailyCheckinType {
 }
 
 interface Props {
-  onGenerate: () => void
+  onGenerate: () => Promise<GeneratePlanOutcome>
+  isGenerating?: boolean
+  generationMessage?: string | null
+  hasPlan?: boolean
+  onViewPlan?: () => void
 }
 
-export default function DailyCheckin({ onGenerate }: Props) {
+export default function DailyCheckin({
+  onGenerate,
+  isGenerating = false,
+  generationMessage,
+  hasPlan = false,
+  onViewPlan,
+}: Props) {
   const [checkin, setCheckin] = useState<DailyCheckinType>(() => {
     const saved = loadCheckin()
     if (saved) return { ...defaultCheckin(), ...saved, date: todayString() }
@@ -72,6 +87,11 @@ export default function DailyCheckin({ onGenerate }: Props) {
       dayType: dt,
       fixedCommitments: match?.commitments ?? prev.fixedCommitments,
     }))
+  }
+
+  async function handleGenerate() {
+    saveCheckin(checkin)
+    await onGenerate()
   }
 
   const energyOptions: { value: EnergyLevel; label: string; desc: string }[] = [
@@ -204,10 +224,21 @@ export default function DailyCheckin({ onGenerate }: Props) {
         </div>
       </div>
 
-      <button className="btn-generate" onClick={onGenerate}>
+      <button className="btn-generate" onClick={handleGenerate} disabled={isGenerating}>
         <Zap />
-        Generate Today's Plan
+        {isGenerating ? 'Generating...' : "Generate Today's Plan"}
       </button>
+
+      {generationMessage && (
+        <div className="generation-status-card">
+          <div>{generationMessage}</div>
+          {hasPlan && onViewPlan && (
+            <button className="btn btn-secondary" onClick={onViewPlan}>
+              View Plan
+            </button>
+          )}
+        </div>
+      )}
 
       <p
         className="text-xs text-muted"

@@ -206,6 +206,13 @@ export interface GeneratedPlan {
   fallbackReason?: string
 }
 
+export interface GeneratePlanOutcome {
+  success: boolean
+  message: string
+  plan?: GeneratedPlan
+  fallbackReason?: string
+}
+
 export interface AppSettings {
   timezone: string
   defaultSleepTarget: string

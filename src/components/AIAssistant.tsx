@@ -39,6 +39,7 @@ import { getFocusStats } from '../focus'
 import { exportPlanToNotion } from '../services/notionService'
 import type {
   GmailScannedWorkLead,
+  GeneratePlanOutcome,
   GoogleCalendarImportMeta,
   WorkOpportunity,
   WorkOpportunityStatus,
@@ -53,7 +54,7 @@ interface AIAction {
 }
 
 interface Props {
-  onGeneratePlan: () => Promise<void>
+  onGeneratePlan: () => Promise<GeneratePlanOutcome>
 }
 
 const ACTIONS: AIAction[] = [
@@ -175,7 +176,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     setRunningAction(action.id)
 
     if (action.id === 'generate') {
-      await onGeneratePlan()
+      const outcome = await onGeneratePlan()
+      if (!outcome.success) setActiveMsg(outcome.message)
       setRunningAction(null)
       return
     }
