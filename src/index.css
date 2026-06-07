@@ -1492,6 +1492,16 @@ body {
   line-height: 1.6;
 }
 
+.gmail-scan-status.connected {
+  border-style: solid;
+  background: var(--accent-bg);
+}
+
+.gmail-scan-status.not-connected {
+  background: var(--amber-bg);
+  border-color: var(--amber-border);
+}
+
 .ai-result {
   font-family: var(--font-mono);
   font-size: 0.72rem;

@@ -102,6 +102,7 @@ const ACTIONS: AIAction[] = [
 
 export default function AIAssistant({ onGeneratePlan }: Props) {
   const [activeMsg, setActiveMsg] = useState<string | null>(null)
+  const [gmailScanMsg, setGmailScanMsg] = useState<string | null>(null)
   const [resultTitle, setResultTitle] = useState<string | null>(null)
   const [resultText, setResultText] = useState<string | null>(null)
   const [scannedLeads, setScannedLeads] = useState<GmailScannedWorkLead[]>([])
@@ -119,6 +120,12 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
 
   function googleScopeLine(meta: GoogleCalendarImportMeta): string {
     return `Calendar: ${meta.calendarConnected ? 'connected' : 'not connected'} · Gmail: ${meta.gmailConnected ? 'connected' : 'not connected'}`
+  }
+
+  function gmailScanStatusLine(meta: GoogleCalendarImportMeta): string {
+    return meta.gmailConnected
+      ? 'Scan recent Gmail job emails'
+      : 'Reconnect Google to grant Gmail read-only scope'
   }
 
   async function refreshGoogleStatus(): Promise<GoogleCalendarImportMeta> {
@@ -155,6 +162,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
 
   async function handleClick(action: AIAction) {
     setActiveMsg(null)
+    setGmailScanMsg(null)
     setResultTitle(null)
     setResultText(null)
     setScannedLeads([])
@@ -186,14 +194,18 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       const status = await refreshGoogleStatus()
       if (!status.gmailConnected) {
         setRunningAction(null)
-        setActiveMsg('Gmail read-only access is not connected yet. Reconnect Google to grant Gmail read-only scope.')
+        setGmailScanMsg('Reconnect Google to grant Gmail read-only scope')
         return
       }
 
       const response = await scanGmailForWorkLeads()
       setRunningAction(null)
       if (!response.success || !response.data) {
-        setActiveMsg(response.message || 'Gmail scan failed. Check Google connection and try again.')
+        setGmailScanMsg(
+          status.gmailConnected
+            ? 'Gmail is connected. Scan failed; try again or reconnect Google if this keeps happening.'
+            : response.message || 'Reconnect Google to grant Gmail read-only scope',
+        )
         return
       }
       setScannedLeads(response.data)
@@ -203,6 +215,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           .map(lead => lead.messageId),
       )
       setActiveMsg(response.message)
+      setGmailScanMsg(response.message)
       return
     }
 
@@ -359,9 +372,23 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
                   {googleScopeLine(calendarMeta)}
                 </div>
               )}
+              {action.id === 'extract-leads' && (
+                <div className="ai-btn-desc">
+                  {gmailScanStatusLine(calendarMeta)}
+                </div>
+              )}
             </div>
           </button>
         ))}
+      </div>
+
+      <div className={`ai-toast mt-1 gmail-scan-status ${calendarMeta.gmailConnected ? 'connected' : 'not-connected'}`}>
+        <Info size={16} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
+        <p>
+          <strong>Gmail scan</strong>
+          <br />
+          {gmailScanMsg ?? gmailScanStatusLine(calendarMeta)}
+        </p>
       </div>
 
       {resultText && (
