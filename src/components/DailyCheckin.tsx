@@ -91,7 +91,10 @@ export default function DailyCheckin({ onGenerate }: Props) {
 
       <div className="card">
         <div className="card-header">
-          <span className="card-title">What kind of day is today?</span>
+          <div>
+            <span className="step-indicator">Step 1/4</span>
+            <span className="card-title">What kind of day is today?</span>
+          </div>
         </div>
         <div className="day-type-grid">
           {DAY_TYPES.map(dt => (
@@ -109,7 +112,10 @@ export default function DailyCheckin({ onGenerate }: Props) {
 
       <div className="card mt-1">
         <div className="card-header">
-          <span className="card-title">Energy & Time</span>
+          <div>
+            <span className="step-indicator">Step 2/4</span>
+            <span className="card-title">Energy & Time</span>
+          </div>
         </div>
 
         <div className="form-group">
@@ -118,10 +124,11 @@ export default function DailyCheckin({ onGenerate }: Props) {
             {energyOptions.map(e => (
               <button
                 key={e.value}
-                className={`btn-option ${checkin.energyLevel === e.value ? `selected-${e.value}` : ''}`}
+                className={`energy-option ${checkin.energyLevel === e.value ? `selected-${e.value}` : ''}`}
                 onClick={() => set('energyLevel', e.value)}
               >
-                {e.label} — {e.desc}
+                <span className="energy-option-label">{e.label}</span>
+                <span className="energy-option-desc">{e.desc}</span>
               </button>
             ))}
           </div>
@@ -149,7 +156,10 @@ export default function DailyCheckin({ onGenerate }: Props) {
 
       <div className="card mt-1">
         <div className="card-header">
-          <span className="card-title">Today's Constraints</span>
+          <div>
+            <span className="step-indicator">Step 3/4</span>
+            <span className="card-title">Today's Constraints</span>
+          </div>
         </div>
 
         <div className="form-group">
@@ -183,6 +193,7 @@ export default function DailyCheckin({ onGenerate }: Props) {
         </div>
 
         <div className="form-group" style={{ marginBottom: 0 }}>
+          <div className="step-indicator step-indicator-inline">Step 4/4</div>
           <label>Notes (body, mood, anything relevant)</label>
           <textarea
             placeholder="Feeling off, bad sleep, anxious about assessment, etc. This shapes the plan."

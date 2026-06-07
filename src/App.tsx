@@ -5,13 +5,19 @@ import {
   Briefcase,
   CreditCard,
   Zap,
-  Bot,
+  Plug,
   AlertTriangle,
   LayoutTemplate,
   Settings as SettingsIcon,
 } from 'lucide-react'
-import type { GeneratedPlan, Bill } from './types'
-import { loadBills, loadPlan, savePlan, loadGeneratePlanContext } from './storage'
+import type { GeneratedPlan, Bill, WorkOpportunity } from './types'
+import {
+  loadBills,
+  loadOpportunities,
+  loadPlan,
+  savePlan,
+  loadGeneratePlanContext,
+} from './storage'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
 import DailyCheckin from './components/DailyCheckin'
@@ -24,16 +30,14 @@ import RecurringTemplates from './components/RecurringTemplates'
 import Settings from './components/Settings'
 import './index.css'
 
-type Tab = 'checkin' | 'tasks' | 'templates' | 'work' | 'bills' | 'plan' | 'ai' | 'settings'
+type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
+type TaskView = 'tasks' | 'templates'
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'checkin', label: 'Check-in', icon: <ClipboardList /> },
+  { id: 'today', label: 'Today', icon: <ClipboardList /> },
+  { id: 'plan', label: 'Plan', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
-  { id: 'templates', label: 'Templates', icon: <LayoutTemplate /> },
-  { id: 'work', label: 'Work Leads', icon: <Briefcase /> },
-  { id: 'bills', label: 'Bills', icon: <CreditCard /> },
-  { id: 'plan', label: "Today's Plan", icon: <Zap /> },
-  { id: 'ai', label: 'AI Ready', icon: <Bot /> },
+  { id: 'integrations', label: 'Integrations', icon: <Plug /> },
   { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
 ]
 
@@ -45,14 +49,26 @@ function getUrgentBills(bills: Bill[]): Bill[] {
   })
 }
 
+function getActiveWorkLeads(opportunities: WorkOpportunity[]): WorkOpportunity[] {
+  return opportunities.filter(o => o.status !== 'ignore' && o.status !== 'later')
+}
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>('checkin')
+  const [tab, setTab] = useState<Tab>('today')
+  const [taskView, setTaskView] = useState<TaskView>('tasks')
   const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan())
   const [urgentBills, setUrgentBills] = useState<Bill[]>([])
+  const [activeWorkLeads, setActiveWorkLeads] = useState<WorkOpportunity[]>([])
 
   useEffect(() => {
     setUrgentBills(getUrgentBills(loadBills()))
+    setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
   }, [tab])
+
+  function refreshReminders() {
+    setUrgentBills(getUrgentBills(loadBills()))
+    setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
+  }
 
   const handleGeneratePlan = async (feedback = '', originalPlan?: GeneratedPlan) => {
     const context = loadGeneratePlanContext()
@@ -134,7 +150,7 @@ export default function App() {
           <AlertTriangle />
           {overdueBills.length === 1
             ? `Overdue: ${overdueBills[0].name} — $${overdueBills[0].amount}`
-            : `${overdueBills.length} bills overdue — check Bills tab`}
+            : `${overdueBills.length} bills overdue — check Today`}
         </div>
       )}
 
@@ -148,22 +164,128 @@ export default function App() {
       )}
 
       <main>
-        {tab === 'checkin' && <DailyCheckin onGenerate={handleGeneratePlan} />}
-        {tab === 'tasks' && <TaskInbox />}
-        {tab === 'templates' && <RecurringTemplates />}
-        {tab === 'work' && <WorkCollection />}
-        {tab === 'bills' && <BillsFinance onBillsChange={() => setUrgentBills(getUrgentBills(loadBills()))} />}
+        {tab === 'today' && (
+          <TodayCommandCentre
+            urgentBills={urgentBills}
+            activeWorkLeads={activeWorkLeads}
+            onGenerate={handleGeneratePlan}
+            onRemindersChange={refreshReminders}
+          />
+        )}
         {tab === 'plan' && (
           <DailyPlanView
             plan={plan}
             onGenerate={handleGeneratePlan}
             onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
-            onGoToCheckin={() => setTab('checkin')}
+            onGoToCheckin={() => setTab('today')}
           />
         )}
-        {tab === 'ai' && <AIAssistant onGeneratePlan={handleGeneratePlan} />}
+        {tab === 'tasks' && (
+          <>
+            <div className="subnav-shell">
+              <div className="segmented-control" aria-label="Task section">
+                <button
+                  className={taskView === 'tasks' ? 'active' : ''}
+                  onClick={() => setTaskView('tasks')}
+                >
+                  <CheckSquare />
+                  Tasks
+                </button>
+                <button
+                  className={taskView === 'templates' ? 'active' : ''}
+                  onClick={() => setTaskView('templates')}
+                >
+                  <LayoutTemplate />
+                  Templates
+                </button>
+              </div>
+            </div>
+            {taskView === 'tasks' ? <TaskInbox /> : <RecurringTemplates />}
+          </>
+        )}
+        {tab === 'integrations' && <AIAssistant onGeneratePlan={handleGeneratePlan} />}
         {tab === 'settings' && <Settings />}
       </main>
     </div>
+  )
+}
+
+interface TodayCommandCentreProps {
+  urgentBills: Bill[]
+  activeWorkLeads: WorkOpportunity[]
+  onGenerate: () => void
+  onRemindersChange: () => void
+}
+
+function TodayCommandCentre({
+  urgentBills,
+  activeWorkLeads,
+  onGenerate,
+  onRemindersChange,
+}: TodayCommandCentreProps) {
+  const [expanded, setExpanded] = useState<'bills' | 'work' | null>(null)
+  const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
+  const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
+  const applyTodayLeads = activeWorkLeads.filter(o => o.status === 'apply-today')
+
+  return (
+    <>
+      <div className="page command-page">
+        <div className="page-header">
+          <h2 className="page-title">Today</h2>
+          <p className="page-subtitle">Check in, notice deadlines, then generate the plan.</p>
+        </div>
+
+        <div className="command-grid">
+          <button
+            className={`command-card ${urgentBills.length > 0 ? 'attention' : ''}`}
+            onClick={() => setExpanded(expanded === 'bills' ? null : 'bills')}
+          >
+            <span className="command-card-icon"><CreditCard /></span>
+            <span className="command-card-body">
+              <span className="command-card-title">Bills</span>
+              <span className="command-card-text">
+                {overdueBills.length > 0
+                  ? `${overdueBills.length} overdue`
+                  : dueSoonBills.length > 0
+                    ? `${dueSoonBills.length} due soon`
+                    : 'No urgent bills'}
+              </span>
+            </span>
+          </button>
+
+          <button
+            className="command-card"
+            onClick={() => setExpanded(expanded === 'work' ? null : 'work')}
+          >
+            <span className="command-card-icon"><Briefcase /></span>
+            <span className="command-card-body">
+              <span className="command-card-title">Work leads</span>
+              <span className="command-card-text">
+                {applyTodayLeads.length > 0
+                  ? `${applyTodayLeads.length} apply today`
+                  : activeWorkLeads.length > 0
+                    ? `${activeWorkLeads.length} active`
+                    : 'No active reminders'}
+              </span>
+            </span>
+          </button>
+        </div>
+
+        {expanded === 'bills' && (
+          <div className="command-inline-manager">
+            <BillsFinance onBillsChange={onRemindersChange} />
+          </div>
+        )}
+
+        {expanded === 'work' && (
+          <div className="command-inline-manager">
+            <WorkCollection onOpportunitiesChange={onRemindersChange} />
+          </div>
+        )}
+      </div>
+
+      <DailyCheckin onGenerate={onGenerate} />
+    </>
   )
 }

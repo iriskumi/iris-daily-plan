@@ -205,7 +205,11 @@ function OppForm({ initial, onSave, onCancel }: OppFormProps) {
 
 type StatusFilter = WorkOpportunityStatus | 'all'
 
-export default function WorkCollection() {
+interface Props {
+  onOpportunitiesChange?: () => void
+}
+
+export default function WorkCollection({ onOpportunitiesChange }: Props) {
   const [opps, setOpps] = useState<WorkOpportunity[]>(() => loadOpportunities())
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [showForm, setShowForm] = useState(false)
@@ -214,6 +218,7 @@ export default function WorkCollection() {
   function persist(updated: WorkOpportunity[]) {
     setOpps(updated)
     saveOpportunities(updated)
+    onOpportunitiesChange?.()
   }
 
   function addOpp(data: Omit<WorkOpportunity, 'id' | 'createdAt'>) {

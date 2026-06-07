@@ -298,14 +298,14 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
   return (
     <div className="page">
       <div className="page-header">
-        <h2 className="page-title">AI Assistant</h2>
-        <p className="page-subtitle">Generate, summarise, and review today with Gemini fallback support.</p>
+        <h2 className="page-title">Integrations</h2>
+        <p className="page-subtitle">Calendar, Gmail, Gemini, and future Notion workflows.</p>
       </div>
 
       <div className="ai-header">
         <div className="ai-header-badge">
           <Sparkles size={11} />
-          AI + automation
+          Connected tools
         </div>
         <p>
           Gemini planning is available when configured. Google Calendar can now be connected
