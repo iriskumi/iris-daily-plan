@@ -25,10 +25,10 @@
   --border-strong: #DDD3C5;
 
   --text: #241A12;
-  --text-2: #463A30;
-  --text-3: #75685C;
-  --text-hint: #75685C;
-  --section-label: #9E9082;
+  --text-2: #3D3028;
+  --text-3: #625348;
+  --text-hint: #6F6258;
+  --section-label: #75685C;
 
   --accent: #B8904E;
   --accent-2: #3D3028;
@@ -131,9 +131,9 @@ body {
 
 .app-header .header-date {
   font-size: 11px;
-  color: var(--text-3);
-  font-weight: 300;
-  letter-spacing: 0.12em;
+  color: var(--text-2);
+  font-weight: 400;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -162,7 +162,7 @@ body {
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #8C7F72;
+  color: var(--text-3);
   white-space: nowrap;
   border-bottom: 1.5px solid transparent;
   transition: color 0.15s, border-color 0.15s;
@@ -233,13 +233,13 @@ body {
   font-size: 17px;
   font-weight: 500;
   letter-spacing: 0;
-  color: #2E2218;
+  color: var(--text);
   margin-bottom: 0.2rem;
 }
 
 .page-subtitle {
   font-size: 14px;
-  color: #5A4F44;
+  color: var(--text-2);
   font-weight: 400;
 }
 
@@ -281,9 +281,9 @@ body {
 
 .section-label {
   font-size: 10px;
-  font-weight: 400;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.07em;
   color: var(--section-label);
   margin-bottom: 0.5rem;
 }
@@ -317,7 +317,7 @@ body {
   font-weight: 500;
   color: var(--section-label);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   margin-bottom: 0.3rem;
 }
 
@@ -330,8 +330,8 @@ body {
   border-radius: 12px;
   font-size: 14px;
   font-family: var(--font-cjk);
-  font-weight: 300;
-  color: #5A4F44;
+  font-weight: 400;
+  color: var(--text);
   background: #FFFCF9;
   transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
@@ -347,6 +347,8 @@ textarea {
 
 ::placeholder {
   font-family: var(--font-cjk);
+  color: var(--text-3);
+  opacity: 1;
 }
 
 .font-hand-accent,
@@ -729,7 +731,7 @@ textarea {
   font-size: 0.67rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   white-space: nowrap;
 }
 
@@ -1174,7 +1176,7 @@ textarea {
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   color: var(--section-label);
   margin-bottom: 0.35rem;
 }
@@ -1276,7 +1278,7 @@ textarea {
   font-weight: 500;
   color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   margin-bottom: 0.2rem;
 }
 
@@ -1290,7 +1292,7 @@ textarea {
 
 .top3-action {
   font-size: 14px;
-  color: var(--text-3);
+  color: var(--text-2);
   line-height: 1.4;
 }
 
@@ -1348,11 +1350,11 @@ textarea {
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text-3);
+  color: var(--text-2);
   font-size: 0.65rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   line-height: 1.2;
 }
 
@@ -1405,7 +1407,7 @@ textarea {
 
 .time-block-body li {
   font-size: 14px;
-  color: var(--text-3);
+  color: var(--text-2);
   padding: 0.18rem 0;
   list-style: none;
   line-height: 1.5;
@@ -1458,10 +1460,10 @@ textarea {
   border-radius: 10px;
   padding: 0.55rem 0.65rem;
   background: #FFFCF9;
-  color: var(--text-2);
-  font-family: var(--font);
+  color: var(--text);
+  font-family: var(--font-cjk);
   font-size: 0.8rem;
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.5;
 }
 
@@ -1473,7 +1475,7 @@ textarea {
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   color: var(--section-label);
   margin-bottom: 0.55rem;
   display: flex;
@@ -1488,7 +1490,7 @@ textarea {
 
 .plan-list li {
   font-size: 14px;
-  color: var(--text-3);
+  color: var(--text-2);
   padding: 0.18rem 0;
   list-style: none;
   line-height: 1.5;
@@ -1515,7 +1517,7 @@ textarea {
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   color: var(--accent);
   margin-bottom: 0.5rem;
 }
@@ -1730,7 +1732,7 @@ textarea {
 
 .carryover-type {
   font-size: 0.68rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--accent);
   font-weight: 500;
@@ -1860,12 +1862,12 @@ textarea {
 
 .scope-status.connected {
   background: #F0E8DC;
-  color: #5A4F44;
+  color: var(--text-2);
 }
 
 .scope-status.not-connected {
   background: #FFFCF9;
-  color: #8C7F72;
+  color: var(--text-3);
 }
 
 .calendar-actions {
@@ -1879,10 +1881,10 @@ textarea {
 
 .settings-section-label {
   font-size: 10px;
-  font-weight: 400;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #8C7F72;
+  letter-spacing: 0.07em;
+  color: var(--section-label);
   margin-bottom: 0.55rem;
 }
 
@@ -2073,7 +2075,7 @@ textarea {
 .focus-garden-label {
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   color: var(--accent-2);
   font-weight: 500;
 }
@@ -2402,7 +2404,7 @@ textarea {
 
 .task-checklist li {
   font-size: 14px;
-  color: #5A4F44;
+  color: var(--text-2);
   font-weight: 400;
   padding: 0.1rem 0;
   line-height: 1.4;
@@ -2562,7 +2564,7 @@ textarea {
 .segmented-control button {
   border: none;
   background: transparent;
-  color: #8C7F72;
+  color: var(--text-3);
   border-radius: var(--radius-sm);
   padding: 0.55rem 0.75rem;
   font-family: var(--font);
