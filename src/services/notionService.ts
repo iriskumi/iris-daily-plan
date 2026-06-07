@@ -1,4 +1,10 @@
-import type { DailyLog, GeneratedPlan, IntegrationResult, NotionExportResult } from '../types'
+import type {
+  DailyLog,
+  FocusStats,
+  GeneratedPlan,
+  IntegrationResult,
+  NotionExportResult,
+} from '../types'
 
 const notConnected = <T>(): IntegrationResult<T> => ({
   success: false,
@@ -9,6 +15,7 @@ const notConnected = <T>(): IntegrationResult<T> => ({
 export async function exportPlanToNotion(
   _plan: GeneratedPlan,
   _dailyLog?: DailyLog | null,
+  _focusStats?: FocusStats,
 ): Promise<IntegrationResult<NotionExportResult>> {
   return notConnected<NotionExportResult>()
 }

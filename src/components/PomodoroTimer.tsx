@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import type { TaskCategory, FocusStats } from '../types'
+import { addFocusSession, loadFocusSessions } from '../storage'
+import { getFocusStats, localDateString } from '../focus'
+import FocusGarden from './FocusGarden'
 
 type Phase = 'idle' | 'focus' | 'break' | 'session-done' | 'all-done'
 
@@ -6,6 +10,9 @@ interface Props {
   pomodoroLength: number
   breakLength: number
   sessions: number
+  taskId?: string
+  taskTitle?: string
+  category?: TaskCategory
   onMarkDone?: () => void
 }
 
@@ -13,11 +20,22 @@ function pad(n: number) {
   return String(n).padStart(2, '0')
 }
 
-export default function PomodoroTimer({ pomodoroLength, breakLength, sessions, onMarkDone }: Props) {
+export default function PomodoroTimer({
+  pomodoroLength,
+  breakLength,
+  sessions,
+  taskId,
+  taskTitle = 'Focus session',
+  category = 'cyber-study',
+  onMarkDone,
+}: Props) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [timeLeft, setTimeLeft] = useState(pomodoroLength * 60)
   const [running, setRunning] = useState(false)
   const [sessionsCompleted, setSessionsCompleted] = useState(0)
+  const [focusStats, setFocusStats] = useState<FocusStats>(() =>
+    getFocusStats(loadFocusSessions()),
+  )
 
   const phaseRef = useRef(phase)
   const sessionsRef = useRef(sessionsCompleted)
@@ -27,6 +45,20 @@ export default function PomodoroTimer({ pomodoroLength, breakLength, sessions, o
   useEffect(() => { sessionsRef.current = sessionsCompleted }, [sessionsCompleted])
   useEffect(() => { sessionsTargetRef.current = sessions }, [sessions])
 
+  function recordFocusSession() {
+    const completedAt = new Date()
+    const next = addFocusSession({
+      id: crypto.randomUUID(),
+      date: localDateString(completedAt),
+      taskId,
+      taskTitle,
+      category,
+      focusMinutes: pomodoroLength,
+      completedAt: completedAt.toISOString(),
+    })
+    setFocusStats(getFocusStats(next))
+  }
+
   useEffect(() => {
     if (!running) return
     const interval = setInterval(() => {
@@ -34,6 +66,7 @@ export default function PomodoroTimer({ pomodoroLength, breakLength, sessions, o
         if (prev <= 1) {
           setRunning(false)
           if (phaseRef.current === 'focus') {
+            recordFocusSession()
             setPhase('session-done')
           } else if (phaseRef.current === 'break') {
             const next = sessionsRef.current + 1
@@ -86,6 +119,7 @@ export default function PomodoroTimer({ pomodoroLength, breakLength, sessions, o
   if (phase === 'all-done') {
     return (
       <div className="pomo-box pomo-done">
+        <FocusGarden stats={focusStats} compact />
         <div className="pomo-done-icon">✓</div>
         <div className="pomo-done-text">
           All {sessions} session{sessions > 1 ? 's' : ''} complete
@@ -107,6 +141,7 @@ export default function PomodoroTimer({ pomodoroLength, breakLength, sessions, o
   if (phase === 'session-done') {
     return (
       <div className="pomo-box pomo-session-done">
+        <FocusGarden stats={focusStats} compact />
         <div className="pomo-session-done-label">Session complete ✓</div>
         <div className="pomo-break-hint">{breakLength} min break</div>
         <div className="pomo-btn-row">
@@ -131,6 +166,7 @@ export default function PomodoroTimer({ pomodoroLength, breakLength, sessions, o
 
   return (
     <div className="pomo-box">
+      <FocusGarden stats={focusStats} compact />
       <div className="pomo-header">
         <span className="pomo-phase-label">
           {phase === 'idle'

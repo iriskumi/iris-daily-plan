@@ -15,7 +15,9 @@ import {
   Shield,
 } from 'lucide-react'
 import type { DailyLog, GeneratedPlan, TimeBlock } from '../types'
-import { loadDailyLog, saveDailyLog } from '../storage'
+import { loadDailyLog, loadFocusSessions, saveDailyLog } from '../storage'
+import { formatFocusStatsMarkdown, getFocusStats } from '../focus'
+import FocusGarden from './FocusGarden'
 
 const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
   morning: <Sun size={13} />,
@@ -78,7 +80,11 @@ function dailyLogMarkdown(log: DailyLog): string {
 }
 
 function planMarkdownWithDailyLog(plan: GeneratedPlan, dailyLog: DailyLog): string {
-  return `${plan.notionMarkdown}\n\n${dailyLogMarkdown(dailyLog)}`
+  return [
+    plan.notionMarkdown,
+    dailyLogMarkdown(dailyLog),
+    formatFocusStatsMarkdown(getFocusStats(loadFocusSessions())),
+  ].join('\n\n')
 }
 
 interface Props {
@@ -163,6 +169,7 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
   const sourceLabel = getPlanSourceLabel(plan)
   const log = dailyLog ?? loadDailyLog(plan.date)
   const isStalePlan = plan.date < todayString()
+  const focusStats = getFocusStats(loadFocusSessions())
 
   return (
     <div className="page">
@@ -335,6 +342,7 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
       <div className="plan-section">
         <div className="plan-section-title">Actual Done & Notes</div>
         <div className="actual-log-card">
+          <FocusGarden stats={focusStats} compact />
           <div className="form-group">
             <label>Actual Done</label>
             <textarea

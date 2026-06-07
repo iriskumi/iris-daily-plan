@@ -4,6 +4,7 @@ import type {
   AppSettings,
   DailyCheckin,
   DailyLog,
+  FocusSession,
   Task,
   WorkOpportunity,
   Bill,
@@ -27,6 +28,7 @@ const KEYS = {
   calendarEvents: 'iris-calendar-events',
   googleCalendarMeta: 'iris-google-calendar-meta',
   dailyLogs: 'iris-daily-logs',
+  focusSessions: 'iris-focus-sessions',
 }
 
 interface VersionedValue<T> {
@@ -86,6 +88,16 @@ export const saveBills = (b: Bill[]): void => save(KEYS.bills, b)
 
 export const loadPlan = (): GeneratedPlan | null => load<GeneratedPlan>(KEYS.plan)
 export const savePlan = (p: GeneratedPlan): void => save(KEYS.plan, p)
+
+export const loadFocusSessions = (): FocusSession[] =>
+  load<FocusSession[]>(KEYS.focusSessions) ?? []
+export const saveFocusSessions = (sessions: FocusSession[]): void =>
+  save(KEYS.focusSessions, sessions)
+export const addFocusSession = (session: FocusSession): FocusSession[] => {
+  const next = [session, ...loadFocusSessions()]
+  saveFocusSessions(next)
+  return next
+}
 
 export const emptyDailyLog = (date: string): DailyLog => ({
   date,
@@ -216,6 +228,7 @@ export function exportBackupData(): AppBackup {
     data: {
       checkin: loadCheckin(),
       dailyLogs: Object.values(loadDailyLogs()),
+      focusSessions: loadFocusSessions(),
       tasks: loadTasks(),
       opportunities: loadOpportunities(),
       bills: loadBills(),
@@ -241,6 +254,7 @@ export function validateBackup(input: unknown): AppBackupData | null {
   const candidate = data as Partial<AppBackupData>
   if (!isArray(candidate.tasks)) return null
   if (candidate.dailyLogs !== undefined && !isArray(candidate.dailyLogs)) return null
+  if (candidate.focusSessions !== undefined && !isArray(candidate.focusSessions)) return null
   if (!isArray(candidate.opportunities)) return null
   if (!isArray(candidate.bills)) return null
   if (!isArray(candidate.templates)) return null
@@ -249,6 +263,9 @@ export function validateBackup(input: unknown): AppBackupData | null {
     checkin: candidate.checkin ?? null,
     dailyLogs: isArray(candidate.dailyLogs)
       ? (candidate.dailyLogs as DailyLog[])
+      : [],
+    focusSessions: isArray(candidate.focusSessions)
+      ? (candidate.focusSessions as FocusSession[])
       : [],
     tasks: candidate.tasks as Task[],
     opportunities: candidate.opportunities as WorkOpportunity[],
@@ -275,6 +292,7 @@ export function importBackupData(data: AppBackupData): void {
   saveDailyLogs(
     Object.fromEntries(data.dailyLogs.map(log => [log.date, log])),
   )
+  saveFocusSessions(data.focusSessions)
   saveTasks(data.tasks)
   saveOpportunities(data.opportunities)
   saveBills(data.bills)

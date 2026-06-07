@@ -3,6 +3,7 @@ import type {
   ExtractedWorkLead,
   CalendarEvent,
   DailyLog,
+  FocusStats,
   GeneratePlanContext,
   GeneratePlanResult,
   GeneratedPlan,
@@ -79,6 +80,7 @@ interface SummaryContext {
   opportunities: WorkOpportunity[]
   calendarEvents: CalendarEvent[]
   dailyLog: DailyLog | null
+  focusStats: FocusStats
 }
 
 async function runSummaryAction(

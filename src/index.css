@@ -7,24 +7,24 @@
 }
 
 :root {
-  --bg: #F7F3EE;
-  --surface: #FDFAF7;
-  --surface-2: #F2EDE6;
-  --border: #EAE4DC;
-  --border-strong: #D4B896;
+  --bg: #FAF7F2;
+  --surface: #FFFDF9;
+  --surface-2: #F5F0E8;
+  --border: #EFE8DF;
+  --border-strong: #DDD3C5;
 
-  --text: #3D3530;
-  --text-2: #5C4F3D;
-  --text-3: #A89F94;
-  --text-hint: #C4BAB0;
-  --section-label: #B5A99A;
+  --text: #4A4038;
+  --text-2: #74675B;
+  --text-3: #A99F95;
+  --text-hint: #C9C0B8;
+  --section-label: #B8AB9D;
 
-  --accent: #C4A882;
-  --accent-2: #8B6F4A;
-  --accent-bg: #F5EDE0;
-  --accent-border: #D4B896;
+  --accent: #9BA98D;
+  --accent-2: #6E7964;
+  --accent-bg: #EEF1EA;
+  --accent-border: #D8DED1;
 
-  --amber: #8B6F4A;
+  --amber: #9A7E5A;
   --amber-bg: #FDF6EC;
   --amber-border: #E8D5B0;
 
@@ -194,12 +194,12 @@ body {
   flex: 1;
   max-width: 780px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 3rem;
+  padding: 1.75rem 1.25rem 4rem;
   width: 100%;
 }
 
 .page-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .page-title {
@@ -221,12 +221,12 @@ body {
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.25rem 1.5rem;
+  padding: 1.35rem 1.55rem;
   box-shadow: none;
 }
 
 .card + .card {
-  margin-top: 1rem;
+  margin-top: 1.2rem;
 }
 
 .card-header {
@@ -1746,11 +1746,95 @@ body {
 
 /* ── Pomodoro Timer ─────────────────────────────────────────── */
 
-.pomo-box {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+.focus-garden {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.focus-garden.compact {
+  grid-template-columns: 34px 1fr;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.65rem;
+  background: rgba(255, 253, 249, 0.72);
+}
+
+.focus-garden-visual {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.focus-garden.compact .focus-garden-visual {
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+}
+
+.focus-garden-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-2);
+  font-weight: 500;
+}
+
+.focus-garden-note {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin-top: 0.12rem;
+}
+
+.focus-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.focus-stats-grid div {
+  border-top: 0.5px solid var(--border);
+  padding-top: 0.4rem;
+}
+
+.focus-stats-grid span,
+.focus-stats-grid small {
+  display: block;
+}
+
+.focus-stats-grid span {
+  font-size: 0.95rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.focus-stats-grid small {
+  font-size: 0.62rem;
+  color: var(--text-hint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+}
+
+.pomo-box {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.05rem;
   margin-top: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -1842,7 +1926,7 @@ body {
 
 .pomo-done {
   text-align: center;
-  background: var(--accent-bg);
+  background: var(--surface);
   border-color: var(--accent-border);
 }
 
@@ -1859,7 +1943,7 @@ body {
 }
 
 .pomo-session-done {
-  background: var(--accent-bg);
+  background: var(--surface);
   border-color: var(--accent-border);
 }
 

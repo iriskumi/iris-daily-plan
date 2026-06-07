@@ -14,11 +14,13 @@ import {
 import type { GeneratedPlan, Bill, WorkOpportunity } from './types'
 import {
   loadBills,
+  loadFocusSessions,
   loadOpportunities,
   loadPlan,
   savePlan,
   loadGeneratePlanContext,
 } from './storage'
+import { getFocusStats } from './focus'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
 import DailyCheckin from './components/DailyCheckin'
@@ -29,6 +31,7 @@ import DailyPlanView from './components/DailyPlanView'
 import AIAssistant from './components/AIAssistant'
 import RecurringTemplates from './components/RecurringTemplates'
 import Settings from './components/Settings'
+import FocusGarden from './components/FocusGarden'
 import './index.css'
 
 type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
@@ -60,15 +63,18 @@ export default function App() {
   const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan())
   const [urgentBills, setUrgentBills] = useState<Bill[]>([])
   const [activeWorkLeads, setActiveWorkLeads] = useState<WorkOpportunity[]>([])
+  const [focusStats, setFocusStats] = useState(() => getFocusStats(loadFocusSessions()))
 
   useEffect(() => {
     setUrgentBills(getUrgentBills(loadBills()))
     setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
+    setFocusStats(getFocusStats(loadFocusSessions()))
   }, [tab])
 
   function refreshReminders() {
     setUrgentBills(getUrgentBills(loadBills()))
     setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
+    setFocusStats(getFocusStats(loadFocusSessions()))
   }
 
   const handleGeneratePlan = async (feedback = '', originalPlan?: GeneratedPlan) => {
@@ -169,6 +175,7 @@ export default function App() {
           <TodayCommandCentre
             urgentBills={urgentBills}
             activeWorkLeads={activeWorkLeads}
+            focusStats={focusStats}
             onGenerate={handleGeneratePlan}
             onRemindersChange={refreshReminders}
           />
@@ -214,6 +221,7 @@ export default function App() {
 interface TodayCommandCentreProps {
   urgentBills: Bill[]
   activeWorkLeads: WorkOpportunity[]
+  focusStats: ReturnType<typeof getFocusStats>
   onGenerate: () => void
   onRemindersChange: () => void
 }
@@ -221,6 +229,7 @@ interface TodayCommandCentreProps {
 function TodayCommandCentre({
   urgentBills,
   activeWorkLeads,
+  focusStats,
   onGenerate,
   onRemindersChange,
 }: TodayCommandCentreProps) {
@@ -236,6 +245,8 @@ function TodayCommandCentre({
           <h2 className="page-title">Today</h2>
           <p className="page-subtitle">Check in, notice deadlines, then generate the plan.</p>
         </div>
+
+        <FocusGarden stats={focusStats} />
 
         <div className="command-grid">
           <button

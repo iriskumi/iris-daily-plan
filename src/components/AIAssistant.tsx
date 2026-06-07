@@ -25,6 +25,7 @@ import {
   loadBills,
   loadCalendarEvents,
   loadDailyLog,
+  loadFocusSessions,
   loadGoogleCalendarMeta,
   loadOpportunities,
   loadPlan,
@@ -33,6 +34,7 @@ import {
   saveGoogleCalendarMeta,
   saveOpportunities,
 } from '../storage'
+import { getFocusStats } from '../focus'
 import type {
   GmailScannedWorkLead,
   GoogleCalendarImportMeta,
@@ -157,6 +159,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       opportunities: loadOpportunities(),
       calendarEvents: loadCalendarEvents(),
       dailyLog: loadDailyLog(date),
+      focusStats: getFocusStats(loadFocusSessions()),
     }
   }
 

@@ -45,6 +45,23 @@ export interface DailyLog {
   updatedAt: string
 }
 
+export interface FocusSession {
+  id: string
+  date: string
+  taskId?: string
+  taskTitle: string
+  category: TaskCategory
+  focusMinutes: number
+  completedAt: string
+}
+
+export interface FocusStats {
+  todaySessions: number
+  todayMinutes: number
+  weekSessions: number
+  weekMinutes: number
+}
+
 export interface Task {
   id: string
   title: string
@@ -232,6 +249,7 @@ export interface IntegrationResult<T> {
 export interface AppBackupData {
   checkin: DailyCheckin | null
   dailyLogs: DailyLog[]
+  focusSessions: FocusSession[]
   tasks: Task[]
   opportunities: WorkOpportunity[]
   bills: Bill[]

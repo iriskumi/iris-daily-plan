@@ -519,6 +519,9 @@ export default function TaskInbox() {
                           pomodoroLength={task.pomodoroLength ?? 50}
                           breakLength={task.breakLength ?? 10}
                           sessions={task.pomodoroSessions ?? 1}
+                          taskId={task.id}
+                          taskTitle={task.title}
+                          category={task.category}
                           onMarkDone={() => {
                             toggleDone(task.id)
                             setTimerOpenId(null)

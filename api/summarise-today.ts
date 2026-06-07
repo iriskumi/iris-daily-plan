@@ -4,6 +4,7 @@ import type {
   Bill,
   CalendarEvent,
   DailyLog,
+  FocusStats,
   GeneratedPlan,
   IntegrationResult,
   Task,
@@ -29,6 +30,7 @@ interface SummaryContext {
   opportunities: WorkOpportunity[]
   calendarEvents: CalendarEvent[]
   dailyLog?: DailyLog | null
+  focusStats?: FocusStats
 }
 
 type SummaryMode = 'summary' | 'review'
@@ -107,6 +109,19 @@ function dailyLogLines(log?: DailyLog | null): string[] {
   ].filter(Boolean)
 }
 
+function focusStatsLines(stats?: FocusStats): string[] {
+  const safe = stats ?? {
+    todaySessions: 0,
+    todayMinutes: 0,
+    weekSessions: 0,
+    weekMinutes: 0,
+  }
+  return [
+    `- Today: ${safe.todaySessions} focus session${safe.todaySessions === 1 ? '' : 's'} / ${safe.todayMinutes} min`,
+    `- This week: ${safe.weekSessions} focus session${safe.weekSessions === 1 ? '' : 's'} / ${safe.weekMinutes} min`,
+  ]
+}
+
 function localSummary(context: SummaryContext): string {
   const completed = context.tasks.filter(task => task.done)
   const unfinished = context.tasks.filter(task => !task.done)
@@ -130,6 +145,9 @@ function localSummary(context: SummaryContext): string {
     '',
     '## Actual Done & Notes',
     dailyLogLines(context.dailyLog).join('\n'),
+    '',
+    '## Focus Garden',
+    focusStatsLines(context.focusStats).join('\n'),
     '',
     '## What is unfinished',
     unfinished.length > 0 ? unfinished.slice(0, 8).map(task => `- ${taskLine(task)}`).join('\n') : '- No unfinished tasks',
@@ -176,6 +194,9 @@ function localReview(context: SummaryContext): string {
     '',
     '## Actual Done & Notes',
     dailyLogLines(context.dailyLog).join('\n'),
+    '',
+    '## Focus Garden',
+    focusStatsLines(context.focusStats).join('\n'),
     '',
     section('Still urgent today', stillUrgent, 'Nothing still urgent today'),
     '',
@@ -242,6 +263,12 @@ function safeContext(context: SummaryContext) {
           carryOverToTomorrow: context.dailyLog.carryOverToTomorrow,
         }
       : null,
+    focusStats: context.focusStats ?? {
+      todaySessions: 0,
+      todayMinutes: 0,
+      weekSessions: 0,
+      weekMinutes: 0,
+    },
   }
 }
 
@@ -251,8 +278,8 @@ async function callGemini(mode: SummaryMode, context: SummaryContext): Promise<s
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
   const instruction =
     mode === 'summary'
-      ? 'Create a concise Markdown end-of-day summary with exactly these sections: What I completed today, Actual Done & Notes, What is unfinished, What should carry over tomorrow, One realistic reflection, One shutdown suggestion. Use dailyLog as the source of what actually happened.'
-      : 'Create a concise Markdown unfinished task review with exactly these sections: Actual Done & Notes, Still urgent today, Carry over tomorrow, Reduce to smaller version, Ignore/delete. Use dailyLog carry-over notes when deciding what should carry over.'
+      ? 'Create a concise Markdown end-of-day summary with exactly these sections: What I completed today, Actual Done & Notes, Focus Garden, What is unfinished, What should carry over tomorrow, One realistic reflection, One shutdown suggestion. Use dailyLog as the source of what actually happened and focusStats for Focus Garden.'
+      : 'Create a concise Markdown unfinished task review with exactly these sections: Actual Done & Notes, Focus Garden, Still urgent today, Carry over tomorrow, Reduce to smaller version, Ignore/delete. Use dailyLog carry-over notes when deciding what should carry over and include focusStats.'
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
