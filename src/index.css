@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -13,16 +13,16 @@
   --border: #EFE8DF;
   --border-strong: #DDD3C5;
 
-  --text: #4A4038;
-  --text-2: #74675B;
-  --text-3: #A99F95;
-  --text-hint: #C9C0B8;
+  --text: #2E2218;
+  --text-2: #5A4F44;
+  --text-3: #8C7F72;
+  --text-hint: #8C7F72;
   --section-label: #B8AB9D;
 
-  --accent: #9BA98D;
-  --accent-2: #6E7964;
-  --accent-bg: #EEF1EA;
-  --accent-border: #D8DED1;
+  --accent: #B8904E;
+  --accent-2: #3D3028;
+  --accent-bg: #F0E8DC;
+  --accent-border: #B8904E;
 
   --amber: #9A7E5A;
   --amber-bg: #FDF6EC;
@@ -49,8 +49,13 @@
   --radius: 16px;
   --radius-lg: 16px;
 
-  --font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font: 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+* {
+  font-family: var(--font);
+  letter-spacing: 0.02em;
 }
 
 html {
@@ -104,9 +109,9 @@ body {
 
 .app-header .header-date {
   font-size: 11px;
-  color: var(--text-hint);
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  color: var(--text-3);
+  font-weight: 300;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -135,7 +140,7 @@ body {
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-3);
+  color: #8C7F72;
   white-space: nowrap;
   border-bottom: 1.5px solid transparent;
   transition: color 0.15s, border-color 0.15s;
@@ -143,7 +148,7 @@ body {
   flex-shrink: 0;
   min-width: 96px;
   justify-content: center;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .nav-tab svg {
@@ -157,7 +162,7 @@ body {
 }
 
 .nav-tab.active {
-  color: var(--text-2);
+  color: #2E2218;
   border-bottom-color: var(--accent);
   font-weight: 500;
 }
@@ -206,13 +211,14 @@ body {
   font-size: 17px;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--text);
+  color: #2E2218;
   margin-bottom: 0.2rem;
 }
 
 .page-subtitle {
   font-size: 13px;
-  color: var(--text-3);
+  color: #5A4F44;
+  font-weight: 400;
 }
 
 /* ── Cards ─────────────────────────────────────────── */
@@ -542,12 +548,12 @@ body {
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: var(--text-2);
+  background: #3D3028;
+  color: #fff;
 }
 
 .btn-primary:hover {
-  background: var(--accent-bg);
+  background: #2E2218;
 }
 
 .btn-secondary {
@@ -616,8 +622,8 @@ body {
 }
 
 .btn-generate {
-  background: var(--accent);
-  color: var(--text-2);
+  background: #3D3028;
+  color: #fff;
   font-size: 0.95rem;
   padding: 0.9rem 1.5rem;
   border-radius: var(--radius);
@@ -637,7 +643,7 @@ body {
 }
 
 .btn-generate:hover {
-  background: var(--accent-bg);
+  background: #2E2218;
   box-shadow: none;
   transform: translateY(-1px);
 }
@@ -657,13 +663,14 @@ body {
   font-size: 0.67rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
   white-space: nowrap;
 }
 
 .badge-assessment {
-  background: var(--accent-bg);
-  color: var(--accent-2);
+  background: #EDE8E0;
+  border: 1px solid #C4B8A8;
+  color: #3D3028;
 }
 
 .badge-cyber-study {
@@ -712,8 +719,9 @@ body {
 }
 
 .badge-urgency-medium {
-  background: var(--amber-bg);
-  color: var(--amber);
+  background: #FDF0DC;
+  border: 1px solid #B8904E;
+  color: #7A5A2E;
 }
 
 .badge-urgency-low {
@@ -750,9 +758,9 @@ body {
 }
 
 .filter-chip.active {
-  background: var(--accent-bg);
-  border-color: var(--accent);
-  color: var(--accent);
+  background: #F0E8DC;
+  border: 1px solid #B8904E;
+  color: #3D3028;
   font-weight: 500;
 }
 
@@ -791,7 +799,7 @@ body {
   width: 17px;
   height: 17px;
   min-width: 17px;
-  border: 2px solid var(--border-strong);
+  border: 1.5px solid #C4B8A8;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -799,21 +807,21 @@ body {
   justify-content: center;
   margin-top: 2px;
   transition: all 0.12s;
-  background: var(--surface);
+  background: #fff;
   flex-shrink: 0;
 }
 
 .task-checkbox.checked {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: #FDF0DC;
+  border: 1.5px solid #B8904E;
 }
 
 .task-checkbox.checked::after {
   content: '';
   width: 8px;
   height: 5px;
-  border-left: 2px solid white;
-  border-bottom: 2px solid white;
+  border-left: 2px solid #7A5A2E;
+  border-bottom: 2px solid #7A5A2E;
   transform: rotate(-45deg) translate(0.5px, -1px);
   display: block;
 }
@@ -824,9 +832,9 @@ body {
 }
 
 .task-title {
-  font-size: 0.875rem;
+  font-size: 16px;
   font-weight: 500;
-  color: var(--text);
+  color: #2E2218;
   margin-bottom: 0.3rem;
   line-height: 1.4;
   word-break: break-word;
@@ -840,8 +848,9 @@ body {
 }
 
 .task-next-action {
-  font-size: 0.75rem;
-  color: var(--accent);
+  font-size: 13px;
+  color: #3D3028;
+  font-weight: 400;
   margin-top: 0.2rem;
   line-height: 1.4;
 }
@@ -1725,7 +1734,7 @@ body {
 }
 
 .text-muted {
-  color: var(--text-3);
+  color: #5A4F44;
 }
 
 .text-accent {
@@ -1974,7 +1983,8 @@ body {
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 500;
-  color: var(--text-3);
+  color: #3D3028;
+  font-weight: 500;
   background: var(--surface);
   cursor: pointer;
   font-family: var(--font);
@@ -2001,8 +2011,8 @@ body {
   gap: 0.15rem;
   font-size: 0.67rem;
   font-weight: 500;
-  color: var(--accent);
-  background: var(--accent-bg);
+  color: #5A3A1A;
+  background: #FDF0DC;
   border-radius: 999px;
   padding: 0.1rem 0.4rem;
   letter-spacing: 0.02em;
@@ -2104,8 +2114,9 @@ body {
 }
 
 .task-checklist li {
-  font-size: 0.75rem;
-  color: var(--text-3);
+  font-size: 13px;
+  color: #5A4F44;
+  font-weight: 400;
   padding: 0.1rem 0;
   line-height: 1.4;
 }
@@ -2264,12 +2275,12 @@ body {
 .segmented-control button {
   border: none;
   background: transparent;
-  color: var(--text-3);
+  color: #8C7F72;
   border-radius: var(--radius-sm);
   padding: 0.55rem 0.75rem;
   font-family: var(--font);
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -2283,8 +2294,10 @@ body {
 }
 
 .segmented-control button.active {
-  background: var(--accent-bg);
-  color: var(--accent);
+  background: #F0E8DC;
+  border: 1px solid #C4B090;
+  color: #2E2218;
+  font-weight: 500;
   box-shadow: none;
 }
 
