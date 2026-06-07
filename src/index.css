@@ -304,12 +304,13 @@ body {
 .form-group textarea {
   width: 100%;
   padding: 0.68rem 0.8rem;
-  border: 0.5px solid var(--border);
+  border: 1px solid #DDD5C8;
   border-radius: 12px;
   font-size: 13px;
   font-family: var(--font);
-  color: var(--text);
-  background: var(--surface);
+  font-weight: 300;
+  color: #5A4F44;
+  background: #FFFCF9;
   transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
   -webkit-appearance: none;
@@ -530,11 +531,12 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.575rem 1.1rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.84rem;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 500;
   font-family: var(--font);
+  letter-spacing: 0.06em;
   cursor: pointer;
   border: none;
   transition: all 0.15s;
@@ -548,24 +550,27 @@ body {
 }
 
 .btn-primary {
-  background: #3D3028;
-  color: #fff;
+  background: #B8904E;
+  color: #FFFCF9;
+  border: none;
 }
 
 .btn-primary:hover {
-  background: #2E2218;
+  background: #A87F3E;
 }
 
 .btn-secondary {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  color: var(--text-2);
+  background: #FFFCF9;
+  border: 1px solid #C4B8A8;
+  color: #3D3028;
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
 .btn-secondary:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-bg);
+  border-color: #B8904E;
+  color: #3D3028;
+  background: #F0E8DC;
 }
 
 .btn:disabled {
@@ -622,11 +627,11 @@ body {
 }
 
 .btn-generate {
-  background: #3D3028;
-  color: #fff;
-  font-size: 0.95rem;
-  padding: 0.9rem 1.5rem;
-  border-radius: var(--radius);
+  background: #B8904E;
+  color: #FFFCF9;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
   font-family: var(--font);
@@ -638,12 +643,12 @@ body {
   gap: 0.5rem;
   transition: all 0.2s;
   margin-top: 1.5rem;
-  letter-spacing: 0;
+  letter-spacing: 0.06em;
   box-shadow: none;
 }
 
 .btn-generate:hover {
-  background: #2E2218;
+  background: #A87F3E;
   box-shadow: none;
   transform: translateY(-1px);
 }
@@ -1253,7 +1258,7 @@ body {
 }
 
 .time-block-range {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--accent);
@@ -1378,7 +1383,7 @@ body {
 }
 
 .notion-preview {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 0.7rem;
   color: var(--text-2);
   white-space: pre-wrap;
@@ -1512,7 +1517,7 @@ body {
 }
 
 .ai-result {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 0.72rem;
   color: var(--text-2);
   white-space: pre-wrap;
@@ -1584,20 +1589,22 @@ body {
 
 .scope-status {
   display: inline-flex;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  font-size: 11px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: 0.04em;
+  border: 1px solid #C4B090;
 }
 
 .scope-status.connected {
-  background: var(--accent-bg);
-  color: var(--accent-2);
+  background: #F0E8DC;
+  color: #5A4F44;
 }
 
 .scope-status.not-connected {
-  background: var(--amber-bg);
-  color: var(--amber);
+  background: #FFFCF9;
+  color: #8C7F72;
 }
 
 .calendar-actions {
@@ -1871,7 +1878,7 @@ body {
 }
 
 .pomo-time {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 2rem;
   font-weight: 500;
   color: var(--text);
@@ -1913,13 +1920,13 @@ body {
 }
 
 .pomo-btn-primary {
-  background: var(--accent);
-  color: var(--text-2);
+  background: #B8904E;
+  color: #FFFCF9;
   flex: 1;
 }
 
 .pomo-btn-primary:hover {
-  background: var(--accent-bg);
+  background: #A87F3E;
 }
 
 .pomo-btn-ghost {
@@ -2083,9 +2090,9 @@ body {
 }
 
 .pomo-quick-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--text-2);
+  background: #B8904E;
+  border-color: #B8904E;
+  color: #FFFCF9;
 }
 
 .pomo-quick-input {

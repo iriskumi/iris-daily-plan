@@ -166,7 +166,7 @@ function TemplateForm({ initial, onSave, onCancel }: TemplateFormProps) {
             setSubtasksText(e.target.value)
             f('subtasks', e.target.value.split('\n').filter(s => s.trim()))
           }}
-          style={{ minHeight: 100, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}
+          style={{ minHeight: 100, fontSize: 13 }}
         />
       </div>
 

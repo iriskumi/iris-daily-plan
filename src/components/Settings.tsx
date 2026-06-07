@@ -262,7 +262,7 @@ export default function Settings() {
             placeholder="Paste a previously exported Iris Daily Plan backup JSON here."
             value={importText}
             onChange={e => setImportText(e.target.value)}
-            style={{ minHeight: 120, fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}
+            style={{ minHeight: 120, fontSize: 13 }}
           />
         </div>
 
