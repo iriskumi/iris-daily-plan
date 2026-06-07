@@ -24,6 +24,7 @@ import {
 import {
   loadBills,
   loadCalendarEvents,
+  loadDailyLog,
   loadGoogleCalendarMeta,
   loadOpportunities,
   loadPlan,
@@ -148,12 +149,15 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
   }
 
   function buildSummaryContext() {
+    const plan = loadPlan()
+    const date = plan?.date ?? new Date().toISOString().slice(0, 10)
     return {
-      plan: loadPlan(),
+      plan,
       tasks: loadTasks(),
       bills: loadBills(),
       opportunities: loadOpportunities(),
       calendarEvents: loadCalendarEvents(),
+      dailyLog: loadDailyLog(date),
     }
   }
 

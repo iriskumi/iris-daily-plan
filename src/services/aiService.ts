@@ -2,6 +2,7 @@ import type {
   ExtractedBill,
   ExtractedWorkLead,
   CalendarEvent,
+  DailyLog,
   GeneratePlanContext,
   GeneratePlanResult,
   GeneratedPlan,
@@ -77,6 +78,7 @@ interface SummaryContext {
   bills: Bill[]
   opportunities: WorkOpportunity[]
   calendarEvents: CalendarEvent[]
+  dailyLog: DailyLog | null
 }
 
 async function runSummaryAction(

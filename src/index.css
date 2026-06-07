@@ -1268,6 +1268,18 @@ body {
   content: '○  ';
 }
 
+.actual-log-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.actual-log-card textarea {
+  min-height: 76px;
+}
+
 .notion-export-card {
   background: var(--surface-2);
   border: 1px solid var(--border);

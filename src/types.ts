@@ -35,6 +35,16 @@ export interface DailyCheckin {
   notes: string
 }
 
+export interface DailyLog {
+  date: string
+  actualDone: string
+  whatChanged: string
+  energyAfterDoing: string
+  notes: string
+  carryOverToTomorrow: string
+  updatedAt: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -221,6 +231,7 @@ export interface IntegrationResult<T> {
 
 export interface AppBackupData {
   checkin: DailyCheckin | null
+  dailyLogs: DailyLog[]
   tasks: Task[]
   opportunities: WorkOpportunity[]
   bills: Bill[]

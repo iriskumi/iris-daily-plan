@@ -3,6 +3,7 @@ import type {
   AppBackupData,
   AppSettings,
   DailyCheckin,
+  DailyLog,
   Task,
   WorkOpportunity,
   Bill,
@@ -25,6 +26,7 @@ const KEYS = {
   settings: 'iris-settings',
   calendarEvents: 'iris-calendar-events',
   googleCalendarMeta: 'iris-google-calendar-meta',
+  dailyLogs: 'iris-daily-logs',
 }
 
 interface VersionedValue<T> {
@@ -84,6 +86,38 @@ export const saveBills = (b: Bill[]): void => save(KEYS.bills, b)
 
 export const loadPlan = (): GeneratedPlan | null => load<GeneratedPlan>(KEYS.plan)
 export const savePlan = (p: GeneratedPlan): void => save(KEYS.plan, p)
+
+export const emptyDailyLog = (date: string): DailyLog => ({
+  date,
+  actualDone: '',
+  whatChanged: '',
+  energyAfterDoing: '',
+  notes: '',
+  carryOverToTomorrow: '',
+  updatedAt: new Date().toISOString(),
+})
+
+export const loadDailyLogs = (): Record<string, DailyLog> =>
+  load<Record<string, DailyLog>>(KEYS.dailyLogs) ?? {}
+
+export const saveDailyLogs = (logs: Record<string, DailyLog>): void =>
+  save(KEYS.dailyLogs, logs)
+
+export const loadDailyLog = (date: string): DailyLog => ({
+  ...emptyDailyLog(date),
+  ...(loadDailyLogs()[date] ?? {}),
+  date,
+})
+
+export const saveDailyLog = (log: DailyLog): void => {
+  saveDailyLogs({
+    ...loadDailyLogs(),
+    [log.date]: {
+      ...log,
+      updatedAt: new Date().toISOString(),
+    },
+  })
+}
 
 export const loadTemplates = (): Template[] => load<Template[]>(KEYS.templates) ?? []
 export const saveTemplates = (t: Template[]): void => save(KEYS.templates, t)
@@ -181,6 +215,7 @@ export function exportBackupData(): AppBackup {
     exportedAt: new Date().toISOString(),
     data: {
       checkin: loadCheckin(),
+      dailyLogs: Object.values(loadDailyLogs()),
       tasks: loadTasks(),
       opportunities: loadOpportunities(),
       bills: loadBills(),
@@ -205,12 +240,16 @@ export function validateBackup(input: unknown): AppBackupData | null {
 
   const candidate = data as Partial<AppBackupData>
   if (!isArray(candidate.tasks)) return null
+  if (candidate.dailyLogs !== undefined && !isArray(candidate.dailyLogs)) return null
   if (!isArray(candidate.opportunities)) return null
   if (!isArray(candidate.bills)) return null
   if (!isArray(candidate.templates)) return null
 
   return {
     checkin: candidate.checkin ?? null,
+    dailyLogs: isArray(candidate.dailyLogs)
+      ? (candidate.dailyLogs as DailyLog[])
+      : [],
     tasks: candidate.tasks as Task[],
     opportunities: candidate.opportunities as WorkOpportunity[],
     bills: candidate.bills as Bill[],
@@ -233,6 +272,9 @@ export function validateBackup(input: unknown): AppBackupData | null {
 export function importBackupData(data: AppBackupData): void {
   if (data.checkin) saveCheckin(data.checkin)
   else localStorage.removeItem(KEYS.checkin)
+  saveDailyLogs(
+    Object.fromEntries(data.dailyLogs.map(log => [log.date, log])),
+  )
   saveTasks(data.tasks)
   saveOpportunities(data.opportunities)
   saveBills(data.bills)

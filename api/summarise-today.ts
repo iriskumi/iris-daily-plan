@@ -3,6 +3,7 @@
 import type {
   Bill,
   CalendarEvent,
+  DailyLog,
   GeneratedPlan,
   IntegrationResult,
   Task,
@@ -27,6 +28,7 @@ interface SummaryContext {
   bills: Bill[]
   opportunities: WorkOpportunity[]
   calendarEvents: CalendarEvent[]
+  dailyLog?: DailyLog | null
 }
 
 type SummaryMode = 'summary' | 'review'
@@ -60,7 +62,12 @@ function isSummaryContext(value: unknown): value is SummaryContext {
     Array.isArray(context.tasks) &&
     Array.isArray(context.bills) &&
     Array.isArray(context.opportunities) &&
-    Array.isArray(context.calendarEvents)
+    Array.isArray(context.calendarEvents) &&
+    (
+      context.dailyLog === undefined ||
+      context.dailyLog === null ||
+      typeof context.dailyLog === 'object'
+    )
   )
 }
 
@@ -76,6 +83,30 @@ function taskLine(task: Task): string {
   return task.nextAction ? `${task.title} -> ${task.nextAction}` : task.title
 }
 
+function hasDailyLogContent(log?: DailyLog | null): log is DailyLog {
+  if (!log) return false
+  return [
+    log.actualDone,
+    log.whatChanged,
+    log.energyAfterDoing,
+    log.notes,
+    log.carryOverToTomorrow,
+  ].some(value => value.trim())
+}
+
+function dailyLogLines(log?: DailyLog | null): string[] {
+  if (!hasDailyLogContent(log)) return ['- No actual done notes recorded yet']
+  return [
+    log.actualDone.trim() ? `- Actual done: ${log.actualDone.trim()}` : '',
+    log.whatChanged.trim() ? `- What changed: ${log.whatChanged.trim()}` : '',
+    log.energyAfterDoing.trim() ? `- Energy after doing: ${log.energyAfterDoing.trim()}` : '',
+    log.notes.trim() ? `- Notes: ${log.notes.trim()}` : '',
+    log.carryOverToTomorrow.trim()
+      ? `- Carry over to tomorrow: ${log.carryOverToTomorrow.trim()}`
+      : '',
+  ].filter(Boolean)
+}
+
 function localSummary(context: SummaryContext): string {
   const completed = context.tasks.filter(task => task.done)
   const unfinished = context.tasks.filter(task => !task.done)
@@ -88,13 +119,26 @@ function localSummary(context: SummaryContext): string {
     '# Today Summary',
     '',
     '## What I completed today',
-    completed.length > 0 ? completed.map(task => `- ${task.title}`).join('\n') : '- Nothing marked complete yet',
+    [
+      completed.length > 0
+        ? completed.map(task => `- ${task.title}`).join('\n')
+        : '- Nothing marked complete yet',
+      hasDailyLogContent(context.dailyLog) && context.dailyLog.actualDone.trim()
+        ? `- Actual done notes: ${context.dailyLog.actualDone.trim()}`
+        : '',
+    ].filter(Boolean).join('\n'),
+    '',
+    '## Actual Done & Notes',
+    dailyLogLines(context.dailyLog).join('\n'),
     '',
     '## What is unfinished',
     unfinished.length > 0 ? unfinished.slice(0, 8).map(task => `- ${taskLine(task)}`).join('\n') : '- No unfinished tasks',
     '',
     '## What should carry over tomorrow',
     carryOver.length > 0 ? carryOver.map(task => `- ${taskLine(task)}`).join('\n') : '- Pick one small useful task tomorrow',
+    hasDailyLogContent(context.dailyLog) && context.dailyLog.carryOverToTomorrow.trim()
+      ? `- Daily log carry-over: ${context.dailyLog.carryOverToTomorrow.trim()}`
+      : '',
     urgentBills.length > 0 ? urgentBills.map(bill => `- Bill: ${bill.name} - $${bill.amount}`).join('\n') : '',
     '',
     '## Realistic reflection',
@@ -129,6 +173,9 @@ function localReview(context: SummaryContext): string {
 
   return [
     '# Unfinished Task Review',
+    '',
+    '## Actual Done & Notes',
+    dailyLogLines(context.dailyLog).join('\n'),
     '',
     section('Still urgent today', stillUrgent, 'Nothing still urgent today'),
     '',
@@ -185,6 +232,16 @@ function safeContext(context: SummaryContext) {
       location: event.location,
       source: event.source,
     })),
+    dailyLog: context.dailyLog
+      ? {
+          date: context.dailyLog.date,
+          actualDone: context.dailyLog.actualDone,
+          whatChanged: context.dailyLog.whatChanged,
+          energyAfterDoing: context.dailyLog.energyAfterDoing,
+          notes: context.dailyLog.notes,
+          carryOverToTomorrow: context.dailyLog.carryOverToTomorrow,
+        }
+      : null,
   }
 }
 
@@ -194,8 +251,8 @@ async function callGemini(mode: SummaryMode, context: SummaryContext): Promise<s
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
   const instruction =
     mode === 'summary'
-      ? 'Create a concise Markdown end-of-day summary with exactly these sections: What I completed today, What is unfinished, What should carry over tomorrow, One realistic reflection, One shutdown suggestion.'
-      : 'Create a concise Markdown unfinished task review with exactly these sections: Still urgent today, Carry over tomorrow, Reduce to smaller version, Ignore/delete.'
+      ? 'Create a concise Markdown end-of-day summary with exactly these sections: What I completed today, Actual Done & Notes, What is unfinished, What should carry over tomorrow, One realistic reflection, One shutdown suggestion. Use dailyLog as the source of what actually happened.'
+      : 'Create a concise Markdown unfinished task review with exactly these sections: Actual Done & Notes, Still urgent today, Carry over tomorrow, Reduce to smaller version, Ignore/delete. Use dailyLog carry-over notes when deciding what should carry over.'
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -287,4 +344,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     fallbackReason: 'Gemini summary unavailable; used local fallback',
   })
 }
-

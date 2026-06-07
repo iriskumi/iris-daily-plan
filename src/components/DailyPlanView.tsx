@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Copy,
   Check,
@@ -13,7 +13,8 @@ import {
   XCircle,
   Shield,
 } from 'lucide-react'
-import type { GeneratedPlan, TimeBlock } from '../types'
+import type { DailyLog, GeneratedPlan, TimeBlock } from '../types'
+import { loadDailyLog, saveDailyLog } from '../storage'
 
 const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
   morning: <Sun size={13} />,
@@ -39,6 +40,42 @@ function getPlanSourceLabel(plan: GeneratedPlan): string {
   return 'Rule-based fallback'
 }
 
+function logHasContent(log: DailyLog): boolean {
+  return [
+    log.actualDone,
+    log.whatChanged,
+    log.energyAfterDoing,
+    log.notes,
+    log.carryOverToTomorrow,
+  ].some(value => value.trim())
+}
+
+function dailyLogMarkdown(log: DailyLog): string {
+  if (!logHasContent(log)) {
+    return [
+      '## Actual Done & Notes',
+      '- Actual Done: ',
+      '- What changed?: ',
+      '- Energy after doing: ',
+      '- Notes: ',
+      '- Carry over to tomorrow: ',
+    ].join('\n')
+  }
+
+  return [
+    '## Actual Done & Notes',
+    `### Actual Done\n${log.actualDone.trim() || '- Not recorded'}`,
+    `### What changed?\n${log.whatChanged.trim() || '- Not recorded'}`,
+    `### Energy after doing\n${log.energyAfterDoing.trim() || '- Not recorded'}`,
+    `### Notes\n${log.notes.trim() || '- Not recorded'}`,
+    `### Carry over to tomorrow\n${log.carryOverToTomorrow.trim() || '- Not recorded'}`,
+  ].join('\n\n')
+}
+
+function planMarkdownWithDailyLog(plan: GeneratedPlan, dailyLog: DailyLog): string {
+  return `${plan.notionMarkdown}\n\n${dailyLogMarkdown(dailyLog)}`
+}
+
 interface Props {
   plan: GeneratedPlan | null
   onGenerate: () => void
@@ -49,12 +86,34 @@ interface Props {
 export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCheckin }: Props) {
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [dailyLog, setDailyLog] = useState<DailyLog | null>(() =>
+    plan ? loadDailyLog(plan.date) : null,
+  )
+
+  useEffect(() => {
+    setDailyLog(plan ? loadDailyLog(plan.date) : null)
+  }, [plan?.date])
+
+  const markdownForCopy = useMemo(() => {
+    if (!plan) return ''
+    return planMarkdownWithDailyLog(plan, dailyLog ?? loadDailyLog(plan.date))
+  }, [plan, dailyLog])
 
   async function handleCopy() {
     if (!plan) return
-    await navigator.clipboard.writeText(plan.notionMarkdown)
+    await navigator.clipboard.writeText(markdownForCopy)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function updateDailyLog<K extends keyof DailyLog>(key: K, value: DailyLog[K]) {
+    if (!dailyLog) return
+    const updated = {
+      ...dailyLog,
+      [key]: value,
+    }
+    setDailyLog(updated)
+    saveDailyLog(updated)
   }
 
   function handleRegenerate() {
@@ -97,6 +156,7 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
     minute: '2-digit',
   })
   const sourceLabel = getPlanSourceLabel(plan)
+  const log = dailyLog ?? loadDailyLog(plan.date)
 
   return (
     <div className="page">
@@ -260,11 +320,57 @@ export default function DailyPlanView({ plan, onGenerate, onRegenerate, onGoToCh
         </div>
       </div>
 
+      <div className="plan-section">
+        <div className="plan-section-title">Actual Done & Notes</div>
+        <div className="actual-log-card">
+          <div className="form-group">
+            <label>Actual Done</label>
+            <textarea
+              value={log.actualDone}
+              onChange={e => updateDailyLog('actualDone', e.target.value)}
+              style={{ minHeight: 88 }}
+            />
+          </div>
+          <div className="form-group">
+            <label>What changed?</label>
+            <textarea
+              value={log.whatChanged}
+              onChange={e => updateDailyLog('whatChanged', e.target.value)}
+              style={{ minHeight: 78 }}
+            />
+          </div>
+          <div className="form-group">
+            <label>Energy after doing</label>
+            <textarea
+              value={log.energyAfterDoing}
+              onChange={e => updateDailyLog('energyAfterDoing', e.target.value)}
+              style={{ minHeight: 64 }}
+            />
+          </div>
+          <div className="form-group">
+            <label>Notes</label>
+            <textarea
+              value={log.notes}
+              onChange={e => updateDailyLog('notes', e.target.value)}
+              style={{ minHeight: 88 }}
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Carry over to tomorrow</label>
+            <textarea
+              value={log.carryOverToTomorrow}
+              onChange={e => updateDailyLog('carryOverToTomorrow', e.target.value)}
+              style={{ minHeight: 88 }}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Copy to Notion */}
       <div className="plan-section">
         <div className="plan-section-title">Copy to Notion</div>
         <div className="notion-export-card">
-          <pre className="notion-preview">{plan.notionMarkdown}</pre>
+          <pre className="notion-preview">{markdownForCopy}</pre>
           <div className="flex gap-sm">
             <button className="btn btn-primary" onClick={handleCopy}>
               {copied ? <Check size={14} /> : <Copy size={14} />}
