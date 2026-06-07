@@ -344,7 +344,15 @@ function TodayCommandCentre({
           <p className="page-subtitle">Start the day, check the next action, then protect your energy.</p>
         </div>
 
-        <FocusGarden stats={focusStats} />
+        <section className="today-focus-section">
+          <div className="today-focus-section-header">
+            <div>
+              <div className="section-label">Focus</div>
+              <h3>Focus Garden</h3>
+            </div>
+          </div>
+          <FocusGarden stats={focusStats} />
+        </section>
 
         <div className="start-today-card">
           <div>

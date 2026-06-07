@@ -167,7 +167,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="section-label mt-1">Schedule defaults</div>
+        <div className="settings-section-label mt-1">Schedule defaults</div>
         <div className="settings-toggle-list">
           <label className="settings-toggle">
             <input

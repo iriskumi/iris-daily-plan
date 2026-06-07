@@ -7,7 +7,6 @@ import {
   Briefcase,
   CreditCard,
   BookOpen,
-  Sparkles,
   Info,
   CalendarDays,
   Download,
@@ -343,17 +342,6 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       <div className="page-header">
         <h2 className="page-title">Integrations</h2>
         <p className="page-subtitle">Calendar, Gmail, Gemini, and future Notion workflows.</p>
-      </div>
-
-      <div className="ai-header">
-        <div className="ai-header-badge">
-          <Sparkles size={11} />
-          Connected tools
-        </div>
-        <p>
-          Gemini planning is available when configured. Google Calendar can now be connected
-          read-only; Gmail scan and Notion Daily Log export are available when configured.
-        </p>
       </div>
 
       <div className="card calendar-integration-card">

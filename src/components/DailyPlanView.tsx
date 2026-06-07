@@ -256,7 +256,7 @@ export default function DailyPlanView({
   const realityCheck = getRealityCheck(plan)
 
   return (
-    <div className="page">
+    <div className="page plan-page">
       <div className="page-header plan-page-header">
         <div>
           <h2 className="page-title">Daily Plan</h2>
@@ -340,7 +340,11 @@ export default function DailyPlanView({
                 <span className="time-block-range">{getTimeBlockRange(block)}</span>
               )}
               <span>{getTimeBlockTitle(block)}</span>
-              {block.type && <span className="time-block-type">{block.type}</span>}
+              {block.type && (
+                <span className={`time-block-type time-block-type-${block.type}`}>
+                  {block.type}
+                </span>
+              )}
             </div>
             <div className="time-block-body">
               <ul>
