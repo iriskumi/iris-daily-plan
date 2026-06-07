@@ -29,6 +29,10 @@ export interface DailyCheckin {
   wakeUpTime: string
   sleepTarget: string
   energyLevel: EnergyLevel
+  morningMainTask?: string
+  morningSecondaryTask1?: string
+  morningSecondaryTask2?: string
+  morningSmallLifeTask?: string
   availableFocusTime: string
   fixedCommitments: string
   planningInstructions: string

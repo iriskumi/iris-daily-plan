@@ -128,6 +128,17 @@ function planSource(payload: NotionDailyLogPayload): string {
   return plan.provider ?? 'local'
 }
 
+function morningPriorityLines(payload: NotionDailyLogPayload): string[] {
+  const checkin = payload.checkin
+  if (!checkin) return []
+  return [
+    checkin.morningMainTask?.trim() ? `Main: ${checkin.morningMainTask.trim()}` : '',
+    checkin.morningSecondaryTask1?.trim() ? `Secondary 1: ${checkin.morningSecondaryTask1.trim()}` : '',
+    checkin.morningSecondaryTask2?.trim() ? `Secondary 2: ${checkin.morningSecondaryTask2.trim()}` : '',
+    checkin.morningSmallLifeTask?.trim() ? `Small life: ${checkin.morningSmallLifeTask.trim()}` : '',
+  ].filter(Boolean)
+}
+
 function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
   const { plan, dailyLog, focusStats } = payload
   const top3 = plan.top3.map((item, index) => `${index + 1}. ${item.task} -> ${item.nextAction}`)
@@ -160,6 +171,7 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
   ]
   const dayType = payload.checkin?.dayType ?? 'Not recorded'
   const energy = payload.checkin?.energyLevel ?? (dailyLog.energyAfterDoing || 'Not recorded')
+  const morningPriorities = morningPriorityLines(payload)
 
   return [
     block('heading_2', 'Daily Log'),
@@ -168,6 +180,8 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
     block('paragraph', `Energy: ${energy}`),
     block('paragraph', `Focus Minutes: ${focusStats.todayMinutes}`),
     block('paragraph', `Planner source: ${planSource(payload)}`),
+    block('heading_3', 'Morning 1+2+1 Priorities'),
+    ...bullets(morningPriorities),
     block('heading_3', 'Top 3'),
     ...bullets(top3),
     block('heading_3', 'Actual Done'),

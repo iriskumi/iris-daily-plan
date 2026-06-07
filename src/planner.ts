@@ -259,11 +259,91 @@ function findMealSlot(
 }
 
 function focusTitle(task: Task): string {
+  if (task.id.startsWith('morning-main')) return 'Main priority focus block'
+  if (task.id.startsWith('morning-secondary')) return 'Secondary priority focus block'
   if (task.category === 'cyber-study' || task.category === 'assessment') return 'Cyber assessment focus block'
   if (task.category === 'english-practice') return 'English Output Pomodoro'
   if (task.category === 'job-search') return 'Job search Pomodoro'
   if (task.category === 'consulting-freelance') return 'AI learning / consulting focus'
   return `${task.title} Pomodoro`
+}
+
+function cleanPriority(value?: string): string {
+  return (value ?? '').trim()
+}
+
+function morningPriorityTasks(checkin: DailyCheckin): {
+  focusTasks: Task[]
+  smallLifeTask: Task | null
+} {
+  const main = cleanPriority(checkin.morningMainTask)
+  const secondary = [
+    cleanPriority(checkin.morningSecondaryTask1),
+    cleanPriority(checkin.morningSecondaryTask2),
+  ].filter(Boolean)
+  const smallLife = cleanPriority(checkin.morningSmallLifeTask)
+  const now = new Date().toISOString()
+  const focusTasks: Task[] = []
+
+  if (main) {
+    focusTasks.push({
+      id: `morning-main-${checkin.date}`,
+      title: main,
+      category: 'assessment',
+      estimatedMinutes: 50,
+      difficulty: 'medium',
+      urgency: 'high',
+      importance: 'high',
+      minimumVersion: `${main} - 25 minute minimum version`,
+      nextAction: `Start ${main}`,
+      pomodoroEnabled: true,
+      pomodoroLength: 50,
+      breakLength: 10,
+      pomodoroSessions: 1,
+      done: false,
+      createdAt: now,
+    })
+  }
+
+  secondary.forEach((title, index) => {
+    focusTasks.push({
+      id: `morning-secondary-${index + 1}-${checkin.date}`,
+      title,
+      category: 'cyber-study',
+      estimatedMinutes: 40,
+      difficulty: 'medium',
+      urgency: 'medium',
+      importance: 'medium',
+      minimumVersion: `${title} - 15 minute version`,
+      nextAction: `Make progress on ${title}`,
+      pomodoroEnabled: true,
+      pomodoroLength: 40,
+      breakLength: 10,
+      pomodoroSessions: 1,
+      done: false,
+      createdAt: now,
+    })
+  })
+
+  return {
+    focusTasks,
+    smallLifeTask: smallLife
+      ? {
+          id: `morning-small-life-${checkin.date}`,
+          title: smallLife,
+          category: 'admin-life',
+          estimatedMinutes: 20,
+          difficulty: 'easy',
+          urgency: 'medium',
+          importance: 'medium',
+          minimumVersion: `${smallLife} - 5 minute reset version`,
+          nextAction: `Do the smallest version of ${smallLife}`,
+          pomodoroEnabled: false,
+          done: false,
+          createdAt: now,
+        }
+      : null,
+  }
 }
 
 function generateTheme(checkin: DailyCheckin, top3Tasks: Task[]): string {
@@ -385,6 +465,25 @@ export function timeBlockGeneration(
     cursor = slot + (energyLevel === 'low' ? 90 : 70)
   })
 
+  const smallLifeTask = morningPriorityTasks(checkin).smallLifeTask
+  if (smallLifeTask) {
+    const smallLifeCursor = energyLevel === 'low'
+      ? Math.max(morningEnd + 10, 10 * 60)
+      : Math.max(cursor, lunch.end + 15)
+    const smallLifeSlot = findNextSlot(
+      smallLifeCursor,
+      20,
+      dayEnd,
+      [...commitments, ...mealWindows, ...scheduledFocus],
+    )
+    if (smallLifeSlot !== null) {
+      blocks.push(blockFromWindow(smallLifeSlot, smallLifeSlot + 20, 'Small life task', 'admin', [
+        formatTaskLine(smallLifeTask),
+        'Keep this short and low-energy',
+      ]))
+    }
+  }
+
   if (urgentBills.length > 0) {
     const billCursor = instructions.includes('bills first') ? morningEnd + 10 : 12 * 60 + 30
     const billSlot = findNextSlot(billCursor, 20, dayEnd, [...commitments, ...mealWindows, ...scheduledFocus])
@@ -468,16 +567,23 @@ export function workLeadSelection(
 }
 
 function selectTasks(tasks: Task[], checkin: DailyCheckin, referenceDate = new Date()) {
+  const priorities = morningPriorityTasks(checkin)
   const pending = tasks.filter(t => !t.done)
-  const scored = [...pending].sort(
+  const priorityTitles = new Set([
+    ...priorities.focusTasks.map(task => task.title.toLowerCase()),
+    ...(priorities.smallLifeTask ? [priorities.smallLifeTask.title.toLowerCase()] : []),
+  ])
+  const scored = [...pending]
+    .filter(task => !priorityTitles.has(task.title.toLowerCase()))
+    .sort(
     (a, b) =>
       taskScoring(b, referenceDate, checkin.planningInstructions) -
       taskScoring(a, referenceDate, checkin.planningInstructions),
-  )
+    )
   const cap = checkin.energyLevel === 'low' ? 1 : checkin.energyLevel === 'medium' ? 2 : 3
   const pomoCapTotal = checkin.energyLevel === 'low' ? 1 : 3
   let pomoCount = 0
-  const cappedScored = scored.map(t => {
+  const cappedScored = [...priorities.focusTasks, ...scored].map(t => {
     if (t.pomodoroEnabled) {
       if (pomoCount >= pomoCapTotal) return { ...t, pomodoroEnabled: false }
       pomoCount++
@@ -487,7 +593,10 @@ function selectTasks(tasks: Task[], checkin: DailyCheckin, referenceDate = new D
 
   return {
     top3Tasks: cappedScored.slice(0, Math.min(3, cap)),
-    optionalTasks: cappedScored.slice(3, 3 + cap),
+    optionalTasks: [
+      ...cappedScored.slice(3, 3 + cap),
+      ...(priorities.smallLifeTask ? [priorities.smallLifeTask] : []),
+    ],
     doNotTasks: cappedScored.slice(3 + cap),
   }
 }
@@ -502,6 +611,20 @@ export function markdownExport(plan: Omit<GeneratedPlan, 'notionMarkdown'>, top3
 
   let md = `# Daily Plan - ${dateFormatted}\n\n`
   md += `## Today's Theme\n${plan.theme}\n\n`
+
+  const morningPriorities = top3Tasks.filter(task => task.id.startsWith('morning-'))
+  if (morningPriorities.length > 0) {
+    md += `## Morning 1+2+1 Priorities\n`
+    morningPriorities.forEach(task => {
+      const label = task.id.startsWith('morning-main')
+        ? 'Main'
+        : task.id.startsWith('morning-secondary')
+          ? 'Secondary'
+          : 'Small life'
+      md += `- ${label}: ${task.title}\n`
+    })
+    md += '\n'
+  }
 
   md += `## Top 3\n`
   top3Tasks.forEach(t => {

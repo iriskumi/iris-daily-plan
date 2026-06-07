@@ -85,6 +85,17 @@ function todayString() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function morningPriorityLines() {
+  const checkin = loadCheckin()
+  if (!checkin) return []
+  return [
+    checkin.morningMainTask?.trim() ? `Main: ${checkin.morningMainTask.trim()}` : '',
+    checkin.morningSecondaryTask1?.trim() ? `Secondary 1: ${checkin.morningSecondaryTask1.trim()}` : '',
+    checkin.morningSecondaryTask2?.trim() ? `Secondary 2: ${checkin.morningSecondaryTask2.trim()}` : '',
+    checkin.morningSmallLifeTask?.trim() ? `Small life: ${checkin.morningSmallLifeTask.trim()}` : '',
+  ].filter(Boolean)
+}
+
 function logHasContent(log: DailyLog): boolean {
   return [
     log.actualDone,
@@ -137,6 +148,12 @@ function followUpsMarkdown(plan: GeneratedPlan, followUps: Record<string, TimeBl
   return ['## Time Block Follow-up', ...lines].join('\n')
 }
 
+function morningPrioritiesMarkdown(): string {
+  const lines = morningPriorityLines()
+  if (lines.length === 0) return ''
+  return ['## Morning 1+2+1 Priorities', ...lines.map(line => `- ${line}`)].join('\n')
+}
+
 interface Props {
   plan: GeneratedPlan | null
   onGenerate: () => void
@@ -174,8 +191,9 @@ export default function DailyPlanView({
     if (!plan) return ''
     return [
       planMarkdownWithDailyLog(plan, dailyLog ?? loadDailyLog(plan.date)),
+      morningPrioritiesMarkdown(),
       followUpsMarkdown(plan, followUps),
-    ].join('\n\n')
+    ].filter(Boolean).join('\n\n')
   }, [plan, dailyLog, followUps])
 
   const carryOverSuggestions = useMemo(() => {
@@ -289,8 +307,9 @@ export default function DailyPlanView({
         bills: loadBills(),
         markdown: [
           planMarkdownWithDailyLog(plan, updatedLog),
+          morningPrioritiesMarkdown(),
           followUpsMarkdown(plan, followUps),
-        ].join('\n\n'),
+        ].filter(Boolean).join('\n\n'),
         followUps: Object.values(followUps),
       },
     )
@@ -367,6 +386,7 @@ export default function DailyPlanView({
   const isStalePlan = plan.date < todayString()
   const focusStats = getFocusStats(loadFocusSessions())
   const realityCheck = getRealityCheck(plan)
+  const morningPriorities = morningPriorityLines()
 
   return (
     <div className="page plan-page">
@@ -421,6 +441,19 @@ export default function DailyPlanView({
             <button className="btn btn-secondary" onClick={onReducePlan}>
               Low Energy Mode
             </button>
+          </div>
+        </div>
+      )}
+
+      {morningPriorities.length > 0 && (
+        <div className="plan-section">
+          <div className="plan-section-title">Morning 1+2+1 priorities</div>
+          <div className="card" style={{ padding: '0.875rem 1rem' }}>
+            <ul className="plan-list">
+              {morningPriorities.map(item => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

@@ -44,6 +44,10 @@ function defaultCheckin(): DailyCheckinType {
     wakeUpTime: '07:30',
     sleepTarget: settings.defaultSleepTarget,
     energyLevel: 'medium',
+    morningMainTask: '',
+    morningSecondaryTask1: '',
+    morningSecondaryTask2: '',
+    morningSmallLifeTask: '',
     availableFocusTime: '3–4 hours',
     fixedCommitments: '',
     planningInstructions: '',
@@ -112,7 +116,7 @@ export default function DailyCheckin({
       <div className="card">
         <div className="card-header">
           <div>
-            <span className="step-indicator">step 1 / 4</span>
+            <span className="step-indicator">step 1 / 5</span>
             <span className="card-title">What kind of day is today?</span>
           </div>
         </div>
@@ -133,7 +137,7 @@ export default function DailyCheckin({
       <div className="card mt-1">
         <div className="card-header">
           <div>
-            <span className="step-indicator">step 2 / 4</span>
+            <span className="step-indicator">step 2 / 5</span>
             <span className="card-title">Energy & Time</span>
           </div>
         </div>
@@ -177,7 +181,57 @@ export default function DailyCheckin({
       <div className="card mt-1">
         <div className="card-header">
           <div>
-            <span className="step-indicator">step 3 / 4</span>
+            <span className="step-indicator">step 3 / 5</span>
+            <span className="card-title">Morning priorities: 1 + 2 + 1</span>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>1 Main Task</label>
+          <input
+            type="text"
+            placeholder="The one task that matters most today"
+            value={checkin.morningMainTask ?? ''}
+            onChange={e => set('morningMainTask', e.target.value)}
+          />
+        </div>
+
+        <div className="form-row">
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Secondary Task 1</label>
+            <input
+              type="text"
+              placeholder="If time allows"
+              value={checkin.morningSecondaryTask1 ?? ''}
+              onChange={e => set('morningSecondaryTask1', e.target.value)}
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Secondary Task 2</label>
+            <input
+              type="text"
+              placeholder="If energy allows"
+              value={checkin.morningSecondaryTask2 ?? ''}
+              onChange={e => set('morningSecondaryTask2', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
+          <label>1 Small Life Task</label>
+          <input
+            type="text"
+            placeholder="Tiny admin/reset/life task"
+            value={checkin.morningSmallLifeTask ?? ''}
+            onChange={e => set('morningSmallLifeTask', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="card mt-1">
+        <div className="card-header">
+          <div>
+            <span className="step-indicator">step 4 / 5</span>
             <span className="card-title">Today's Constraints</span>
           </div>
         </div>
@@ -213,7 +267,7 @@ export default function DailyCheckin({
         </div>
 
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <div className="step-indicator step-indicator-inline">step 4 / 4</div>
+          <div className="step-indicator step-indicator-inline">step 5 / 5</div>
           <label>Notes (body, mood, anything relevant)</label>
           <textarea
             placeholder="Feeling off, bad sleep, anxious about assessment, etc. This shapes the plan."
