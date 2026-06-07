@@ -56,9 +56,13 @@
   --shadow: none;
   --shadow-md: none;
 
-  --radius-sm: 12px;
-  --radius: 16px;
+  --radius-sm: 10px;
+  --radius: 14px;
   --radius-lg: 16px;
+
+  --control-height: 42px;
+  --control-radius: 10px;
+  --control-pad-x: 16px;
 
   --font-cjk: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -68,11 +72,11 @@
 
 * {
   font-family: var(--font);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 html {
-  font-size: 15px;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -82,6 +86,7 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100dvh;
+  line-height: 1.55;
 }
 
 :lang(zh),
@@ -122,9 +127,9 @@ body {
 }
 
 .app-header h1 {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   color: var(--text);
   white-space: nowrap;
 }
@@ -156,7 +161,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.8rem 0.7rem;
+  min-height: 48px;
+  padding: 0.75rem 0.85rem;
   border: none;
   background: none;
   cursor: pointer;
@@ -164,13 +170,13 @@ body {
   font-weight: 500;
   color: var(--text-3);
   white-space: nowrap;
-  border-bottom: 1.5px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
+  border-bottom: 2px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   font-family: var(--font);
   flex-shrink: 0;
   min-width: 96px;
   justify-content: center;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 
 .nav-tab svg {
@@ -221,26 +227,28 @@ body {
   flex: 1;
   max-width: 780px;
   margin: 0 auto;
-  padding: 1.75rem 1.25rem 4rem;
+  padding: 2rem 1.25rem 4.25rem;
   width: 100%;
 }
 
 .page-header {
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .page-title {
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 500;
   letter-spacing: 0;
   color: var(--text);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.3rem;
+  line-height: 1.35;
 }
 
 .page-subtitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-2);
   font-weight: 400;
+  line-height: 1.65;
 }
 
 /* ── Cards ─────────────────────────────────────────── */
@@ -249,7 +257,7 @@ body {
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.35rem 1.55rem;
+  padding: 1.4rem 1.5rem;
   box-shadow: none;
 }
 
@@ -261,14 +269,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text);
   letter-spacing: 0;
+  line-height: 1.4;
 }
 
 .card-title-row {
@@ -280,10 +289,10 @@ body {
 /* ── Section Labels ─────────────────────────────────────────── */
 
 .section-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.04em;
   color: var(--section-label);
   margin-bottom: 0.5rem;
 }
@@ -293,11 +302,11 @@ body {
   align-items: center;
   border: 0.5px solid var(--accent);
   border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 10px;
+  padding: 4px 10px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--accent);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   margin-bottom: 0.45rem;
 }
 
@@ -308,7 +317,7 @@ body {
 /* ── Form Elements ─────────────────────────────────────────── */
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 
 .form-group label {
@@ -317,18 +326,18 @@ body {
   font-weight: 500;
   color: var(--section-label);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 0.3rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 0.68rem 0.8rem;
+  padding: 0.72rem 0.85rem;
   border: 1px solid #DDD5C8;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: var(--control-radius);
+  font-size: 15px;
   font-family: var(--font-cjk);
   font-weight: 400;
   color: var(--text);
@@ -374,7 +383,7 @@ textarea {
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.9rem;
 }
 
 .form-row-3 {
@@ -394,15 +403,16 @@ textarea {
 
 .btn-group {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .btn-option {
-  padding: 0.42rem 0.85rem;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.78rem;
+  min-height: 36px;
+  padding: 0.44rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
   font-family: var(--font);
   font-weight: 500;
   cursor: pointer;
@@ -449,9 +459,9 @@ textarea {
 .energy-option {
   flex: 1;
   min-width: 0;
-  padding: 0.55rem 0.75rem;
+  padding: 0.7rem 0.8rem;
   border: 0.5px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--control-radius);
   font-family: var(--font);
   cursor: pointer;
   background: var(--surface);
@@ -471,12 +481,12 @@ textarea {
 }
 
 .energy-option-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
 }
 
 .energy-option-desc {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-3);
   line-height: 1.35;
   margin-top: 0.12rem;
@@ -525,8 +535,8 @@ textarea {
 
 .day-type-card {
   border: 0.5px solid var(--border);
-  border-radius: 16px;
-  padding: 0.65rem 0.75rem;
+  border-radius: var(--control-radius);
+  padding: 0.75rem 0.8rem;
   cursor: pointer;
   background: var(--surface);
   transition: all 0.15s;
@@ -556,7 +566,7 @@ textarea {
 }
 
 .day-type-card .dtc-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-2);
   display: block;
@@ -572,13 +582,15 @@ textarea {
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 10px 20px;
-  border-radius: 10px;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: var(--control-height);
+  padding: 0.62rem var(--control-pad-x);
+  border-radius: var(--control-radius);
   font-size: 14px;
   font-weight: 500;
   font-family: var(--font);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   cursor: pointer;
   border: none;
   transition: all 0.15s;
@@ -594,7 +606,7 @@ textarea {
 .btn-primary {
   background: #B8904E;
   color: #FFFCF9;
-  border: none;
+  border: 1px solid #B8904E;
 }
 
 .btn-primary:hover {
@@ -605,8 +617,8 @@ textarea {
   background: #FFFCF9;
   border: 1px solid #C4B8A8;
   color: #3D3028;
-  font-weight: 400;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .btn-secondary:hover {
@@ -624,8 +636,9 @@ textarea {
   background: none;
   border: none;
   color: var(--text-3);
-  padding: 0.35rem 0.45rem;
-  border-radius: var(--radius-sm);
+  min-height: 34px;
+  padding: 0.38rem 0.55rem;
+  border-radius: var(--control-radius);
   cursor: pointer;
   font-family: var(--font);
   display: inline-flex;
@@ -649,8 +662,9 @@ textarea {
   background: none;
   border: none;
   color: var(--text-3);
-  padding: 0.35rem 0.45rem;
-  border-radius: var(--radius-sm);
+  min-height: 34px;
+  padding: 0.38rem 0.55rem;
+  border-radius: var(--control-radius);
   cursor: pointer;
   font-family: var(--font);
   display: inline-flex;
@@ -672,9 +686,10 @@ textarea {
   background: #B8904E;
   color: #FFFCF9;
   font-size: 14px;
-  padding: 10px 20px;
-  border-radius: 10px;
-  border: none;
+  min-height: var(--control-height);
+  padding: 0.62rem var(--control-pad-x);
+  border-radius: var(--control-radius);
+  border: 1px solid #B8904E;
   cursor: pointer;
   font-family: var(--font);
   font-weight: 500;
@@ -685,7 +700,7 @@ textarea {
   gap: 0.5rem;
   transition: all 0.2s;
   margin-top: 1.5rem;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   box-shadow: none;
 }
 
@@ -726,12 +741,13 @@ textarea {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.12rem 0.5rem;
+  min-height: 22px;
+  padding: 0.14rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.67rem;
+  font-size: 0.7rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
@@ -801,16 +817,17 @@ textarea {
 
 .filter-bar {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
 }
 
 .filter-chip {
-  padding: 0.32rem 0.7rem;
+  min-height: 34px;
+  padding: 0.36rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   background: var(--surface);
@@ -837,14 +854,14 @@ textarea {
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .task-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.8rem 0.9rem;
+  padding: 0.9rem 1rem;
   display: flex;
   gap: 0.7rem;
   align-items: flex-start;
@@ -904,7 +921,7 @@ textarea {
   font-weight: 500;
   color: #2E2218;
   margin-bottom: 0.3rem;
-  line-height: 1.4;
+  line-height: 1.5;
   word-break: break-word;
 }
 
@@ -920,7 +937,7 @@ textarea {
   color: #3D3028;
   font-weight: 400;
   margin-top: 0.2rem;
-  line-height: 1.4;
+  line-height: 1.55;
 }
 
 .task-next-action::before {
@@ -982,14 +999,14 @@ textarea {
 .opp-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .opp-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.875rem 1rem;
+  padding: 0.95rem 1rem;
   transition: border-color 0.12s;
 }
 
@@ -1006,15 +1023,15 @@ textarea {
 }
 
 .opp-title {
-  font-size: 0.875rem;
+  font-size: 0.94rem;
   font-weight: 500;
   color: var(--text);
-  line-height: 1.3;
+  line-height: 1.45;
   word-break: break-word;
 }
 
 .opp-source {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-3);
   margin-bottom: 0.35rem;
 }
@@ -1044,9 +1061,10 @@ textarea {
 }
 
 .opp-next-action {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   color: var(--accent);
   margin-top: 0.3rem;
+  line-height: 1.5;
 }
 
 .opp-next-action::before {
@@ -1055,10 +1073,11 @@ textarea {
 }
 
 .status-select {
-  padding: 0.28rem 0.55rem;
+  min-height: 34px;
+  padding: 0.34rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  border-radius: var(--control-radius);
+  font-size: 0.8rem;
   font-family: var(--font);
   background: var(--surface);
   cursor: pointer;
@@ -1072,14 +1091,14 @@ textarea {
 .bill-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .bill-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.8rem 1rem;
+  padding: 0.9rem 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -1102,13 +1121,13 @@ textarea {
 }
 
 .bill-name {
-  font-size: 0.875rem;
+  font-size: 0.94rem;
   font-weight: 500;
   color: var(--text);
 }
 
 .bill-amount {
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   color: var(--text-3);
   font-weight: 500;
 }
@@ -1132,11 +1151,12 @@ textarea {
 }
 
 .bill-status-badge {
-  font-size: 0.68rem;
+  min-height: 22px;
+  font-size: 0.7rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.15rem 0.45rem;
+  padding: 0.14rem 0.55rem;
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -1167,30 +1187,30 @@ textarea {
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  margin-bottom: 1rem;
+  padding: 1.45rem 1.5rem;
+  margin-bottom: 1.15rem;
   box-shadow: none;
 }
 
 .plan-date-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.04em;
   color: var(--section-label);
   margin-bottom: 0.35rem;
 }
 
 .plan-theme {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--text);
   letter-spacing: 0;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
 .plan-meta {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-3);
   margin-top: 0.4rem;
 }
@@ -1207,7 +1227,7 @@ textarea {
 }
 
 .plan-page-header {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1226,8 +1246,9 @@ textarea {
   border: 0.5px solid var(--accent-border);
   color: var(--accent-2);
   border-radius: 999px;
-  padding: 0.28rem 0.65rem;
-  font-size: 11px;
+  min-height: 28px;
+  padding: 0.3rem 0.7rem;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
@@ -1241,6 +1262,7 @@ textarea {
   color: var(--accent-2);
   padding: 0.55rem 0.65rem;
   font-size: 14px;
+  line-height: 1.55;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -1262,7 +1284,7 @@ textarea {
 .top3-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .top3-item {
@@ -1270,30 +1292,30 @@ textarea {
   border: 0.5px solid var(--border);
   border-left: 2px solid var(--accent);
   border-radius: 0;
-  padding: 0.875rem 1rem;
+  padding: 0.95rem 1rem;
 }
 
 .top3-num {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.04em;
   margin-bottom: 0.2rem;
 }
 
 .top3-task {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text);
   margin-bottom: 0.2rem;
-  line-height: 1.3;
+  line-height: 1.45;
 }
 
 .top3-action {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-2);
-  line-height: 1.4;
+  line-height: 1.55;
 }
 
 .top3-action::before {
@@ -1306,15 +1328,15 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.65rem;
   overflow: hidden;
 }
 
 .time-block-header {
-  padding: 0.65rem 1rem;
+  padding: 0.72rem 1rem;
   background: var(--surface-2);
   border-bottom: 0.5px solid var(--border);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text);
   display: flex;
@@ -1337,7 +1359,7 @@ textarea {
 
 .time-block-range {
   font-family: var(--font);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: var(--accent);
   min-width: 5.9rem;
@@ -1346,15 +1368,16 @@ textarea {
 
 .time-block-type {
   margin-left: auto;
+  min-height: 22px;
   padding: 0.18rem 0.55rem;
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-2);
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.04em;
   line-height: 1.2;
 }
 
@@ -1402,15 +1425,15 @@ textarea {
 }
 
 .time-block-body {
-  padding: 0.65rem 1rem 0.75rem;
+  padding: 0.75rem 1rem 0.85rem;
 }
 
 .time-block-body li {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-2);
   padding: 0.18rem 0;
   list-style: none;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .time-block-body li::before {
@@ -1428,8 +1451,8 @@ textarea {
 .follow-up-options {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.4rem;
-  margin-bottom: 0.55rem;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .follow-up-options button {
@@ -1437,9 +1460,10 @@ textarea {
   background: var(--surface);
   color: var(--text-2);
   border-radius: 999px;
-  padding: 0.35rem 0.45rem;
+  min-height: 34px;
+  padding: 0.35rem 0.5rem;
   font-family: var(--font);
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   font-weight: 400;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, color 0.15s;
@@ -1462,20 +1486,20 @@ textarea {
   background: #FFFCF9;
   color: var(--text);
   font-family: var(--font-cjk);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 400;
   line-height: 1.5;
 }
 
 .plan-section {
-  margin-bottom: 1rem;
+  margin-bottom: 1.15rem;
 }
 
 .plan-section-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.04em;
   color: var(--section-label);
   margin-bottom: 0.55rem;
   display: flex;
@@ -1489,11 +1513,11 @@ textarea {
 }
 
 .plan-list li {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-2);
   padding: 0.18rem 0;
   list-style: none;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .plan-list li::before {
@@ -1514,16 +1538,16 @@ textarea {
 }
 
 .plan-mvd-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.04em;
   color: var(--accent);
   margin-bottom: 0.5rem;
 }
 
 .plan-mvd li {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--accent-2);
   padding: 0.18rem 0;
   list-style: none;
@@ -1538,7 +1562,7 @@ textarea {
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1.1rem;
   box-shadow: none;
 }
 
@@ -1550,12 +1574,12 @@ textarea {
   background: var(--surface-2);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  padding: 1.1rem 1.25rem;
 }
 
 .notion-status {
   margin-top: 0.75rem;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   color: var(--text-2);
   line-height: 1.55;
 }
@@ -1623,7 +1647,7 @@ textarea {
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.875rem 1rem;
+  padding: 0.95rem 1rem;
   text-align: left;
   cursor: pointer;
   font-family: var(--font);
@@ -1662,22 +1686,23 @@ textarea {
 }
 
 .ai-btn-title {
-  font-size: 0.875rem;
+  font-size: 0.94rem;
   font-weight: 500;
   color: var(--text);
   margin-bottom: 0.1rem;
 }
 
 .ai-btn-desc {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   color: var(--text-3);
+  line-height: 1.55;
 }
 
 .reality-card {
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  padding: 1.1rem 1.25rem;
   margin-bottom: 1.4rem;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1698,9 +1723,10 @@ textarea {
 }
 
 .reality-meta {
-  font-size: 0.8rem;
+  font-size: 0.88rem;
   color: var(--text-2);
   margin-bottom: 0.55rem;
+  line-height: 1.55;
 }
 
 .reality-actions {
@@ -1739,7 +1765,7 @@ textarea {
 }
 
 .carryover-title {
-  font-size: 0.86rem;
+  font-size: 0.92rem;
   color: var(--text);
   font-weight: 500;
 }
@@ -1747,8 +1773,8 @@ textarea {
 .carryover-reason,
 .carryover-action {
   grid-column: 2;
-  font-size: 0.8rem;
-  line-height: 1.45;
+  font-size: 0.86rem;
+  line-height: 1.55;
   color: var(--text-2);
 }
 
@@ -1852,11 +1878,12 @@ textarea {
 
 .scope-status {
   display: inline-flex;
+  min-height: 28px;
   padding: 4px 14px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   border: 1px solid #C4B090;
 }
 
@@ -2553,7 +2580,7 @@ textarea {
 .segmented-control {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
+  gap: 0.4rem;
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
@@ -2566,10 +2593,11 @@ textarea {
   background: transparent;
   color: var(--text-3);
   border-radius: var(--radius-sm);
-  padding: 0.55rem 0.75rem;
+  min-height: 38px;
+  padding: 0.56rem 0.75rem;
   font-family: var(--font);
-  font-size: 0.82rem;
-  font-weight: 400;
+  font-size: 0.86rem;
+  font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -2598,8 +2626,8 @@ textarea {
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1rem;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.1rem;
 }
 
 .today-focus-section-header {
@@ -2610,7 +2638,7 @@ textarea {
 }
 
 .today-focus-section h3 {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 500;
   color: var(--text);
   letter-spacing: 0;
@@ -2627,8 +2655,8 @@ textarea {
   background: var(--surface);
   border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1rem;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.1rem;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
@@ -2637,7 +2665,7 @@ textarea {
 
 .start-today-card h3,
 .next-action-card h3 {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 500;
   color: var(--text);
   margin-bottom: 0.3rem;
@@ -2645,9 +2673,9 @@ textarea {
 
 .start-today-card p,
 .next-action-card p {
-  font-size: 0.84rem;
+  font-size: 0.92rem;
   color: var(--text-2);
-  line-height: 1.55;
+  line-height: 1.65;
 }
 
 .start-flow-steps {
@@ -2659,18 +2687,20 @@ textarea {
 .start-flow-step {
   background: var(--surface-2);
   border-radius: 10px;
-  padding: 0.5rem 0.7rem;
-  font-size: 0.78rem;
+  padding: 0.58rem 0.75rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
   color: var(--text-2);
 }
 
 .next-action-time {
   display: inline-flex;
   margin-top: 0.45rem;
-  padding: 0.18rem 0.55rem;
+  min-height: 26px;
+  padding: 0.18rem 0.6rem;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--text-2);
 }
 
@@ -2685,15 +2715,15 @@ textarea {
 .command-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .command-card {
   border: none;
-  border-radius: 12px;
+  border-radius: var(--control-radius);
   background: var(--surface-2);
   box-shadow: none;
-  padding: 0.85rem;
+  padding: 0.95rem;
   text-align: left;
   display: flex;
   align-items: center;
@@ -2742,15 +2772,15 @@ textarea {
 }
 
 .command-card-title {
-  font-size: 0.84rem;
+  font-size: 0.92rem;
   font-weight: 500;
   margin-bottom: 0.12rem;
 }
 
 .command-card-text {
-  font-size: 0.74rem;
+  font-size: 0.82rem;
   color: var(--text-3);
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
 .command-card-chevron {
@@ -2786,8 +2816,9 @@ textarea {
   gap: 0.75rem;
   background: var(--surface);
   border-radius: 10px;
-  padding: 0.55rem 0.7rem;
-  font-size: 0.8rem;
+  padding: 0.62rem 0.75rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
   color: var(--text-2);
 }
 
@@ -2799,28 +2830,30 @@ textarea {
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 600px) {
   .page {
-    padding: 1rem 0.875rem 5.75rem;
+    padding: 1.15rem 1rem 6.35rem;
   }
 
   .app-header {
-    padding: 0 0.875rem;
+    height: 56px;
+    padding: 0 1rem;
   }
 
   .app-header h1 {
-    font-size: 0.88rem;
+    font-size: 0.95rem;
   }
 
   .nav-tabs {
     position: fixed;
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: 0.75rem;
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
     z-index: 200;
     border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 0.25rem;
+    border-radius: 16px;
+    padding: 0.3rem;
     justify-content: space-between;
-    box-shadow: none;
+    background: rgba(255, 253, 249, 0.96);
+    box-shadow: 0 8px 24px rgba(61, 48, 40, 0.08);
     overflow: visible;
   }
 
@@ -2828,26 +2861,29 @@ textarea {
     flex: 1;
     min-width: 0;
     flex-direction: column;
-    gap: 0.18rem;
-    padding: 0.42rem 0.2rem;
-    font-size: 0.62rem;
+    gap: 0.2rem;
+    min-height: 52px;
+    padding: 0.48rem 0.15rem;
+    font-size: 0.68rem;
     border-bottom: none;
-    border-radius: 14px;
+    border-radius: 12px;
+    color: var(--text-hint);
+    line-height: 1.1;
   }
 
   .nav-tab svg {
-    width: 15px;
-    height: 15px;
+    width: 17px;
+    height: 17px;
   }
 
   .nav-tab.active {
     background: var(--accent-bg);
-    color: var(--accent);
+    color: var(--accent-2);
     border-bottom-color: transparent;
   }
 
   .plan-theme {
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
 
   .command-grid {
@@ -2873,7 +2909,7 @@ textarea {
   }
 
   .subnav-shell {
-    padding: 0.875rem 0.875rem 0;
+    padding: 1rem 1rem 0;
   }
 
   .command-inline-manager > .page {
@@ -2882,5 +2918,36 @@ textarea {
 
   .energy-option {
     min-width: 100%;
+  }
+
+  .card,
+  .plan-header,
+  .today-focus-section,
+  .start-today-card,
+  .next-action-card,
+  .actual-log-card,
+  .notion-export-card {
+    padding: 1rem;
+  }
+
+  .btn,
+  .btn-generate {
+    width: 100%;
+  }
+
+  .form-actions,
+  .calendar-actions,
+  .reality-actions,
+  .pomo-btn-row {
+    flex-direction: column;
+  }
+
+  .time-block-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .time-block-type {
+    margin-left: 0;
   }
 }
