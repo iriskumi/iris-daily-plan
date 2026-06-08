@@ -1,5 +1,6 @@
 import type { FocusStats } from '../types'
-import { focusGardenStage } from '../focus'
+import { focusGardenStage, localDateString } from '../focus'
+import { loadFocusSessions } from '../storage'
 
 interface Props {
   stats: FocusStats
@@ -8,6 +9,14 @@ interface Props {
 
 export default function FocusGarden({ stats, compact = false }: Props) {
   const stage = focusGardenStage(stats.todaySessions)
+  const sessions = loadFocusSessions()
+  const weekCounts = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date()
+    date.setDate(date.getDate() - (6 - index))
+    const key = localDateString(date)
+    return sessions.filter(session => session.date === key).length
+  })
+  const maxCount = Math.max(1, ...weekCounts)
 
   return (
     <div className={`focus-garden ${compact ? 'compact' : ''}`}>
@@ -34,6 +43,14 @@ export default function FocusGarden({ stats, compact = false }: Props) {
             <span>{stats.weekMinutes}</span>
             <small>week min</small>
           </div>
+        </div>
+        <div className="focus-sparkline" aria-label="Focus sessions this week">
+          {weekCounts.map((count, index) => (
+            <span
+              key={index}
+              style={{ height: `${Math.max(2, Math.round((count / maxCount) * 28))}px` }}
+            />
+          ))}
         </div>
       </div>
     </div>

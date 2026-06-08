@@ -11,6 +11,7 @@ import {
   Settings as SettingsIcon,
   ChevronRight,
   Play,
+  X,
 } from 'lucide-react'
 import type { GeneratedPlan, Bill, WorkOpportunity, GeneratePlanOutcome } from './types'
 import {
@@ -27,7 +28,7 @@ import {
   savePlan,
   loadGeneratePlanContext,
 } from './storage'
-import { getFocusStats } from './focus'
+import { getFocusStats, localDateString } from './focus'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
 import { getGoogleCalendarStatus, importCalendarCommitments } from './services/calendarService'
@@ -54,12 +55,10 @@ import './index.css'
 type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'plan' | 'tasks'>; label: string; icon: React.ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
   { id: 'plan', label: 'Plan', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
-  { id: 'integrations', label: 'Integrations', icon: <Plug /> },
-  { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
 ]
 
 function getUrgentBills(bills: Bill[]): Bill[] {
@@ -74,9 +73,38 @@ function getActiveWorkLeads(opportunities: WorkOpportunity[]): WorkOpportunity[]
   return opportunities.filter(o => o.status !== 'ignore' && o.status !== 'later')
 }
 
+function minutesFromClock(value?: string): number | null {
+  if (!value) return null
+  const [hour, minute] = value.split(':').map(Number)
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+  return hour * 60 + minute
+}
+
+function getNowContext(plan: GeneratedPlan | null): string {
+  const now = new Date()
+  const nowLabel = now.toLocaleTimeString('en-AU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  if (!plan) return `Now ${nowLabel} · Plan not generated yet`
+
+  const todayKey = localDateString(now)
+  if (plan.date !== todayKey) return `Now ${nowLabel} · Plan needs refresh`
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const activeBlock = plan.timeBlocks.find(block => {
+    const start = minutesFromClock(block.startTime)
+    const end = minutesFromClock(block.endTime)
+    return start !== null && end !== null && nowMinutes >= start && nowMinutes <= end
+  })
+  if (!activeBlock) return `Now ${nowLabel} · Next block pending`
+  return `Now ${nowLabel} · ${activeBlock.type ? `${activeBlock.type} block` : 'Plan block'} active`
+}
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [taskView, setTaskView] = useState<TaskView>('tasks')
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan())
   const [urgentBills, setUrgentBills] = useState<Bill[]>([])
   const [activeWorkLeads, setActiveWorkLeads] = useState<WorkOpportunity[]>([])
@@ -188,13 +216,29 @@ export default function App() {
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
 
+  function goToTab(nextTab: Tab) {
+    setTab(nextTab)
+    setSettingsPanelOpen(false)
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header-brand">
           <h1>Iris Daily Plan Hub</h1>
         </div>
-        <span className="header-date">{today}</span>
+        <div className="app-header-actions">
+          <span className="header-date">{today}</span>
+          <button
+            className="settings-menu-button"
+            type="button"
+            onClick={() => setSettingsPanelOpen(open => !open)}
+            aria-label="Open settings and integrations"
+            aria-expanded={settingsPanelOpen}
+          >
+            <SettingsIcon />
+          </button>
+        </div>
       </header>
 
       <nav className="nav-tabs">
@@ -202,13 +246,46 @@ export default function App() {
           <button
             key={t.id}
             className={`nav-tab ${tab === t.id ? 'active' : ''}`}
-            onClick={() => setTab(t.id)}
+            onClick={() => goToTab(t.id)}
           >
             {t.icon}
             {t.label}
           </button>
         ))}
       </nav>
+
+      {settingsPanelOpen && (
+        <aside className="settings-slideover" aria-label="Settings and integrations">
+          <div className="settings-slideover-header">
+            <div>
+              <div className="section-label">Tools</div>
+              <h2>Settings & integrations</h2>
+            </div>
+            <button
+              className="btn-ghost"
+              type="button"
+              onClick={() => setSettingsPanelOpen(false)}
+              aria-label="Close settings panel"
+            >
+              <X />
+            </button>
+          </div>
+          <button className="settings-panel-item" type="button" onClick={() => goToTab('integrations')}>
+            <Plug />
+            <span>
+              <strong>Integrations</strong>
+              <small>Google Calendar, Gmail, Gemini, Notion</small>
+            </span>
+          </button>
+          <button className="settings-panel-item" type="button" onClick={() => goToTab('settings')}>
+            <SettingsIcon />
+            <span>
+              <strong>Settings</strong>
+              <small>Planner defaults and preferences</small>
+            </span>
+          </button>
+        </aside>
+      )}
 
       {overdueBills.length > 0 && (
         <div className="alert-banner alert-red">
@@ -239,7 +316,7 @@ export default function App() {
             currentPlan={plan}
             generatingPlan={generatingPlan}
             generationMessage={generationMessage}
-            onViewPlan={() => setTab('plan')}
+            onViewPlan={() => goToTab('plan')}
             onStartToday={async () => {
               const steps: string[] = []
               const meta = loadGoogleCalendarMeta()
@@ -299,7 +376,7 @@ export default function App() {
             plan={plan}
             onGenerate={handleGeneratePlan}
             onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
-            onGoToCheckin={() => setTab('today')}
+            onGoToCheckin={() => goToTab('today')}
             onReducePlan={handleLowEnergyMode}
           />
         )}
@@ -367,6 +444,7 @@ function TodayCommandCentre({
   const workReminders = getTodayWorkReminders(activeWorkLeads)
   const billReminders = getTodayBillReminders(urgentBills)
   const nextAction = getNextAction(currentPlan)
+  const nowContext = getNowContext(currentPlan)
 
   async function handleStartToday() {
     setStarting(true)
@@ -423,14 +501,18 @@ function TodayCommandCentre({
                 {nextAction.startTime ?? '--'}-{nextAction.endTime ?? '--'}
               </div>
             )}
+            <div className="next-action-now">{nowContext}</div>
           </div>
           {nextAction.canStartFocus && (
             <div className="next-action-focus">
               <button
-                className="btn btn-secondary"
+                className="btn btn-primary"
                 onClick={() => setShowNextFocus(value => !value)}
               >
-                {showNextFocus ? 'Hide Pomodoro' : 'Start Pomodoro'}
+                {showNextFocus ? 'Hide Focus' : 'Start Focus'}
+              </button>
+              <button className="btn btn-secondary" onClick={onViewPlan}>
+                Skip →
               </button>
               {showNextFocus && (
                 <PomodoroTimer

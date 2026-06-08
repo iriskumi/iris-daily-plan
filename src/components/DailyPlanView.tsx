@@ -413,7 +413,7 @@ export default function DailyPlanView({
         <div className="plan-meta">Generated at {generatedTime}</div>
         {plan.fallbackReason && (
           <div className="plan-fallback-note">
-            {plan.fallbackReason}
+            ⚠ Using local planner · Gemini unavailable
           </div>
         )}
       </div>
@@ -493,7 +493,7 @@ export default function DailyPlanView({
             updatedAt: '',
           }
           return (
-          <div key={i} className="time-block">
+          <div key={i} className={`time-block time-block-${block.type ?? 'default'}`}>
             <div className="time-block-header">
               <span className="time-block-icon">{PERIOD_ICONS[block.period]}</span>
               {getTimeBlockRange(block) && (
@@ -517,7 +517,7 @@ export default function DailyPlanView({
                   {FOLLOW_UP_OPTIONS.map(option => (
                     <button
                       key={option.value}
-                      className={followUp.status === option.value ? 'active' : ''}
+                      className={`follow-up-option-${option.value} ${followUp.status === option.value ? 'active' : ''}`}
                       onClick={() => updateFollowUp(block, i, { status: option.value })}
                     >
                       {option.label}

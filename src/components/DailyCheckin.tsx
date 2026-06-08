@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Zap } from 'lucide-react'
+import { Check, Pencil, Zap } from 'lucide-react'
 import type {
   DailyCheckin as DailyCheckinType,
   DayType,
@@ -70,6 +70,7 @@ export default function DailyCheckin({
   hasPlan = false,
   onViewPlan,
 }: Props) {
+  const [currentStep, setCurrentStep] = useState(1)
   const [checkin, setCheckin] = useState<DailyCheckinType>(() => {
     const saved = loadCheckin()
     if (saved) return { ...defaultCheckin(), ...saved, date: todayString() }
@@ -98,10 +99,26 @@ export default function DailyCheckin({
     await onGenerate()
   }
 
+  function handleStepAction() {
+    if (currentStep < 4) {
+      setCurrentStep(step => step + 1)
+      return
+    }
+    void handleGenerate()
+  }
+
   const energyOptions: { value: EnergyLevel; label: string; desc: string }[] = [
     { value: 'low', label: 'Low', desc: 'Foggy, need rest' },
     { value: 'medium', label: 'Medium', desc: 'Steady pace' },
     { value: 'high', label: 'High', desc: 'Sharp, ready' },
+  ]
+
+  const dayTypeLabel = DAY_TYPES.find(day => day.id === checkin.dayType)?.label ?? checkin.dayType
+  const steps = [
+    { id: 1, label: 'Day type', summary: dayTypeLabel },
+    { id: 2, label: 'Energy & time', summary: `${checkin.energyLevel} · ${checkin.wakeUpTime}-${checkin.sleepTarget}` },
+    { id: 3, label: 'Morning 1 + 2 + 1', summary: checkin.morningMainTask || 'Main task not set' },
+    { id: 4, label: "Today's constraints", summary: checkin.availableFocusTime || 'Focus time not set' },
   ]
 
   return (
@@ -113,175 +130,197 @@ export default function DailyCheckin({
         </p>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <div>
-            <span className="step-indicator">step 1 / 5</span>
-            <span className="card-title">What kind of day is today?</span>
-          </div>
-        </div>
-        <div className="day-type-grid">
-          {DAY_TYPES.map(dt => (
-            <button
-              key={dt.id}
-              className={`day-type-card ${checkin.dayType === dt.id ? 'selected' : ''}`}
-              onClick={() => handleDayType(dt.id)}
-            >
-              <span className="dtc-emoji">{dt.emoji}</span>
-              <span className="dtc-label">{dt.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="card mt-1">
-        <div className="card-header">
-          <div>
-            <span className="step-indicator">step 2 / 5</span>
-            <span className="card-title">Energy & Time</span>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Energy level right now</label>
-          <div className="btn-group">
-            {energyOptions.map(e => (
+      <div className="checkin-stepper">
+        {steps.filter(step => step.id <= currentStep).map(step => {
+          if (step.id < currentStep) {
+            return (
               <button
-                key={e.value}
-                className={`energy-option ${checkin.energyLevel === e.value ? `selected-${e.value}` : ''}`}
-                onClick={() => set('energyLevel', e.value)}
+                key={step.id}
+                className="checkin-step-row"
+                type="button"
+                onClick={() => setCurrentStep(step.id)}
               >
-                <span className="energy-option-label">{e.label}</span>
-                <span className="energy-option-desc">{e.desc}</span>
+                <Check />
+                <span>
+                  <strong>{step.label}</strong>
+                  <small>{step.summary}</small>
+                </span>
+                <Pencil />
               </button>
-            ))}
-          </div>
-        </div>
+            )
+          }
 
-        <div className="form-row">
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Wake-up time</label>
-            <input
-              type="time"
-              value={checkin.wakeUpTime}
-              onChange={e => set('wakeUpTime', e.target.value)}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Sleep target</label>
-            <input
-              type="time"
-              value={checkin.sleepTarget}
-              onChange={e => set('sleepTarget', e.target.value)}
-            />
-          </div>
-        </div>
+          return (
+            <div key={step.id} className="card checkin-step-card">
+              <div className="card-header">
+                <div>
+                  <span className="step-indicator">step {step.id} / 4</span>
+                  <span className="card-title">{step.label}</span>
+                </div>
+              </div>
+
+              {step.id === 1 && (
+                <div className="day-type-grid">
+                  {DAY_TYPES.map(dt => (
+                    <button
+                      key={dt.id}
+                      className={`day-type-card ${checkin.dayType === dt.id ? 'selected' : ''}`}
+                      type="button"
+                      onClick={() => handleDayType(dt.id)}
+                    >
+                      <span className="dtc-emoji">{dt.emoji}</span>
+                      <span className="dtc-label">{dt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {step.id === 2 && (
+                <>
+                  <div className="form-group">
+                    <label>Energy level right now</label>
+                    <div className="btn-group">
+                      {energyOptions.map(e => (
+                        <button
+                          key={e.value}
+                          className={`energy-option ${checkin.energyLevel === e.value ? `selected-${e.value}` : ''}`}
+                          type="button"
+                          onClick={() => set('energyLevel', e.value)}
+                        >
+                          <span className="energy-option-label">{e.label}</span>
+                          <span className="energy-option-desc">{e.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Wake-up time</label>
+                      <input
+                        type="time"
+                        value={checkin.wakeUpTime}
+                        onChange={e => set('wakeUpTime', e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Sleep target</label>
+                      <input
+                        type="time"
+                        value={checkin.sleepTarget}
+                        onChange={e => set('sleepTarget', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {step.id === 3 && (
+                <>
+                  <div className="form-group">
+                    <label>1 Main Task</label>
+                    <input
+                      type="text"
+                      placeholder="The one task that matters most today"
+                      value={checkin.morningMainTask ?? ''}
+                      onChange={e => set('morningMainTask', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Secondary Task 1</label>
+                      <input
+                        type="text"
+                        placeholder="If time allows"
+                        value={checkin.morningSecondaryTask1 ?? ''}
+                        onChange={e => set('morningSecondaryTask1', e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Secondary Task 2</label>
+                      <input
+                        type="text"
+                        placeholder="If energy allows"
+                        value={checkin.morningSecondaryTask2 ?? ''}
+                        onChange={e => set('morningSecondaryTask2', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
+                    <label>1 Small Life Task</label>
+                    <input
+                      type="text"
+                      placeholder="Tiny admin/reset/life task"
+                      value={checkin.morningSmallLifeTask ?? ''}
+                      onChange={e => set('morningSmallLifeTask', e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {step.id === 4 && (
+                <>
+                  <div className="form-group">
+                    <label>Available focus time</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 3 hours, all afternoon, only mornings"
+                      value={checkin.availableFocusTime}
+                      onChange={e => set('availableFocusTime', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Fixed commitments today</label>
+                    <input
+                      type="text"
+                      placeholder="Classes, shifts, appointments, calls..."
+                      value={checkin.fixedCommitments}
+                      onChange={e => set('fixedCommitments', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Planning instructions</label>
+                    <textarea
+                      placeholder="e.g. Keep today light, prioritise Cybersecurity assessment, no deep work after 7pm, bills first"
+                      value={checkin.planningInstructions}
+                      onChange={e => set('planningInstructions', e.target.value)}
+                      style={{ minHeight: 70 }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Notes (body, mood, anything relevant)</label>
+                    <textarea
+                      placeholder="Feeling off, bad sleep, anxious about assessment, etc. This shapes the plan."
+                      value={checkin.notes}
+                      onChange={e => set('notes', e.target.value)}
+                      style={{ minHeight: 70 }}
+                    />
+                  </div>
+                </>
+              )}
+
+              <button
+                className="btn-generate"
+                type="button"
+                onClick={handleStepAction}
+                disabled={isGenerating}
+              >
+                <Zap />
+                {isGenerating
+                  ? 'Generating...'
+                  : currentStep === 4
+                    ? "Generate Today's Plan →"
+                    : 'Next →'}
+              </button>
+            </div>
+          )
+        })}
       </div>
-
-      <div className="card mt-1">
-        <div className="card-header">
-          <div>
-            <span className="step-indicator">step 3 / 5</span>
-            <span className="card-title">Morning priorities: 1 + 2 + 1</span>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>1 Main Task</label>
-          <input
-            type="text"
-            placeholder="The one task that matters most today"
-            value={checkin.morningMainTask ?? ''}
-            onChange={e => set('morningMainTask', e.target.value)}
-          />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Secondary Task 1</label>
-            <input
-              type="text"
-              placeholder="If time allows"
-              value={checkin.morningSecondaryTask1 ?? ''}
-              onChange={e => set('morningSecondaryTask1', e.target.value)}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Secondary Task 2</label>
-            <input
-              type="text"
-              placeholder="If energy allows"
-              value={checkin.morningSecondaryTask2 ?? ''}
-              onChange={e => set('morningSecondaryTask2', e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
-          <label>1 Small Life Task</label>
-          <input
-            type="text"
-            placeholder="Tiny admin/reset/life task"
-            value={checkin.morningSmallLifeTask ?? ''}
-            onChange={e => set('morningSmallLifeTask', e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="card mt-1">
-        <div className="card-header">
-          <div>
-            <span className="step-indicator">step 4 / 5</span>
-            <span className="card-title">Today's Constraints</span>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Available focus time</label>
-          <input
-            type="text"
-            placeholder="e.g. 3 hours, all afternoon, only mornings"
-            value={checkin.availableFocusTime}
-            onChange={e => set('availableFocusTime', e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Fixed commitments today</label>
-          <input
-            type="text"
-            placeholder="Classes, shifts, appointments, calls…"
-            value={checkin.fixedCommitments}
-            onChange={e => set('fixedCommitments', e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Planning instructions</label>
-          <textarea
-            placeholder="e.g. Keep today light, prioritise Cybersecurity assessment, no deep work after 7pm, bills first"
-            value={checkin.planningInstructions}
-            onChange={e => set('planningInstructions', e.target.value)}
-            style={{ minHeight: 70 }}
-          />
-        </div>
-
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <div className="step-indicator step-indicator-inline">step 5 / 5</div>
-          <label>Notes (body, mood, anything relevant)</label>
-          <textarea
-            placeholder="Feeling off, bad sleep, anxious about assessment, etc. This shapes the plan."
-            value={checkin.notes}
-            onChange={e => set('notes', e.target.value)}
-            style={{ minHeight: 70 }}
-          />
-        </div>
-      </div>
-
-      <button className="btn-generate" onClick={handleGenerate} disabled={isGenerating}>
-        <Zap />
-        {isGenerating ? 'Generating...' : "Generate Today's Plan"}
-      </button>
 
       {generationMessage && (
         <div className="generation-status-card">

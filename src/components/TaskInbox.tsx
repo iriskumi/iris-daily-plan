@@ -370,6 +370,8 @@ export default function TaskInbox() {
 
   const pendingCount = tasks.filter(t => !t.done).length
   const doneCount = tasks.filter(t => t.done).length
+  const totalCount = tasks.length
+  const doneRatio = totalCount > 0 ? doneCount / totalCount : 0
 
   return (
     <div className="page">
@@ -377,6 +379,9 @@ export default function TaskInbox() {
         <div className="flex-between">
           <div>
             <h2 className="page-title">Task Inbox</h2>
+            <div className="task-progress-bar" aria-label="Task completion progress">
+              <span style={{ width: `${Math.round(doneRatio * 100)}%` }} />
+            </div>
             <p className="page-subtitle">
               {pendingCount} pending · {doneCount} done
             </p>
@@ -505,7 +510,7 @@ export default function TaskInbox() {
                       {task.pomodoroEnabled && !task.done && (
                         <div className="pomo-toggle-row">
                           <button
-                            className={`pomo-toggle-btn ${timerOpen ? 'active' : ''}`}
+                            className={`pomo-toggle-btn pomo-toggle-primary ${timerOpen ? 'active' : ''}`}
                             onClick={() => setTimerOpenId(timerOpen ? null : task.id)}
                           >
                             <Timer size={12} />
