@@ -34,52 +34,73 @@ function FocusCompanion({ state }: { state: CompanionState }) {
     <div className={`pomo-companion pomo-companion-${state}`} aria-hidden="true">
       <svg viewBox="0 0 180 150" role="img">
         <defs>
-          <linearGradient id="pomoLeaf" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#AFCB9B" />
-            <stop offset="100%" stopColor="#6F9A72" />
+          <linearGradient id="pomoHair" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#DAB48A" />
+            <stop offset="100%" stopColor="#A9784D" />
           </linearGradient>
-          <linearGradient id="pomoWarm" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#FFF8EF" />
-            <stop offset="100%" stopColor="#F0E0CA" />
+          <linearGradient id="pomoSkin" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#FFF1E5" />
+            <stop offset="100%" stopColor="#FFD7CC" />
+          </linearGradient>
+          <linearGradient id="pomoPink" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#FFC1D8" />
+            <stop offset="100%" stopColor="#EF7FAE" />
           </linearGradient>
         </defs>
 
-        <ellipse className="pomo-ground" cx="90" cy="128" rx="58" ry="10" />
+        <ellipse className="pomo-ground" cx="91" cy="132" rx="60" ry="9" />
 
-        <g className="pomo-tree">
-          <path className="pomo-trunk" d="M92 113 C92 98 91 86 94 72" />
-          <path className="pomo-leaf pomo-leaf-left" d="M92 82 C69 71 62 50 75 39 C91 45 96 61 92 82Z" />
-          <path className="pomo-leaf pomo-leaf-right" d="M96 78 C116 60 137 59 144 75 C133 89 112 92 96 78Z" />
-          <path className="pomo-leaf pomo-leaf-top" d="M94 70 C84 49 91 29 107 25 C119 39 112 60 94 70Z" />
+        <g className="pomo-kiss-hearts">
+          <path className="pomo-heart pomo-heart-one" d="M132 48 C132 41 142 41 142 49 C142 41 153 42 153 50 C153 59 142 65 142 65 C142 65 132 58 132 48Z" />
+          <path className="pomo-heart pomo-heart-two" d="M36 56 C36 51 43 51 43 57 C43 51 51 52 51 58 C51 64 43 69 43 69 C43 69 36 64 36 56Z" />
+          <circle className="pomo-heart-dot" cx="148" cy="31" r="3" />
         </g>
 
-        <g className="pomo-friend">
-          <path className="pomo-body" d="M58 93 C58 66 76 48 95 48 C116 48 130 67 130 94 C130 117 115 128 94 128 C73 128 58 116 58 93Z" />
-          <circle className="pomo-cheek pomo-cheek-left" cx="80" cy="86" r="5" />
-          <circle className="pomo-cheek pomo-cheek-right" cx="110" cy="86" r="5" />
-          <circle className="pomo-eye pomo-eye-left" cx="84" cy="76" r="3" />
-          <circle className="pomo-eye pomo-eye-right" cx="106" cy="76" r="3" />
-          <path className="pomo-mouth" d="M88 94 Q95 101 103 94" />
-          <path className="pomo-arm pomo-arm-left" d="M62 92 C48 89 42 81 39 70" />
-          <path className="pomo-arm pomo-arm-right" d="M127 91 C140 83 145 72 146 61" />
+        <g className="pomo-celebration-tree">
+          <path className="pomo-trunk" d="M142 124 C142 112 141 101 144 90" />
+          <path className="pomo-leaf pomo-leaf-left" d="M142 99 C126 91 121 77 130 69 C142 73 147 84 142 99Z" />
+          <path className="pomo-leaf pomo-leaf-right" d="M146 96 C160 83 174 83 178 94 C170 105 156 106 146 96Z" />
+          <path className="pomo-leaf pomo-leaf-top" d="M144 89 C137 75 142 61 153 58 C161 68 157 82 144 89Z" />
         </g>
 
-        <g className="pomo-phone">
-          <rect x="136" y="44" width="18" height="28" rx="5" />
-          <line x1="141" y1="49" x2="149" y2="49" />
+        <g className="pomo-boy">
+          <path className="pomo-leg pomo-leg-left" d="M75 119 C66 128 58 126 54 135" />
+          <path className="pomo-leg pomo-leg-right" d="M102 120 C111 129 120 127 124 136" />
+
+          <path className="pomo-body" d="M63 92 C65 77 79 68 94 69 C111 70 123 80 125 96 C128 116 113 127 94 127 C75 127 60 114 63 92Z" />
+          <path className="pomo-scarf" d="M78 95 C92 88 107 90 121 101 C110 110 94 109 78 95Z" />
+
+          <circle className="pomo-face" cx="92" cy="67" r="34" />
+          <path className="pomo-ear pomo-ear-left" d="M58 68 C48 68 48 83 61 82" />
+          <path className="pomo-ear pomo-ear-right" d="M126 68 C137 68 136 84 123 82" />
+          <path className="pomo-hair" d="M57 63 C55 40 74 25 94 28 C116 30 130 44 127 67 C119 55 110 48 99 45 C98 54 85 55 79 47 C75 57 65 58 57 63Z" />
+          <path className="pomo-hair-flip pomo-hair-flip-left" d="M67 42 C58 35 51 40 47 49" />
+          <path className="pomo-hair-flip pomo-hair-flip-right" d="M116 40 C128 34 135 41 139 52" />
+
+          <circle className="pomo-eye pomo-eye-left" cx="80" cy="66" r="4" />
+          <path className="pomo-eye-wink" d="M102 66 Q110 62 116 67" />
+          <circle className="pomo-eye-shine" cx="82" cy="64" r="1.4" />
+          <circle className="pomo-cheek pomo-cheek-left" cx="72" cy="78" r="6" />
+          <circle className="pomo-cheek pomo-cheek-right" cx="113" cy="79" r="6" />
+          <path className="pomo-mouth pomo-mouth-smile" d="M86 84 Q95 91 104 84" />
+          <path className="pomo-mouth pomo-mouth-worry" d="M87 88 Q95 82 103 88" />
+
+          <path className="pomo-arm pomo-arm-left" d="M66 97 C53 91 49 82 51 72" />
+          <path className="pomo-arm pomo-arm-right" d="M120 94 C133 86 137 77 137 65" />
+          <path className="pomo-kiss-hand" d="M51 72 C58 73 61 77 61 82" />
         </g>
 
         <g className="pomo-tea">
-          <path d="M131 100 H154 V111 C154 118 149 122 142 122 H137 C133 122 131 118 131 113Z" />
-          <path d="M154 105 C165 104 165 116 154 115" />
-          <path className="pomo-steam pomo-steam-one" d="M136 94 C132 89 140 86 136 81" />
-          <path className="pomo-steam pomo-steam-two" d="M146 94 C142 89 150 86 146 81" />
+          <path d="M127 103 H151 V114 C151 121 146 125 139 125 H133 C129 125 127 121 127 116Z" />
+          <path d="M151 108 C162 107 162 119 151 118" />
+          <path className="pomo-steam pomo-steam-one" d="M133 97 C129 92 137 89 133 84" />
+          <path className="pomo-steam pomo-steam-two" d="M144 97 C140 92 148 89 144 84" />
         </g>
 
         <g className="pomo-sparkles">
-          <path d="M38 45 L41 54 L50 57 L41 60 L38 69 L35 60 L26 57 L35 54Z" />
-          <path d="M141 23 L143 29 L149 31 L143 33 L141 39 L139 33 L133 31 L139 29Z" />
-          <circle cx="47" cy="31" r="3" />
+          <path d="M32 36 L35 45 L44 48 L35 51 L32 60 L29 51 L20 48 L29 45Z" />
+          <path d="M137 18 L139 25 L146 27 L139 29 L137 36 L135 29 L128 27 L135 25Z" />
+          <circle cx="45" cy="26" r="3" />
         </g>
       </svg>
     </div>
