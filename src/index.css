@@ -777,9 +777,24 @@ textarea {
   color: var(--orange);
 }
 
+.badge-ai {
+  background: var(--accent-light);
+  color: var(--accent-text);
+}
+
 .badge-english-practice {
   background: var(--surface-2);
   color: var(--accent-2);
+}
+
+.badge-japanese-practice {
+  background: #F5E6DC;
+  color: #8B4A20;
+}
+
+.badge-exercise {
+  background: #E3EBDD;
+  color: #4A7C59;
 }
 
 .badge-recovery {

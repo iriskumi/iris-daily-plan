@@ -17,7 +17,10 @@ const CATEGORIES: { id: TaskCategory; label: string }[] = [
   { id: 'job-search', label: 'Job Search' },
   { id: 'work-shift', label: 'Work / Holmesglen' },
   { id: 'admin-life', label: 'Admin / Life' },
+  { id: 'ai', label: 'AI' },
   { id: 'english-practice', label: 'English Practice' },
+  { id: 'japanese-practice', label: 'Japanese Practice' },
+  { id: 'exercise', label: 'Exercise' },
   { id: 'recovery', label: 'Recovery' },
   { id: 'finance-bills', label: 'Finance / Bills' },
   { id: 'consulting-freelance', label: 'Consulting / Freelance' },
@@ -26,7 +29,9 @@ const CATEGORIES: { id: TaskCategory; label: string }[] = [
 const DEEP_FOCUS_CATEGORIES: TaskCategory[] = [
   'assessment',
   'cyber-study',
+  'ai',
   'english-practice',
+  'japanese-practice',
   'consulting-freelance',
 ]
 
