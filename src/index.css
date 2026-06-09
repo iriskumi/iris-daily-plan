@@ -4091,3 +4091,356 @@ body {
     transition: none;
   }
 }
+
+/* ── Soft pink diary / Korean webtoon direction ───────────── */
+:root {
+  --bg-page: #FAF8F6;
+  --bg-card: #FFFFFF;
+  --bg-surface: #F7F0F4;
+  --bg-hover: #FFF0F7;
+  --accent: #FF8FC7;
+  --accent-light: #FFD7EA;
+  --accent-text: #8A2F60;
+  --reward-accent: #FF5DAE;
+  --text-primary: #2B2B2B;
+  --text-secondary: #67606A;
+  --text-muted: #A79DA6;
+  --success: #4A7C59;
+  --warning: #B07A30;
+  --danger: #9B4040;
+
+  --bg: var(--bg-page);
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-surface);
+  --text: var(--text-primary);
+  --text-2: var(--text-secondary);
+  --text-3: var(--text-secondary);
+  --text-hint: var(--text-muted);
+  --section-label: var(--text-muted);
+  --accent-bg: var(--accent-light);
+  --accent-border: var(--accent);
+  --accent-2: var(--accent-text);
+}
+
+body,
+.page,
+.app-header,
+.nav-tabs {
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+.app-header h1,
+.page-title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.app-header .header-date,
+.page-subtitle,
+.text-muted {
+  color: var(--text-secondary);
+}
+
+.nav-tabs {
+  border-bottom-color: rgba(255, 143, 199, 0.22);
+}
+
+.nav-tab {
+  color: var(--text-muted);
+}
+
+.nav-tab.active {
+  color: var(--reward-accent);
+  border-bottom-color: var(--reward-accent);
+}
+
+.settings-menu-button {
+  color: var(--text-muted);
+}
+
+.settings-menu-button:hover,
+.settings-menu-button[aria-expanded='true'] {
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.95), transparent 36%),
+    var(--accent-light);
+  color: var(--reward-accent);
+}
+
+.card,
+.plan-header,
+.reality-card,
+.actual-log-card,
+.notion-export-card,
+.generation-status-card,
+.today-focus-section,
+.start-today-card,
+.next-action-card,
+.focus-garden,
+.pomo-box,
+.inline-form,
+.task-card,
+.opp-card,
+.bill-card,
+.template-card,
+.ai-btn,
+.ai-toast,
+.calendar-integration-card,
+.settings-slideover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 253, 0.98));
+  border: 1px solid rgba(255, 143, 199, 0.16);
+  box-shadow: 0 14px 36px rgba(255, 143, 199, 0.08);
+}
+
+.card,
+.plan-header,
+.today-focus-section,
+.start-today-card,
+.next-action-card,
+.task-card,
+.template-card,
+.pomo-box {
+  position: relative;
+  overflow: hidden;
+}
+
+.card::after,
+.plan-header::after,
+.task-card::after,
+.template-card::after {
+  content: '✧';
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  color: rgba(255, 93, 174, 0.18);
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.next-action-card {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(255, 255, 255, 0.9) 0 8%, transparent 9%),
+    linear-gradient(135deg, #FFE6F2 0%, #FFFFFF 58%, #FFF7FB 100%);
+  border-color: rgba(255, 93, 174, 0.22);
+}
+
+.next-action-card::after {
+  content: '♡';
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  color: rgba(255, 93, 174, 0.28);
+  font-size: 28px;
+}
+
+.next-action-card h3 {
+  color: var(--text-primary);
+}
+
+.next-action-now,
+.plan-section-title,
+.section-label,
+.step-indicator,
+.plan-date-label,
+.focus-garden-label,
+.form-group label,
+.settings-section-label,
+.pomo-phase-label {
+  color: var(--text-muted);
+}
+
+.btn-primary,
+.btn-generate,
+.pomo-btn-primary,
+.pomo-toggle-btn.pomo-toggle-primary {
+  background:
+    linear-gradient(180deg, #FF9FD0 0%, var(--reward-accent) 100%);
+  color: #FFFFFF;
+  box-shadow: 0 10px 22px rgba(255, 93, 174, 0.22);
+}
+
+.btn-primary:hover,
+.btn-generate:hover,
+.pomo-btn-primary:hover,
+.pomo-toggle-btn.pomo-toggle-primary:hover,
+.pomo-toggle-btn.pomo-toggle-primary.active {
+  background:
+    linear-gradient(180deg, #FF8FC7 0%, #EF4FA0 100%);
+  color: #FFFFFF;
+}
+
+.btn-secondary,
+.pomo-btn-ghost,
+.start-today-card .btn-primary {
+  background: #FFFFFF;
+  border-color: rgba(255, 93, 174, 0.55);
+  color: var(--reward-accent);
+  box-shadow: none;
+}
+
+.badge,
+.filter-chip,
+.bill-status-badge,
+.template-default-badge,
+.template-pomo-badge,
+.pomo-badge-inline,
+.plan-source-pill,
+.time-block-type,
+.scope-status,
+.next-action-time,
+.btn-option.selected,
+.btn-option.selected-low,
+.btn-option.selected-medium,
+.btn-option.selected-high,
+.filter-chip.active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 215, 234, 0.86));
+  color: var(--accent-text);
+  border: 1px solid rgba(255, 143, 199, 0.28);
+}
+
+.btn-option,
+.energy-option,
+.day-type-card,
+.command-card,
+.segmented-control,
+.start-flow-step,
+.light-reminder-item,
+.template-subtask-list,
+.pomo-form-section,
+.settings-panel-item {
+  background: var(--bg-surface);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea,
+.time-block-follow-up textarea,
+.pomo-quick-input {
+  background: #F8F2F6;
+  color: var(--text-primary);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.time-block-follow-up textarea:focus,
+.pomo-quick-input:focus {
+  outline-color: var(--reward-accent);
+}
+
+.focus-garden {
+  background:
+    radial-gradient(circle at 15% 18%, rgba(255, 215, 234, 0.65), transparent 24%),
+    radial-gradient(circle at 88% 12%, rgba(255, 255, 255, 0.95), transparent 14%),
+    linear-gradient(135deg, #FFFFFF 0%, #FFF7FB 100%);
+  border-color: rgba(255, 143, 199, 0.2);
+}
+
+.focus-garden::after {
+  content: '♡ ✧ ❀';
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  color: rgba(255, 93, 174, 0.26);
+  font-size: 15px;
+  letter-spacing: 0.25em;
+  pointer-events: none;
+}
+
+.focus-garden-visual {
+  background:
+    radial-gradient(circle at 35% 25%, #FFFFFF 0 14%, transparent 15%),
+    linear-gradient(135deg, #FFD7EA, #FF8FC7);
+  color: #FFFFFF;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 8px 18px rgba(255, 93, 174, 0.16);
+}
+
+.focus-stats-grid div {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 143, 199, 0.16);
+}
+
+.focus-sparkline span,
+.pomo-progress-fill,
+.task-progress-bar span {
+  background: linear-gradient(180deg, var(--accent), var(--reward-accent));
+}
+
+.pomo-box {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 215, 234, 0.62), transparent 26%),
+    linear-gradient(180deg, #FFFFFF 0%, #FFF9FC 100%);
+}
+
+.pomo-box::after {
+  content: '♡';
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  color: rgba(255, 93, 174, 0.22);
+  font-size: 22px;
+}
+
+.pomo-microcopy {
+  color: var(--accent-text);
+}
+
+.pomo-time {
+  color: var(--text-primary);
+  text-shadow: 0 8px 26px rgba(255, 93, 174, 0.18);
+}
+
+.pomo-progress-bar,
+.task-progress-bar {
+  background: #F4EAF0;
+}
+
+.pomo-hair,
+.pomo-hair-flip {
+  filter: drop-shadow(0 4px 4px rgba(255, 143, 199, 0.12));
+}
+
+.pomo-scarf,
+.pomo-kiss-hearts,
+.pomo-sparkles {
+  filter: drop-shadow(0 4px 8px rgba(255, 93, 174, 0.16));
+}
+
+.pomo-body {
+  fill: #FFC8DE;
+}
+
+.pomo-cheek,
+.pomo-kiss-hearts,
+.pomo-sparkles {
+  fill: var(--reward-accent);
+}
+
+.time-block {
+  border-left-color: rgba(255, 143, 199, 0.62);
+}
+
+.time-block-focus {
+  border-left-color: var(--reward-accent);
+}
+
+.time-block-type-focus {
+  background: var(--accent-light);
+  color: var(--accent-text);
+}
+
+.task-checkbox {
+  border-color: rgba(255, 143, 199, 0.65);
+}
+
+.task-checkbox.checked {
+  background: var(--accent-light);
+  border-color: var(--reward-accent);
+}
+
+.task-checkbox.checked::after {
+  border-left-color: var(--reward-accent);
+  border-bottom-color: var(--reward-accent);
+}
