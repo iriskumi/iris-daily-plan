@@ -47,6 +47,7 @@ export interface DailyCheckin {
   wakeUpTime: string
   sleepTarget: string
   energyLevel: EnergyLevel
+  rankedTasks?: RankedCheckinTask[]
   morningMainTask?: string
   morningSecondaryTask1?: string
   morningSecondaryTask2?: string
@@ -55,6 +56,15 @@ export interface DailyCheckin {
   fixedCommitments: string
   planningInstructions: string
   notes: string
+}
+
+export interface RankedCheckinTask {
+  id: string
+  taskId?: string
+  title: string
+  area: TaskArea
+  estimatedMinutes: 15 | 25 | 45 | 60
+  orderIndex: number
 }
 
 export interface DailyLog {

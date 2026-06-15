@@ -90,6 +90,14 @@ function todayString() {
 function morningPriorityLines() {
   const checkin = loadCheckin()
   if (!checkin) return []
+  const rankedTasks = (checkin.rankedTasks ?? [])
+    .filter(task => task.title.trim())
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+  if (rankedTasks.length > 0) {
+    return rankedTasks.map((task, index) =>
+      `${index + 1}. ${task.title.trim()} · ${task.area} · ${task.estimatedMinutes} min`,
+    )
+  }
   return [
     checkin.morningMainTask?.trim() ? `Main: ${checkin.morningMainTask.trim()}` : '',
     checkin.morningSecondaryTask1?.trim() ? `Secondary 1: ${checkin.morningSecondaryTask1.trim()}` : '',
@@ -182,7 +190,7 @@ function focusBlocksMarkdown(planDate: string): string {
 function morningPrioritiesMarkdown(): string {
   const lines = morningPriorityLines()
   if (lines.length === 0) return ''
-  return ['## Morning 1+2+1 Priorities', ...lines.map(line => `- ${line}`)].join('\n')
+  return ["## Today's to-do", ...lines.map(line => `- ${line}`)].join('\n')
 }
 
 interface Props {
@@ -484,7 +492,7 @@ export default function DailyPlanView({
 
       {morningPriorities.length > 0 && (
         <div className="plan-section">
-          <div className="plan-section-title">Morning 1+2+1 priorities</div>
+          <div className="plan-section-title">Today’s to-do</div>
           <div className="card" style={{ padding: '0.875rem 1rem' }}>
             <ul className="plan-list">
               {morningPriorities.map(item => (

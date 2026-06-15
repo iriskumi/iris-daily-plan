@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Check, Pencil, Zap } from 'lucide-react'
+import { Check, GripVertical, Pencil, Plus, Zap } from 'lucide-react'
 import type {
   DailyCheckin as DailyCheckinType,
   DayType,
   EnergyLevel,
   GeneratePlanOutcome,
+  RankedCheckinTask,
+  TaskArea,
 } from '../types'
-import { loadCheckin, loadSettings, saveCheckin } from '../storage'
+import { loadCheckin, loadSettings, loadTasks, saveCheckin, saveTasks } from '../storage'
+import { categoryFromArea, createInboxTask } from '../focusBlocks'
 
 const DAY_TYPES: { id: DayType; emoji: string; label: string; commitments: string }[] = [
   { id: 'normal', emoji: '☀️', label: 'Normal Day', commitments: '' },
@@ -44,6 +47,7 @@ function defaultCheckin(): DailyCheckinType {
     wakeUpTime: '07:30',
     sleepTarget: settings.defaultSleepTarget,
     energyLevel: 'medium',
+    rankedTasks: [],
     morningMainTask: '',
     morningSecondaryTask1: '',
     morningSecondaryTask2: '',
@@ -53,6 +57,56 @@ function defaultCheckin(): DailyCheckinType {
     planningInstructions: '',
     notes: '',
   }
+}
+
+const ESTIMATE_OPTIONS: Array<15 | 25 | 45 | 60> = [15, 25, 45, 60]
+
+function makeRankedRow(
+  title: string,
+  area: TaskArea,
+  orderIndex: number,
+  taskId?: string,
+  estimatedMinutes: 15 | 25 | 45 | 60 = 25,
+): RankedCheckinTask {
+  return {
+    id: taskId ?? crypto.randomUUID(),
+    taskId,
+    title,
+    area,
+    estimatedMinutes,
+    orderIndex,
+  }
+}
+
+function initialRankedTasks(saved?: RankedCheckinTask[]): RankedCheckinTask[] {
+  if (saved && saved.length > 0) {
+    return saved
+      .map((task, index) => ({ ...task, orderIndex: index }))
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+  }
+  const inboxTasks = loadTasks().filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
+  if (inboxTasks.length > 0) {
+    return inboxTasks.slice(0, 6).map((task, index) =>
+      makeRankedRow(
+        task.title,
+        task.area ?? 'Other',
+        index,
+        task.id,
+        task.estimatedMinutes >= 60
+          ? 60
+          : task.estimatedMinutes >= 45
+            ? 45
+            : task.estimatedMinutes >= 25
+              ? 25
+              : 15,
+      ),
+    )
+  }
+  return [
+    makeRankedRow('', 'Cyber', 0, undefined, 25),
+    makeRankedRow('', 'Job', 1, undefined, 25),
+    makeRankedRow('', 'Life reset', 2, undefined, 15),
+  ]
 }
 
 interface Props {
@@ -73,9 +127,13 @@ export default function DailyCheckin({
   const [currentStep, setCurrentStep] = useState(1)
   const [checkin, setCheckin] = useState<DailyCheckinType>(() => {
     const saved = loadCheckin()
-    if (saved) return { ...defaultCheckin(), ...saved, date: todayString() }
-    return defaultCheckin()
+    const base = saved ? { ...defaultCheckin(), ...saved, date: todayString() } : defaultCheckin()
+    return {
+      ...base,
+      rankedTasks: initialRankedTasks(base.rankedTasks),
+    }
   })
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
 
   useEffect(() => {
     saveCheckin(checkin)
@@ -95,12 +153,104 @@ export default function DailyCheckin({
   }
 
   async function handleGenerate() {
+    syncRankedTasksToInbox()
     saveCheckin(checkin)
     await onGenerate()
   }
 
+  function setRankedTasks(updater: (tasks: RankedCheckinTask[]) => RankedCheckinTask[]) {
+    setCheckin(prev => {
+      const next = updater(prev.rankedTasks ?? []).map((task, index) => ({
+        ...task,
+        orderIndex: index,
+      }))
+      return { ...prev, rankedTasks: next }
+    })
+  }
+
+  function updateRankedTask(id: string, patch: Partial<RankedCheckinTask>) {
+    setRankedTasks(tasks => tasks.map(task => task.id === id ? { ...task, ...patch } : task))
+  }
+
+  function addRankedTask() {
+    setRankedTasks(tasks => [
+      ...tasks,
+      makeRankedRow('', 'Other', tasks.length, undefined, 25),
+    ])
+  }
+
+  function moveRankedTask(targetId: string) {
+    if (!draggedTaskId || draggedTaskId === targetId) return
+    setRankedTasks(tasks => {
+      const dragged = tasks.find(task => task.id === draggedTaskId)
+      if (!dragged) return tasks
+      const withoutDragged = tasks.filter(task => task.id !== draggedTaskId)
+      const targetIndex = withoutDragged.findIndex(task => task.id === targetId)
+      if (targetIndex < 0) return tasks
+      return [
+        ...withoutDragged.slice(0, targetIndex),
+        dragged,
+        ...withoutDragged.slice(targetIndex),
+      ]
+    })
+  }
+
+  function syncRankedTasksToInbox() {
+    const rows = (checkin.rankedTasks ?? [])
+      .map((task, index) => ({ ...task, orderIndex: index, title: task.title.trim() }))
+      .filter(task => task.title)
+    if (rows.length === 0) return
+
+    const inboxTasks = loadTasks()
+    const existingIds = new Set(inboxTasks.map(task => task.id))
+    const createdTaskPairs = rows
+      .filter(row => !row.taskId || !existingIds.has(row.taskId))
+      .map(row => {
+        const task = createInboxTask({
+          title: row.title,
+          area: row.area,
+          energy: row.estimatedMinutes <= 15 ? 'Low' : row.estimatedMinutes <= 25 ? 'Medium' : 'High',
+          mode: row.area === 'Admin' ? 'Admin' : row.area === 'Life reset' ? 'Recovery' : 'Focus',
+          estimatedMinutes: row.estimatedMinutes === 60 ? 45 : row.estimatedMinutes as 15 | 25 | 45,
+        })
+        return [row.id, {
+          ...task,
+          estimatedMinutes: row.estimatedMinutes,
+          pomodoroLength: row.estimatedMinutes,
+          category: categoryFromArea(row.area),
+        }] as const
+      })
+    const createdTasks = createdTaskPairs.map(([, task]) => task)
+    const createdIdMap = new Map(createdTaskPairs.map(([rowId, task]) => [rowId, task.id]))
+
+    const updatedTasks = inboxTasks.map(task => {
+      const row = rows.find(item => item.taskId === task.id)
+      if (!row) return task
+      return {
+        ...task,
+        title: row.title,
+        area: row.area,
+        category: categoryFromArea(row.area),
+        estimatedMinutes: row.estimatedMinutes,
+        pomodoroLength: row.estimatedMinutes,
+        updatedAt: new Date().toISOString(),
+      }
+    })
+    saveTasks([...createdTasks, ...updatedTasks])
+    if (createdIdMap.size > 0) {
+      setCheckin(prev => ({
+        ...prev,
+        rankedTasks: (prev.rankedTasks ?? []).map(task => ({
+          ...task,
+          taskId: task.taskId ?? createdIdMap.get(task.id),
+        })),
+      }))
+    }
+  }
+
   function handleStepAction() {
     if (currentStep < 4) {
+      if (currentStep === 3) syncRankedTasksToInbox()
       setCurrentStep(step => step + 1)
       return
     }
@@ -117,7 +267,7 @@ export default function DailyCheckin({
   const steps = [
     { id: 1, label: 'Day type', summary: dayTypeLabel },
     { id: 2, label: 'Energy & time', summary: `${checkin.energyLevel} · ${checkin.wakeUpTime}-${checkin.sleepTarget}` },
-    { id: 3, label: 'Morning 1 + 2 + 1', summary: checkin.morningMainTask || 'Main task not set' },
+    { id: 3, label: "Today's to-do", summary: checkin.rankedTasks?.find(task => task.title.trim())?.title || 'Tasks not set' },
     { id: 4, label: "Today's constraints", summary: checkin.availableFocusTime || 'Focus time not set' },
   ]
 
@@ -217,45 +367,69 @@ export default function DailyCheckin({
 
               {step.id === 3 && (
                 <>
-                  <div className="form-group">
-                    <label>1 Main Task</label>
-                    <input
-                      type="text"
-                      placeholder="The one task that matters most today"
-                      value={checkin.morningMainTask ?? ''}
-                      onChange={e => set('morningMainTask', e.target.value)}
-                    />
+                  <div className="ranked-task-list">
+                    {(checkin.rankedTasks ?? []).map((task, index) => {
+                      const isPlaceholder = !task.title.trim()
+                      return (
+                        <div
+                          key={task.id}
+                          className={`ranked-task-row ${isPlaceholder ? 'placeholder' : ''}`}
+                          draggable
+                          onDragStart={() => setDraggedTaskId(task.id)}
+                          onDragOver={event => event.preventDefault()}
+                          onDrop={() => moveRankedTask(task.id)}
+                          onDragEnd={() => setDraggedTaskId(null)}
+                        >
+                          <span className="ranked-task-drag" aria-label="Drag to reorder">
+                            <GripVertical size={16} />
+                          </span>
+                          <span className={`ranked-task-badge ${index === 0 ? 'rank-one' : ''}`}>
+                            {index + 1}
+                          </span>
+                          <div className="ranked-task-main">
+                            <input
+                              value={task.title}
+                              onChange={event => updateRankedTask(task.id, { title: event.target.value })}
+                              placeholder={
+                                index === 0
+                                  ? 'Type your most important task'
+                                  : index === 1
+                                    ? 'Type the next useful task'
+                                    : 'Type a small task or reset'
+                              }
+                            />
+                            <span>{task.area}</span>
+                          </div>
+                          <select
+                            className="ranked-task-estimate"
+                            value={task.estimatedMinutes}
+                            onChange={event =>
+                              updateRankedTask(task.id, {
+                                estimatedMinutes: Number(event.target.value) as 15 | 25 | 45 | 60,
+                              })
+                            }
+                            aria-label={`Estimate for task ${index + 1}`}
+                          >
+                            {ESTIMATE_OPTIONS.map(minutes => (
+                              <option key={minutes} value={minutes}>
+                                {minutes} min
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )
+                    })}
+                    <button className="ranked-task-add" type="button" onClick={addRankedTask}>
+                      <Plus size={15} />
+                      Add a task
+                    </button>
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Secondary Task 1</label>
-                      <input
-                        type="text"
-                        placeholder="If time allows"
-                        value={checkin.morningSecondaryTask1 ?? ''}
-                        onChange={e => set('morningSecondaryTask1', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Secondary Task 2</label>
-                      <input
-                        type="text"
-                        placeholder="If energy allows"
-                        value={checkin.morningSecondaryTask2 ?? ''}
-                        onChange={e => set('morningSecondaryTask2', e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
-                    <label>1 Small Life Task</label>
-                    <input
-                      type="text"
-                      placeholder="Tiny admin/reset/life task"
-                      value={checkin.morningSmallLifeTask ?? ''}
-                      onChange={e => set('morningSmallLifeTask', e.target.value)}
-                    />
+                  <div className="ranked-task-footer">
+                    <span>Drag to reorder · app will follow your sequence</span>
+                    <strong>
+                      Total {(checkin.rankedTasks ?? []).reduce((sum, task) => sum + task.estimatedMinutes, 0)} min
+                    </strong>
                   </div>
                 </>
               )}

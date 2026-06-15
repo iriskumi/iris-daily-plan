@@ -92,6 +92,7 @@ import {
   createInboxTask,
   pickTaskForBlock,
   recommendNextBlocks,
+  tinyActionForTask,
   tinyActionForArea,
 } from './focusBlocks'
 import './index.css'
@@ -1025,14 +1026,37 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
   const [blockMessage, setBlockMessage] = useState<string | null>(null)
   const [tick, setTick] = useState(Date.now())
 
-  const filteredTasks = tasks
-    .filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
-    .filter(task => areaFilter === 'Any' || task.area === areaFilter)
-    .filter(task => energy === 'High' || task.energy !== 'High' || areaFilter === task.area)
+  const rankedTasks = (loadCheckin()?.rankedTasks ?? [])
+    .filter(task => task.title.trim())
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+  const pendingTasks = tasks.filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
+  const rankedOrder = new Map<string, number>()
+  rankedTasks.forEach((rankedTask, index) => {
+    if (rankedTask.taskId) rankedOrder.set(`id:${rankedTask.taskId}`, index)
+    rankedOrder.set(`title:${rankedTask.title.trim().toLowerCase()}`, index)
+  })
+  const orderedTasks = rankedTasks.length > 0
+    ? pendingTasks
+        .filter(task =>
+          rankedOrder.has(`id:${task.id}`) ||
+          rankedOrder.has(`title:${task.title.trim().toLowerCase()}`),
+        )
+        .sort((a, b) => {
+          const aRank = rankedOrder.get(`id:${a.id}`) ?? rankedOrder.get(`title:${a.title.trim().toLowerCase()}`) ?? 999
+          const bRank = rankedOrder.get(`id:${b.id}`) ?? rankedOrder.get(`title:${b.title.trim().toLowerCase()}`) ?? 999
+          return aRank - bRank
+        })
+    : pendingTasks
+  const filteredTasks = orderedTasks.filter(task => areaFilter === 'Any' || task.area === areaFilter)
 
   const activeBlock = blocks.find(block => block.status === 'Doing')
   const selectedTask = tasks.find(task => task.id === selectedTaskId) ?? filteredTasks[0] ?? null
-  const recommendations = recommendNextBlocks({ tasks, energy, areaFilter })
+  const recommendations = recommendNextBlocks({
+    tasks: rankedTasks.length > 0 ? orderedTasks : tasks,
+    energy,
+    areaFilter,
+    preserveOrder: rankedTasks.length > 0,
+  })
 
   useEffect(() => {
     const interval = window.setInterval(() => setTick(Date.now()), 1000)
@@ -1088,7 +1112,9 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
   }
 
   function handlePickForMe() {
-    const picked = pickTaskForBlock(tasks, energy, areaFilter)
+    const picked = rankedTasks.length > 0
+      ? filteredTasks[0] ?? null
+      : pickTaskForBlock(tasks, energy, areaFilter)
     if (!picked) {
       setBlockMessage('Add one tiny task first.')
       return
@@ -1163,6 +1189,27 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
     setBlocks(prev => prev.map(item => item.id === block.id ? { ...item, notes } : item))
   }
 
+  function regenerateActiveTinyAction() {
+    if (!activeBlock) return
+    const task = tasks.find(item => item.id === activeBlock.taskId)
+    const nextAction = tinyActionForTask(task?.title ?? activeBlock.taskTitle, task?.area ?? activeBlock.area)
+    updateFocusBlock(activeBlock.id, { firstTinyAction: nextAction })
+    if (task) {
+      updateTasks(tasks.map(item => (
+        item.id === task.id
+          ? {
+              ...item,
+              nextTinyAction: nextAction,
+              nextAction,
+              updatedAt: new Date().toISOString(),
+            }
+          : item
+      )))
+    }
+    setBlocks(loadFocusBlocksForDate(today))
+    setBlockMessage('Tiny action regenerated.')
+  }
+
   function updateMeal(anchor: MealAnchor, status: MealAnchorStatus) {
     const next = saveMealAnchor({ ...anchor, status })
     setMealAnchors(next)
@@ -1199,6 +1246,10 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
           </div>
           <div className="current-block-timer">{formatCountdown(remainingSeconds)}</div>
           <div className="start-plan-actions">
+            <button className="btn btn-secondary" type="button" onClick={regenerateActiveTinyAction}>
+              <Sparkles size={14} />
+              Regenerate tiny action
+            </button>
             <button className="btn btn-primary" type="button" onClick={() => finishBlock('Done')}>Done</button>
             <button className="btn btn-secondary" type="button" onClick={() => finishBlock('Partial')}>Partial</button>
             <button className="btn btn-secondary" type="button" onClick={() => finishBlock('Skipped')}>Skip</button>

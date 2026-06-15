@@ -519,6 +519,122 @@ textarea {
   color: var(--text-2);
 }
 
+.ranked-task-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ranked-task-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.68rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.ranked-task-row.placeholder {
+  opacity: 0.72;
+}
+
+.ranked-task-drag {
+  color: var(--text-3);
+  cursor: grab;
+  display: inline-flex;
+}
+
+.ranked-task-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.ranked-task-badge.rank-one {
+  background: var(--reward-accent, #FF5DAE);
+  color: #FFFFFF;
+  box-shadow: 0 8px 18px rgba(255, 93, 174, 0.2);
+}
+
+.ranked-task-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.ranked-task-main input {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  outline: none;
+  min-width: 0;
+}
+
+.ranked-task-main input::placeholder {
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.ranked-task-main span {
+  color: var(--text-3);
+  font-size: 0.76rem;
+}
+
+.ranked-task-estimate {
+  min-height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  padding: 0.36rem 0.72rem;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.ranked-task-add {
+  min-height: 44px;
+  border: 1.5px dashed rgba(255, 143, 199, 0.45);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--reward-accent, var(--accent));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ranked-task-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.ranked-task-footer span {
+  color: var(--text-3);
+  font-size: 0.82rem;
+}
+
+.ranked-task-footer strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
 /* ── Day Type Cards ─────────────────────────────────────────── */
 
 .day-type-grid {
@@ -3552,6 +3668,20 @@ textarea {
 
   .energy-option {
     min-width: 100%;
+  }
+
+  .ranked-task-row {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .ranked-task-estimate {
+    grid-column: 3;
+    justify-self: start;
+  }
+
+  .ranked-task-footer {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .card,

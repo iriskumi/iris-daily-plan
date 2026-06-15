@@ -276,6 +276,43 @@ function morningPriorityTasks(checkin: DailyCheckin): {
   focusTasks: Task[]
   smallLifeTask: Task | null
 } {
+  const rankedTasks = (checkin.rankedTasks ?? [])
+    .filter(task => task.title.trim())
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+  if (rankedTasks.length > 0) {
+    const now = new Date().toISOString()
+    return {
+      focusTasks: rankedTasks.map(task => ({
+        id: task.taskId ?? `ranked-${task.orderIndex + 1}-${checkin.date}`,
+        title: task.title,
+        area: task.area,
+        category:
+          task.area === 'Cyber'
+            ? 'cyber-study'
+            : task.area === 'Job'
+              ? 'job-search'
+              : task.area === 'English' || task.area === 'Expression Review'
+                ? 'english-practice'
+                : task.area === 'Life reset'
+                  ? 'recovery'
+                  : 'admin-life',
+        estimatedMinutes: task.estimatedMinutes,
+        difficulty: task.estimatedMinutes >= 45 ? 'hard' : task.estimatedMinutes >= 25 ? 'medium' : 'easy',
+        urgency: task.orderIndex === 0 ? 'high' : 'medium',
+        importance: task.orderIndex === 0 ? 'high' : 'medium',
+        minimumVersion: `${task.title} - ${Math.min(task.estimatedMinutes, 25)} minute version`,
+        nextAction: `Start ${task.title}`,
+        pomodoroEnabled: task.area !== 'Life reset',
+        pomodoroLength: task.estimatedMinutes,
+        breakLength: task.estimatedMinutes >= 45 ? 10 : 5,
+        pomodoroSessions: 1,
+        done: false,
+        createdAt: now,
+      })),
+      smallLifeTask: null,
+    }
+  }
+
   const main = cleanPriority(checkin.morningMainTask)
   const secondary = [
     cleanPriority(checkin.morningSecondaryTask1),
@@ -614,7 +651,7 @@ export function markdownExport(plan: Omit<GeneratedPlan, 'notionMarkdown'>, top3
 
   const morningPriorities = top3Tasks.filter(task => task.id.startsWith('morning-'))
   if (morningPriorities.length > 0) {
-    md += `## Morning 1+2+1 Priorities\n`
+    md += `## Today's to-do\n`
     morningPriorities.forEach(task => {
       const label = task.id.startsWith('morning-main')
         ? 'Main'
@@ -622,6 +659,15 @@ export function markdownExport(plan: Omit<GeneratedPlan, 'notionMarkdown'>, top3
           ? 'Secondary'
           : 'Small life'
       md += `- ${label}: ${task.title}\n`
+    })
+    md += '\n'
+  }
+
+  const rankedPriorities = top3Tasks.filter(task => task.id.startsWith('ranked-'))
+  if (rankedPriorities.length > 0) {
+    md += `## Today's to-do\n`
+    rankedPriorities.forEach((task, index) => {
+      md += `- ${index + 1}. ${task.title} (${task.estimatedMinutes} min)\n`
     })
     md += '\n'
   }

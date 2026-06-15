@@ -71,13 +71,36 @@ export function normalizedBlockMinutes(minutes?: number): 5 | 15 | 25 | 45 {
 }
 
 export function tinyActionForArea(area: TaskArea): string {
-  if (area === 'Cyber') return 'Open the relevant notes or screenshots folder.'
-  if (area === 'Job') return 'Open the JD and highlight 3 requirements.'
+  if (area === 'Cyber') return 'Open the glossary and review 8 terms only.'
+  if (area === 'Job') return 'Open the JD and highlight 3 requirements only.'
   if (area === 'English') return 'Write or say one sentence only.'
-  if (area === 'Admin') return 'Open the relevant email/page only.'
+  if (area === 'Admin') return 'Open the relevant email or page and do the first visible step only.'
   if (area === 'Life reset') return 'Get water or wash face first.'
-  if (area === 'Expression Review') return 'Review 5 entries only.'
-  return 'Open the smallest relevant file or note.'
+  if (area === 'Expression Review') return 'Review 5 entries only. Do not add new entries.'
+  return 'Open the relevant file and do only the first visible step for 5 minutes.'
+}
+
+export function tinyActionForTask(title: string, area: TaskArea): string {
+  const normalizedTitle = title.toLowerCase()
+  if (/\b(sdlc|vibe coding|article|reading)\b/i.test(normalizedTitle)) {
+    return 'Open the reading/note and highlight 3 useful points only. Do not summarise yet.'
+  }
+  if (/\b(screenshot|gophish|test case)\b/i.test(normalizedTitle)) {
+    return 'Open the screenshots folder and sort screenshots by test case only.'
+  }
+  if (/\b(jd|job|resume)\b/i.test(normalizedTitle)) {
+    return 'Open the JD and highlight 3 requirements only.'
+  }
+  if (/\b(email|reply|timesheet)\b/i.test(normalizedTitle)) {
+    return 'Open the draft and write only the first sentence.'
+  }
+  if (/\b(expression|review)\b/i.test(normalizedTitle)) {
+    return 'Review 5 entries only. Do not add new entries.'
+  }
+  if (/\b(glossary|cisco|cyber)\b/i.test(normalizedTitle)) {
+    return 'Open the glossary and review 8 terms only.'
+  }
+  return tinyActionForArea(area)
 }
 
 export function normalizeTask(task: Task): Task {
@@ -91,7 +114,7 @@ export function normalizeTask(task: Task): Task {
     energy: task.energy ?? energyFromMinutes(estimatedMinutes),
     mode: task.mode ?? modeFromArea(area),
     estimatedMinutes,
-    nextTinyAction: task.nextTinyAction?.trim() || task.nextAction?.trim() || tinyActionForArea(area),
+    nextTinyAction: task.nextTinyAction?.trim() || task.nextAction?.trim() || tinyActionForTask(task.title, area),
     status,
     updatedAt: task.updatedAt ?? task.createdAt ?? now,
   }
@@ -106,7 +129,7 @@ export function createInboxTask(input: {
   nextTinyAction?: string
 }): Task {
   const now = new Date().toISOString()
-  const nextTinyAction = input.nextTinyAction?.trim() || tinyActionForArea(input.area)
+  const nextTinyAction = input.nextTinyAction?.trim() || tinyActionForTask(input.title, input.area)
   return {
     id: crypto.randomUUID(),
     title: input.title.trim(),
@@ -135,12 +158,14 @@ export function pickTaskForBlock(
   tasks: Task[],
   energy: TaskEnergy,
   areaFilter: TaskArea | 'Any',
+  options: { preserveOrder?: boolean } = {},
 ): Task | null {
   const usable = tasks
     .map(normalizeTask)
     .filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
     .filter(task => areaFilter === 'Any' || task.area === areaFilter)
   if (usable.length === 0) return null
+  if (options.preserveOrder) return usable[0]
   const energyOrder: Record<TaskEnergy, TaskEnergy[]> = {
     Low: ['Low', 'Medium', 'High'],
     Medium: ['Medium', 'Low', 'High'],
@@ -174,7 +199,7 @@ export function createFocusBlock(input: {
     area: task.area ?? 'Other',
     mode: task.mode ?? 'Focus',
     energy: input.energy,
-    firstTinyAction: task.nextTinyAction || tinyActionForArea(task.area ?? 'Other'),
+    firstTinyAction: tinyActionForTask(task.title, task.area ?? 'Other'),
     status: 'Doing',
     notes: '',
     createdAt: now.toISOString(),
@@ -202,12 +227,15 @@ export function recommendNextBlocks(input: {
   tasks: Task[]
   energy: TaskEnergy
   areaFilter: TaskArea | 'Any'
+  preserveOrder?: boolean
   now?: Date
 }): NextBlockRecommendation[] {
   const now = input.now ?? new Date()
   const resetMinutes = input.energy === 'Low' ? 10 : 5
   const focusMinutes = input.energy === 'Low' ? 15 : input.energy === 'Medium' ? 25 : 45
-  const task = pickTaskForBlock(input.tasks, input.energy, input.areaFilter)
+  const task = pickTaskForBlock(input.tasks, input.energy, input.areaFilter, {
+    preserveOrder: input.preserveOrder,
+  })
   const firstEnd = addMinutes(now, resetMinutes)
   const secondEnd = addMinutes(firstEnd, focusMinutes)
   const breakEnd = addMinutes(secondEnd, 10)

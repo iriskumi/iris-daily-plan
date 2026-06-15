@@ -19,6 +19,7 @@ import {
   categoryFromArea,
   createInboxTask,
   tinyActionForArea,
+  tinyActionForTask,
 } from '../focusBlocks'
 
 const CATEGORIES: { id: TaskCategory; label: string }[] = [
@@ -81,6 +82,7 @@ interface TaskFormProps {
 
 function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
   const [form, setForm] = useState({ ...emptyForm(), ...initial })
+  const suggestedTinyAction = tinyActionForTask(form.title, form.area ?? 'Other')
 
   function f<K extends keyof typeof form>(key: K, val: (typeof form)[K]) {
     setForm(prev => ({ ...prev, [key]: val }))
@@ -209,7 +211,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
       <div className="form-group">
         <label>Next tiny action</label>
         <input
-          placeholder={tinyActionForArea(form.area ?? 'Other')}
+          placeholder={suggestedTinyAction}
           value={form.nextTinyAction ?? ''}
           onChange={e => f('nextTinyAction', e.target.value)}
         />
@@ -227,7 +229,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
               mode: form.mode ?? 'Focus',
               status: form.status ?? 'Inbox',
               estimatedMinutes: form.estimatedMinutes as 5 | 15 | 25 | 45,
-              nextTinyAction: form.nextTinyAction?.trim() || tinyActionForArea(form.area ?? 'Other'),
+              nextTinyAction: form.nextTinyAction?.trim() || suggestedTinyAction,
             })
           }}
         >
@@ -277,7 +279,7 @@ export default function TaskInbox() {
   function updateTask(id: string, data: TaskFormData) {
     persist(tasks.map(t => {
       if (t.id !== id) return t
-      const nextTinyAction = data.nextTinyAction?.trim() || tinyActionForArea(data.area ?? 'Other')
+      const nextTinyAction = data.nextTinyAction?.trim() || tinyActionForTask(data.title, data.area ?? 'Other')
       return {
         ...t,
         ...data,
