@@ -17,10 +17,12 @@ import {
 } from 'lucide-react'
 import type { DailyLog, GeneratedPlan, TimeBlock, TimeBlockFollowUp } from '../types'
 import {
+  getLatestStartPlanForDate,
   loadBills,
   loadCalendarEvents,
   loadCheckin,
   loadDailyLog,
+  loadFocusBlocksForDate,
   loadFocusSessions,
   loadOpportunities,
   loadTasks,
@@ -148,6 +150,35 @@ function followUpsMarkdown(plan: GeneratedPlan, followUps: Record<string, TimeBl
   return ['## Time Block Follow-up', ...lines].join('\n')
 }
 
+function startPlanMarkdown(planDate: string): string {
+  const startPlan = getLatestStartPlanForDate(planDate)
+  if (!startPlan) return ''
+  return [
+    '## Start Now',
+    `- Did I start?: ${startPlan.markedStarted ? 'Yes' : 'Not yet'}`,
+    `- What helped me start?: ${startPlan.firstTinyAction}`,
+    `- Body reset: ${startPlan.bodyReset}`,
+    `- Opened: ${startPlan.openThis}`,
+    `- Timer: ${startPlan.timerMinutes} min`,
+  ].join('\n')
+}
+
+function focusBlocksMarkdown(planDate: string): string {
+  const blocks = loadFocusBlocksForDate(planDate)
+  if (blocks.length === 0) return ''
+  return [
+    '## Focus Blocks',
+    ...blocks.map(block => {
+      const time = new Date(block.startTime).toLocaleTimeString('en-AU', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      const notes = block.notes.trim() ? ` - ${block.notes.trim()}` : ''
+      return `- ${time} · ${block.minutes}m · ${block.taskTitle} · ${block.area} · ${block.status}${notes}`
+    }),
+  ].join('\n')
+}
+
 function morningPrioritiesMarkdown(): string {
   const lines = morningPriorityLines()
   if (lines.length === 0) return ''
@@ -191,6 +222,8 @@ export default function DailyPlanView({
     if (!plan) return ''
     return [
       planMarkdownWithDailyLog(plan, dailyLog ?? loadDailyLog(plan.date)),
+      startPlanMarkdown(plan.date),
+      focusBlocksMarkdown(plan.date),
       morningPrioritiesMarkdown(),
       followUpsMarkdown(plan, followUps),
     ].filter(Boolean).join('\n\n')
@@ -307,6 +340,8 @@ export default function DailyPlanView({
         bills: loadBills(),
         markdown: [
           planMarkdownWithDailyLog(plan, updatedLog),
+          startPlanMarkdown(plan.date),
+          focusBlocksMarkdown(plan.date),
           morningPrioritiesMarkdown(),
           followUpsMarkdown(plan, followUps),
         ].filter(Boolean).join('\n\n'),
@@ -383,6 +418,8 @@ export default function DailyPlanView({
   })
   const sourceLabel = getPlanSourceLabel(plan)
   const log = dailyLog ?? loadDailyLog(plan.date)
+  const latestStartPlan = getLatestStartPlanForDate(plan.date)
+  const focusBlocksToday = loadFocusBlocksForDate(plan.date)
   const isStalePlan = plan.date < todayString()
   const focusStats = getFocusStats(loadFocusSessions())
   const realityCheck = getRealityCheck(plan)
@@ -637,6 +674,40 @@ export default function DailyPlanView({
         <div className="plan-section-title">Daily Reality</div>
         <div className="actual-log-card">
           <FocusGarden stats={focusStats} compact />
+          {latestStartPlan && (
+            <div className="start-now-evening-card">
+              <div className="plan-section-title">Start Now reflection</div>
+              <div className="start-now-evening-grid">
+                <div>
+                  <span>Did I start?</span>
+                  <strong>{latestStartPlan.markedStarted ? 'Yes' : 'Not yet'}</strong>
+                </div>
+                <div>
+                  <span>What helped me start?</span>
+                  <strong>{latestStartPlan.firstTinyAction}</strong>
+                </div>
+              </div>
+            </div>
+          )}
+          {focusBlocksToday.length > 0 && (
+            <div className="start-now-evening-card">
+              <div className="plan-section-title">Today’s Focus Blocks</div>
+              <div className="evening-block-list">
+                {focusBlocksToday.map(block => (
+                  <div key={block.id}>
+                    <span>
+                      {new Date(block.startTime).toLocaleTimeString('en-AU', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })} · {block.minutes}m · {block.area}
+                    </span>
+                    <strong>{block.taskTitle}</strong>
+                    <em>{block.status}{block.notes.trim() ? ` · ${block.notes.trim()}` : ''}</em>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="form-group">
             <label>What I actually did</label>
             <textarea

@@ -3,13 +3,23 @@ import { Plus, Pencil, Trash2, X, Check, Timer } from 'lucide-react'
 import type {
   Task,
   TaskCategory,
-  Difficulty,
-  Urgency,
-  Importance,
+  TaskArea,
+  TaskEnergy,
+  TaskMode,
+  TaskStatus,
 } from '../types'
 import { loadTasks, saveTasks } from '../storage'
 import { getDaysUntil } from '../planner'
 import PomodoroTimer from './PomodoroTimer'
+import {
+  TASK_AREAS,
+  TASK_ENERGIES,
+  TASK_MODES,
+  TASK_STATUSES,
+  categoryFromArea,
+  createInboxTask,
+  tinyActionForArea,
+} from '../focusBlocks'
 
 const CATEGORIES: { id: TaskCategory; label: string }[] = [
   { id: 'assessment', label: 'Assessment' },
@@ -24,15 +34,6 @@ const CATEGORIES: { id: TaskCategory; label: string }[] = [
   { id: 'recovery', label: 'Recovery' },
   { id: 'finance-bills', label: 'Finance / Bills' },
   { id: 'consulting-freelance', label: 'Consulting / Freelance' },
-]
-
-const DEEP_FOCUS_CATEGORIES: TaskCategory[] = [
-  'assessment',
-  'cyber-study',
-  'ai',
-  'english-practice',
-  'japanese-practice',
-  'consulting-freelance',
 ]
 
 function categoryLabel(id: TaskCategory) {
@@ -54,26 +55,27 @@ function deadlineTag(deadline?: string): { text: string; cls: string } | null {
   }
 }
 
-const emptyForm = (): Omit<Task, 'id' | 'createdAt' | 'done'> => ({
+type TaskFormData = Pick<
+  Task,
+  'title' | 'area' | 'energy' | 'mode' | 'estimatedMinutes' | 'nextTinyAction' | 'status'
+> & {
+  deadline?: string
+}
+
+const emptyForm = (): TaskFormData => ({
   title: '',
-  category: 'cyber-study',
+  area: 'Cyber',
+  energy: 'Medium',
+  mode: 'Focus',
+  estimatedMinutes: 25,
+  nextTinyAction: '',
+  status: 'Inbox',
   deadline: undefined,
-  estimatedMinutes: 50,
-  difficulty: 'medium',
-  urgency: 'medium',
-  importance: 'medium',
-  minimumVersion: '',
-  nextAction: '',
-  checklist: [],
-  pomodoroEnabled: false,
-  pomodoroLength: 50,
-  breakLength: 10,
-  pomodoroSessions: 1,
 })
 
 interface TaskFormProps {
-  initial?: Partial<Omit<Task, 'id' | 'createdAt' | 'done'>>
-  onSave: (data: Omit<Task, 'id' | 'createdAt' | 'done'>) => void
+  initial?: Partial<TaskFormData>
+  onSave: (data: TaskFormData) => void
   onCancel: () => void
 }
 
@@ -84,14 +86,12 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
     setForm(prev => ({ ...prev, [key]: val }))
   }
 
-  function handleCategoryChange(cat: TaskCategory) {
-    const isDeepFocus = DEEP_FOCUS_CATEGORIES.includes(cat)
+  function handleAreaChange(area: TaskArea) {
     setForm(prev => ({
       ...prev,
-      category: cat,
-      pomodoroEnabled: isDeepFocus ? true : prev.pomodoroEnabled,
-      pomodoroLength: isDeepFocus ? 50 : prev.pomodoroLength,
-      breakLength: isDeepFocus ? 10 : prev.breakLength,
+      area,
+      mode: area === 'Admin' ? 'Admin' : area === 'Life reset' ? 'Recovery' : prev.mode,
+      nextTinyAction: prev.nextTinyAction?.trim() ? prev.nextTinyAction : tinyActionForArea(area),
     }))
   }
 
@@ -105,7 +105,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
       <button
         key={o}
         type="button"
-        className={`btn-option ${cur === o ? `selected-${o}` : ''}`}
+            className={`btn-option ${cur === o ? 'selected' : ''}`}
         onClick={() => onChange(o)}
       >
         {labels[i]}
@@ -131,14 +131,14 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
 
       <div className="form-row">
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Category</label>
+          <label>Area</label>
           <select
-            value={form.category}
-            onChange={e => handleCategoryChange(e.target.value as TaskCategory)}
+            value={form.area}
+            onChange={e => handleAreaChange(e.target.value as TaskArea)}
           >
-            {CATEGORIES.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.label}
+            {TASK_AREAS.map(area => (
+              <option key={area} value={area}>
+                {area}
               </option>
             ))}
           </select>
@@ -156,154 +156,63 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
       <div className="form-row mt-1">
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Est. time (minutes)</label>
-          <input
-            type="number"
-            min={5}
-            step={5}
-            value={form.estimatedMinutes}
-            onChange={e => f('estimatedMinutes', Number(e.target.value))}
-          />
+          <div className="btn-group">
+            {[5, 15, 25, 45].map(minutes => (
+              <button
+                key={minutes}
+                type="button"
+                className={`btn-option ${form.estimatedMinutes === minutes ? 'selected' : ''}`}
+                onClick={() => f('estimatedMinutes', minutes as 5 | 15 | 25 | 45)}
+              >
+                {minutes}m
+              </button>
+            ))}
+          </div>
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Difficulty</label>
-          <select
-            value={form.difficulty}
-            onChange={e => f('difficulty', e.target.value as Difficulty)}
-          >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
+          <label>Mode</label>
+          <div className="btn-group">
+            {triBtn(
+              form.mode ?? 'Focus',
+              TASK_MODES,
+              TASK_MODES,
+              v => f('mode', v as TaskMode),
+            )}
+          </div>
         </div>
       </div>
 
       <div className="form-group mt-1">
-        <label>Urgency</label>
+        <label>Energy</label>
         <div className="btn-group">
           {triBtn(
-            form.urgency,
-            ['low', 'medium', 'high'] as Urgency[],
-            ['Low', 'Medium', 'High'],
-            v => f('urgency', v),
+            form.energy ?? 'Medium',
+            TASK_ENERGIES,
+            TASK_ENERGIES,
+            v => f('energy', v as TaskEnergy),
           )}
         </div>
       </div>
 
       <div className="form-group">
-        <label>Importance</label>
+        <label>Status</label>
         <div className="btn-group">
           {triBtn(
-            form.importance,
-            ['low', 'medium', 'high'] as Importance[],
-            ['Low', 'Medium', 'High'],
-            v => f('importance', v),
+            form.status ?? 'Inbox',
+            TASK_STATUSES,
+            TASK_STATUSES,
+            v => f('status', v as TaskStatus),
           )}
         </div>
       </div>
 
       <div className="form-group">
-        <label>Next action</label>
+        <label>Next tiny action</label>
         <input
-          placeholder="e.g. Open assessment brief and read part 2"
-          value={form.nextAction ?? ''}
-          onChange={e => f('nextAction', e.target.value)}
+          placeholder={tinyActionForArea(form.area ?? 'Other')}
+          value={form.nextTinyAction ?? ''}
+          onChange={e => f('nextTinyAction', e.target.value)}
         />
-      </div>
-
-      <div className="form-group">
-        <label>Minimum completion version</label>
-        <input
-          placeholder="e.g. Answer Q1 only, 20 min review"
-          value={form.minimumVersion ?? ''}
-          onChange={e => f('minimumVersion', e.target.value)}
-        />
-      </div>
-
-      {/* Pomodoro section */}
-      <div className="pomo-form-section">
-        <div className="pomo-form-label">
-          <Timer size={13} />
-          Focus mode (Pomodoro)
-        </div>
-        <div className="btn-group mb-sm">
-          <button
-            type="button"
-            className={`btn-option ${form.pomodoroEnabled ? 'selected' : ''}`}
-            onClick={() => f('pomodoroEnabled', true)}
-          >
-            🍅 On
-          </button>
-          <button
-            type="button"
-            className={`btn-option ${!form.pomodoroEnabled ? 'selected' : ''}`}
-            onClick={() => f('pomodoroEnabled', false)}
-          >
-            Off
-          </button>
-        </div>
-
-        {form.pomodoroEnabled && (
-          <div className="pomo-form-row">
-            <div>
-              <div className="pomo-form-field-label">Focus</div>
-              <div className="pomo-quick-btns">
-                {[25, 50].map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`pomo-quick-btn ${form.pomodoroLength === n ? 'active' : ''}`}
-                    onClick={() => f('pomodoroLength', n)}
-                  >
-                    {n}m
-                  </button>
-                ))}
-                <input
-                  type="number"
-                  className="pomo-quick-input"
-                  min={10}
-                  step={5}
-                  value={form.pomodoroLength}
-                  onChange={e => f('pomodoroLength', Number(e.target.value))}
-                />
-              </div>
-            </div>
-            <div>
-              <div className="pomo-form-field-label">Break</div>
-              <div className="pomo-quick-btns">
-                {[5, 10].map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`pomo-quick-btn ${form.breakLength === n ? 'active' : ''}`}
-                    onClick={() => f('breakLength', n)}
-                  >
-                    {n}m
-                  </button>
-                ))}
-                <input
-                  type="number"
-                  className="pomo-quick-input"
-                  min={5}
-                  step={5}
-                  value={form.breakLength}
-                  onChange={e => f('breakLength', Number(e.target.value))}
-                />
-              </div>
-            </div>
-            <div>
-              <div className="pomo-form-field-label">Sessions</div>
-              <input
-                type="number"
-                className="pomo-quick-input"
-                style={{ width: 52 }}
-                min={1}
-                max={6}
-                value={form.pomodoroSessions ?? 1}
-                onChange={e => f('pomodoroSessions', Number(e.target.value))}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="form-actions">
@@ -311,7 +220,15 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
           className="btn btn-primary"
           onClick={() => {
             if (!form.title.trim()) return
-            onSave(form)
+            onSave({
+              ...form,
+              area: form.area ?? 'Other',
+              energy: form.energy ?? 'Medium',
+              mode: form.mode ?? 'Focus',
+              status: form.status ?? 'Inbox',
+              estimatedMinutes: form.estimatedMinutes as 5 | 15 | 25 | 45,
+              nextTinyAction: form.nextTinyAction?.trim() || tinyActionForArea(form.area ?? 'Other'),
+            })
           }}
         >
           <Check size={14} />
@@ -341,24 +258,58 @@ export default function TaskInbox() {
     saveTasks(updated)
   }
 
-  function addTask(data: Omit<Task, 'id' | 'createdAt' | 'done'>) {
-    const task: Task = {
-      ...data,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      done: false,
-    }
+  function addTask(data: TaskFormData) {
+    const task = createInboxTask({
+      title: data.title,
+      area: data.area ?? 'Other',
+      energy: data.energy ?? 'Medium',
+      mode: data.mode ?? 'Focus',
+      estimatedMinutes: data.estimatedMinutes as 5 | 15 | 25 | 45,
+      nextTinyAction: data.nextTinyAction,
+    })
+    task.status = data.status ?? 'Inbox'
+    task.deadline = data.deadline
+    task.done = task.status === 'Done'
     persist([task, ...tasks])
     setShowForm(false)
   }
 
-  function updateTask(id: string, data: Omit<Task, 'id' | 'createdAt' | 'done'>) {
-    persist(tasks.map(t => (t.id === id ? { ...t, ...data } : t)))
+  function updateTask(id: string, data: TaskFormData) {
+    persist(tasks.map(t => {
+      if (t.id !== id) return t
+      const nextTinyAction = data.nextTinyAction?.trim() || tinyActionForArea(data.area ?? 'Other')
+      return {
+        ...t,
+        ...data,
+        area: data.area ?? 'Other',
+        energy: data.energy ?? 'Medium',
+        mode: data.mode ?? 'Focus',
+        status: data.status ?? 'Inbox',
+        estimatedMinutes: data.estimatedMinutes as 5 | 15 | 25 | 45,
+        category: categoryFromArea(data.area ?? 'Other'),
+        nextTinyAction,
+        nextAction: nextTinyAction,
+        pomodoroEnabled: data.mode === 'Focus',
+        pomodoroLength: data.estimatedMinutes,
+        breakLength: Number(data.estimatedMinutes) >= 25 ? 10 : 5,
+        done: data.status === 'Done',
+        updatedAt: new Date().toISOString(),
+      }
+    }))
     setEditingId(null)
   }
 
   function toggleDone(id: string) {
-    persist(tasks.map(t => (t.id === id ? { ...t, done: !t.done } : t)))
+    persist(tasks.map(t => (
+      t.id === id
+        ? {
+            ...t,
+            done: !t.done,
+            status: !t.done ? 'Done' : 'Inbox',
+            updatedAt: new Date().toISOString(),
+          }
+        : t
+    )))
   }
 
   function deleteTask(id: string) {
@@ -368,7 +319,7 @@ export default function TaskInbox() {
   }
 
   const filtered = tasks.filter(t => {
-    if (filter === 'done') return t.done
+    if (filter === 'done') return t.done || t.status === 'Done'
     if (filter === ALL_FILTER) return !t.done
     return !t.done && t.category === filter
   })
@@ -481,14 +432,20 @@ export default function TaskInbox() {
                       <div className="task-title">{task.title}</div>
                       <div className="task-meta">
                         <span className={`badge badge-${task.category}`}>
-                          {categoryLabel(task.category)}
+                          {task.area ?? categoryLabel(task.category)}
                         </span>
-                        <span className={`badge badge-urgency-${task.urgency}`}>
-                          {task.urgency}
+                        <span className="badge">
+                          {task.energy ?? 'Medium'}
+                        </span>
+                        <span className="badge">
+                          {task.mode ?? 'Focus'}
+                        </span>
+                        <span className="badge">
+                          {task.status ?? (task.done ? 'Done' : 'Inbox')}
                         </span>
                         {task.pomodoroEnabled && (
                           <span className="pomo-badge-inline">
-                            🍅 {task.pomodoroLength ?? 50}m
+                            {task.pomodoroLength ?? task.estimatedMinutes}m
                           </span>
                         )}
                         {dl && (
@@ -500,8 +457,10 @@ export default function TaskInbox() {
                             : `${(task.estimatedMinutes / 60).toFixed(1)}h`}
                         </span>
                       </div>
-                      {task.nextAction && (
-                        <div className="task-next-action">{task.nextAction}</div>
+                      {(task.nextTinyAction || task.nextAction) && (
+                        <div className="task-next-action">
+                          {task.nextTinyAction || task.nextAction}
+                        </div>
                       )}
                       {task.checklist && task.checklist.length > 0 && (
                         <ul className="task-checklist">

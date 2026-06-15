@@ -4,7 +4,10 @@ import type {
   AppSettings,
   DailyCheckin,
   DailyLog,
+  FocusBlock,
   FocusSession,
+  MealAnchor,
+  StartPlan,
   TimeBlockFollowUp,
   Task,
   WorkOpportunity,
@@ -15,6 +18,7 @@ import type {
   GoogleCalendarImportMeta,
   Template,
 } from './types'
+import { defaultMealAnchors, normalizeTask } from './focusBlocks'
 
 export const STORAGE_SCHEMA_VERSION = 1
 
@@ -31,6 +35,9 @@ const KEYS = {
   dailyLogs: 'iris-daily-logs',
   timeBlockFollowUps: 'iris-time-block-follow-ups',
   focusSessions: 'iris-focus-sessions',
+  startPlans: 'startPlans',
+  focusBlocks: 'iris_focus_blocks',
+  mealAnchors: 'iris_meal_anchors',
 }
 
 interface VersionedValue<T> {
@@ -78,8 +85,8 @@ function save(key: string, value: unknown): void {
 export const loadCheckin = (): DailyCheckin | null => load<DailyCheckin>(KEYS.checkin)
 export const saveCheckin = (c: DailyCheckin): void => save(KEYS.checkin, c)
 
-export const loadTasks = (): Task[] => load<Task[]>(KEYS.tasks) ?? []
-export const saveTasks = (t: Task[]): void => save(KEYS.tasks, t)
+export const loadTasks = (): Task[] => (load<Task[]>(KEYS.tasks) ?? []).map(normalizeTask)
+export const saveTasks = (t: Task[]): void => save(KEYS.tasks, t.map(normalizeTask))
 
 export const loadOpportunities = (): WorkOpportunity[] =>
   load<WorkOpportunity[]>(KEYS.opportunities) ?? []
@@ -99,6 +106,88 @@ export const addFocusSession = (session: FocusSession): FocusSession[] => {
   const next = [session, ...loadFocusSessions()]
   saveFocusSessions(next)
   return next
+}
+
+export const loadFocusBlocks = (): FocusBlock[] => load<FocusBlock[]>(KEYS.focusBlocks) ?? []
+export const saveFocusBlocks = (blocks: FocusBlock[]): void => save(KEYS.focusBlocks, blocks)
+export const saveFocusBlock = (block: FocusBlock): FocusBlock[] => {
+  const next = [block, ...loadFocusBlocks().filter(item => item.id !== block.id)]
+  saveFocusBlocks(next)
+  return next
+}
+export const updateFocusBlock = (
+  id: string,
+  patch: Partial<FocusBlock>,
+): FocusBlock | null => {
+  let updatedBlock: FocusBlock | null = null
+  const next = loadFocusBlocks().map(block => {
+    if (block.id !== id) return block
+    updatedBlock = {
+      ...block,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    }
+    return updatedBlock
+  })
+  saveFocusBlocks(next)
+  return updatedBlock
+}
+export const loadFocusBlocksForDate = (date: string): FocusBlock[] =>
+  loadFocusBlocks()
+    .filter(block => block.date === date)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+export const loadMealAnchors = (date: string): MealAnchor[] => {
+  const saved = load<Record<string, MealAnchor[]>>(KEYS.mealAnchors) ?? {}
+  const savedForDate = saved[date] ?? []
+  const defaults = defaultMealAnchors(date)
+  return defaults.map(anchor => savedForDate.find(item => item.id === anchor.id) ?? anchor)
+}
+export const saveMealAnchor = (anchor: MealAnchor): MealAnchor[] => {
+  const saved = load<Record<string, MealAnchor[]>>(KEYS.mealAnchors) ?? {}
+  const current = saved[anchor.date] ?? defaultMealAnchors(anchor.date)
+  const nextForDate = current.map(item =>
+    item.id === anchor.id ? { ...anchor, updatedAt: new Date().toISOString() } : item,
+  )
+  save(KEYS.mealAnchors, {
+    ...saved,
+    [anchor.date]: nextForDate,
+  })
+  return nextForDate
+}
+
+export const loadStartPlans = (): StartPlan[] => load<StartPlan[]>(KEYS.startPlans) ?? []
+export const saveStartPlans = (plans: StartPlan[]): void => {
+  localStorage.setItem(KEYS.startPlans, JSON.stringify(plans))
+}
+
+export const saveStartPlan = (plan: StartPlan): StartPlan[] => {
+  const next = [plan, ...loadStartPlans().filter(item => item.id !== plan.id)]
+  saveStartPlans(next)
+  return next
+}
+
+export const updateStartPlanStarted = (
+  id: string,
+  markedStarted = true,
+): StartPlan | null => {
+  let updatedPlan: StartPlan | null = null
+  const next = loadStartPlans().map(plan => {
+    if (plan.id !== id) return plan
+    updatedPlan = {
+      ...plan,
+      markedStarted,
+    }
+    return updatedPlan
+  })
+  saveStartPlans(next)
+  return updatedPlan
+}
+
+export const getLatestStartPlanForDate = (date: string): StartPlan | null => {
+  return loadStartPlans()
+    .filter(plan => plan.date === date)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
 }
 
 export const emptyDailyLog = (date: string): DailyLog => ({
@@ -256,6 +345,7 @@ export function exportBackupData(): AppBackup {
       dailyLogs: Object.values(loadDailyLogs()),
       timeBlockFollowUps: loadAllTimeBlockFollowUps(),
       focusSessions: loadFocusSessions(),
+      focusBlocks: loadFocusBlocks(),
       tasks: loadTasks(),
       opportunities: loadOpportunities(),
       bills: loadBills(),
@@ -295,6 +385,9 @@ export function validateBackup(input: unknown): AppBackupData | null {
     focusSessions: isArray(candidate.focusSessions)
       ? (candidate.focusSessions as FocusSession[])
       : [],
+    focusBlocks: isArray(candidate.focusBlocks)
+      ? (candidate.focusBlocks as FocusBlock[])
+      : [],
     tasks: candidate.tasks as Task[],
     opportunities: candidate.opportunities as WorkOpportunity[],
     bills: candidate.bills as Bill[],
@@ -322,6 +415,7 @@ export function importBackupData(data: AppBackupData): void {
   )
   saveAllTimeBlockFollowUps(data.timeBlockFollowUps ?? {})
   saveFocusSessions(data.focusSessions)
+  saveFocusBlocks(data.focusBlocks ?? [])
   saveTasks(data.tasks)
   saveOpportunities(data.opportunities)
   saveBills(data.bills)

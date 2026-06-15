@@ -26,6 +26,21 @@ export type Difficulty = 'easy' | 'medium' | 'hard'
 export type Urgency = 'low' | 'medium' | 'high'
 export type Importance = 'low' | 'medium' | 'high'
 
+export type TaskArea =
+  | 'Cyber'
+  | 'Job'
+  | 'English'
+  | 'Admin'
+  | 'Life reset'
+  | 'Expression Review'
+  | 'Other'
+
+export type TaskEnergy = 'Low' | 'Medium' | 'High'
+export type TaskMode = 'Focus' | 'Light' | 'Admin' | 'Recovery'
+export type TaskStatus = 'Inbox' | 'Planned' | 'Doing' | 'Done' | 'Skipped'
+export type FocusBlockStatus = 'Doing' | 'Done' | 'Partial' | 'Skipped' | 'Changed'
+export type MealAnchorStatus = 'Followed' | 'Partial' | 'Skipped' | 'Changed' | ''
+
 export interface DailyCheckin {
   date: string
   dayType: DayType
@@ -114,15 +129,53 @@ export interface FocusStats {
   weekMinutes: number
 }
 
+export type StartNowState =
+  | 'Morning after waking'
+  | 'Afternoon slump'
+  | 'Before evening class'
+  | 'Deadline panic'
+  | 'Emotionally messy'
+  | 'Low-energy but okay'
+
+export type StartNowTimeAvailable = 5 | 15 | 25 | 45
+
+export type StartNowArea =
+  | 'Study'
+  | 'Job search'
+  | 'English output'
+  | 'Cyber'
+  | 'Admin'
+  | 'Life reset'
+
+export interface StartPlan {
+  id: string
+  date: string
+  state: StartNowState
+  energy: number
+  timeAvailable: StartNowTimeAvailable
+  area: StartNowArea
+  bodyReset: string
+  openThis: string
+  firstTinyAction: string
+  timerMinutes: StartNowTimeAvailable
+  markedStarted: boolean
+  createdAt: string
+}
+
 export interface Task {
   id: string
   title: string
+  area?: TaskArea
+  energy?: TaskEnergy
+  mode?: TaskMode
+  status?: TaskStatus
   category: TaskCategory
   deadline?: string
-  estimatedMinutes: number
+  estimatedMinutes: number | 5 | 15 | 25 | 45
   difficulty: Difficulty
   urgency: Urgency
   importance: Importance
+  nextTinyAction?: string
   minimumVersion?: string
   nextAction?: string
   checklist?: string[]
@@ -132,6 +185,44 @@ export interface Task {
   pomodoroSessions?: number
   done: boolean
   createdAt: string
+  updatedAt?: string
+}
+
+export interface FocusBlock {
+  id: string
+  date: string
+  startTime: string
+  plannedEndTime: string
+  actualEndTime?: string
+  minutes: number
+  taskId: string
+  taskTitle: string
+  area: TaskArea
+  mode: TaskMode
+  energy: TaskEnergy
+  firstTinyAction: string
+  status: FocusBlockStatus
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MealAnchor {
+  id: 'lunch' | 'dinner'
+  date: string
+  label: 'Lunch + reset' | 'Dinner + reset'
+  aroundTime: string
+  status: MealAnchorStatus
+  updatedAt: string
+}
+
+export interface NextBlockRecommendation {
+  id: string
+  time: string
+  label: string
+  detail: string
+  minutes: number
+  area?: TaskArea
 }
 
 export interface Template {
@@ -323,6 +414,7 @@ export interface AppBackupData {
   dailyLogs: DailyLog[]
   timeBlockFollowUps?: Record<string, Record<string, TimeBlockFollowUp>>
   focusSessions: FocusSession[]
+  focusBlocks?: FocusBlock[]
   tasks: Task[]
   opportunities: WorkOpportunity[]
   bills: Bill[]
