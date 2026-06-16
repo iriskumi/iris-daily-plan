@@ -9,7 +9,7 @@ import type {
   TaskArea,
 } from '../types'
 import { loadCheckin, loadSettings, loadTasks, saveCheckin, saveTasks } from '../storage'
-import { categoryFromArea, createInboxTask } from '../focusBlocks'
+import { TASK_AREAS, categoryFromArea, createInboxTask, normalizeArea } from '../focusBlocks'
 
 const DAY_TYPES: { id: DayType; emoji: string; label: string; commitments: string }[] = [
   { id: 'normal', emoji: '☀️', label: 'Normal Day', commitments: '' },
@@ -81,7 +81,7 @@ function makeRankedRow(
 function initialRankedTasks(saved?: RankedCheckinTask[]): RankedCheckinTask[] {
   if (saved && saved.length > 0) {
     return saved
-      .map((task, index) => ({ ...task, orderIndex: index }))
+      .map((task, index) => ({ ...task, area: normalizeArea(task.area), orderIndex: index }))
       .sort((a, b) => a.orderIndex - b.orderIndex)
   }
   const inboxTasks = loadTasks().filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
@@ -89,7 +89,7 @@ function initialRankedTasks(saved?: RankedCheckinTask[]): RankedCheckinTask[] {
     return inboxTasks.slice(0, 6).map((task, index) =>
       makeRankedRow(
         task.title,
-        task.area ?? 'Other',
+        normalizeArea(task.area),
         index,
         task.id,
         task.estimatedMinutes >= 60
@@ -106,6 +106,8 @@ function initialRankedTasks(saved?: RankedCheckinTask[]): RankedCheckinTask[] {
     makeRankedRow('', 'Cyber', 0, undefined, 25),
     makeRankedRow('', 'Job', 1, undefined, 25),
     makeRankedRow('', 'Life reset', 2, undefined, 15),
+    makeRankedRow('', 'Other', 3, undefined, 25),
+    makeRankedRow('', 'Other', 4, undefined, 25),
   ]
 }
 
@@ -208,7 +210,7 @@ export default function DailyCheckin({
       .map(row => {
         const task = createInboxTask({
           title: row.title,
-          area: row.area,
+          area: normalizeArea(row.area),
           energy: row.estimatedMinutes <= 15 ? 'Low' : row.estimatedMinutes <= 25 ? 'Medium' : 'High',
           mode: row.area === 'Admin' ? 'Admin' : row.area === 'Life reset' ? 'Recovery' : 'Focus',
           estimatedMinutes: row.estimatedMinutes === 60 ? 45 : row.estimatedMinutes as 15 | 25 | 45,
@@ -217,7 +219,7 @@ export default function DailyCheckin({
           ...task,
           estimatedMinutes: row.estimatedMinutes,
           pomodoroLength: row.estimatedMinutes,
-          category: categoryFromArea(row.area),
+          category: categoryFromArea(normalizeArea(row.area)),
         }] as const
       })
     const createdTasks = createdTaskPairs.map(([, task]) => task)
@@ -229,8 +231,8 @@ export default function DailyCheckin({
       return {
         ...task,
         title: row.title,
-        area: row.area,
-        category: categoryFromArea(row.area),
+        area: normalizeArea(row.area),
+        category: categoryFromArea(normalizeArea(row.area)),
         estimatedMinutes: row.estimatedMinutes,
         pomodoroLength: row.estimatedMinutes,
         updatedAt: new Date().toISOString(),
@@ -395,10 +397,25 @@ export default function DailyCheckin({
                                   ? 'Type your most important task'
                                   : index === 1
                                     ? 'Type the next useful task'
-                                    : 'Type a small task or reset'
+                                : 'Type a small task or reset'
                               }
                             />
-                            <span>{task.area}</span>
+                            <select
+                              className="ranked-task-area-select"
+                              value={task.area}
+                              onChange={event =>
+                                updateRankedTask(task.id, {
+                                  area: event.target.value as TaskArea,
+                                })
+                              }
+                              aria-label={`Area for task ${index + 1}`}
+                            >
+                              {TASK_AREAS.map(area => (
+                                <option key={area} value={area}>
+                                  {area}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                           <select
                             className="ranked-task-estimate"

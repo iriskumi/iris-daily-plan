@@ -28,11 +28,14 @@ export type Importance = 'low' | 'medium' | 'high'
 
 export type TaskArea =
   | 'Cyber'
+  | 'AI'
+  | 'Vibe Coding'
   | 'Job'
   | 'English'
   | 'Admin'
   | 'Life reset'
   | 'Expression Review'
+  | 'Study'
   | 'Other'
 
 export type TaskEnergy = 'Low' | 'Medium' | 'High'

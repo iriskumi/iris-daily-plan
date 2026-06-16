@@ -13,11 +13,14 @@ import { localDateString } from './focus'
 
 export const TASK_AREAS: TaskArea[] = [
   'Cyber',
+  'AI',
+  'Vibe Coding',
   'Job',
   'English',
   'Admin',
   'Life reset',
   'Expression Review',
+  'Study',
   'Other',
 ]
 
@@ -32,7 +35,8 @@ export const BLOCK_LENGTHS = [
 ]
 
 export function areaFromCategory(category: TaskCategory): TaskArea {
-  if (category === 'cyber-study' || category === 'assessment' || category === 'ai') return 'Cyber'
+  if (category === 'cyber-study' || category === 'assessment') return 'Cyber'
+  if (category === 'ai') return 'AI'
   if (category === 'job-search' || category === 'consulting-freelance') return 'Job'
   if (category === 'english-practice' || category === 'japanese-practice') return 'English'
   if (category === 'admin-life' || category === 'finance-bills' || category === 'work-shift') return 'Admin'
@@ -40,13 +44,20 @@ export function areaFromCategory(category: TaskCategory): TaskArea {
   return 'Other'
 }
 
+export function normalizeArea(area?: string): TaskArea {
+  return TASK_AREAS.includes(area as TaskArea) ? area as TaskArea : 'Other'
+}
+
 export function categoryFromArea(area: TaskArea): TaskCategory {
   if (area === 'Cyber') return 'cyber-study'
+  if (area === 'AI') return 'ai'
+  if (area === 'Vibe Coding') return 'ai'
   if (area === 'Job') return 'job-search'
   if (area === 'English') return 'english-practice'
   if (area === 'Admin') return 'admin-life'
   if (area === 'Life reset') return 'recovery'
   if (area === 'Expression Review') return 'english-practice'
+  if (area === 'Study') return 'assessment'
   return 'admin-life'
 }
 
@@ -54,6 +65,7 @@ export function modeFromArea(area: TaskArea): TaskMode {
   if (area === 'Admin') return 'Admin'
   if (area === 'Life reset') return 'Recovery'
   if (area === 'Expression Review') return 'Light'
+  if (area === 'Study') return 'Light'
   return 'Focus'
 }
 
@@ -71,19 +83,22 @@ export function normalizedBlockMinutes(minutes?: number): 5 | 15 | 25 | 45 {
 }
 
 export function tinyActionForArea(area: TaskArea): string {
-  if (area === 'Cyber') return 'Open the glossary and review 8 terms only.'
+  if (area === 'Cyber') return 'Open the relevant notes, glossary, or screenshots folder.'
+  if (area === 'AI') return 'Open the AI note, news item, or tool page and capture only 3 useful points.'
+  if (area === 'Vibe Coding') return 'Open the project folder and identify the next smallest code/UI change.'
   if (area === 'Job') return 'Open the JD and highlight 3 requirements only.'
   if (area === 'English') return 'Write or say one sentence only.'
-  if (area === 'Admin') return 'Open the relevant email or page and do the first visible step only.'
-  if (area === 'Life reset') return 'Get water or wash face first.'
+  if (area === 'Admin') return 'Open the relevant email, form, or page only.'
+  if (area === 'Life reset') return 'Get water, wash face, or clear one small surface first.'
   if (area === 'Expression Review') return 'Review 5 entries only. Do not add new entries.'
+  if (area === 'Study') return 'Open the study material and read the first section only.'
   return 'Open the relevant file and do only the first visible step for 5 minutes.'
 }
 
 export function tinyActionForTask(title: string, area: TaskArea): string {
   const normalizedTitle = title.toLowerCase()
   if (/\b(sdlc|vibe coding|article|reading)\b/i.test(normalizedTitle)) {
-    return 'Open the reading/note and highlight 3 useful points only. Do not summarise yet.'
+    return 'Open the reading or note and highlight 3 useful points only. Do not summarise yet.'
   }
   if (/\b(screenshot|gophish|test case)\b/i.test(normalizedTitle)) {
     return 'Open the screenshots folder and sort screenshots by test case only.'
@@ -100,11 +115,16 @@ export function tinyActionForTask(title: string, area: TaskArea): string {
   if (/\b(glossary|cisco|cyber)\b/i.test(normalizedTitle)) {
     return 'Open the glossary and review 8 terms only.'
   }
+  if (/\b(cursor|codex|deploy|bug|ui)\b/i.test(normalizedTitle)) {
+    return 'Open the project folder and find the next smallest code or UI change.'
+  }
   return tinyActionForArea(area)
 }
 
 export function normalizeTask(task: Task): Task {
-  const area = task.area ?? areaFromCategory(task.category)
+  const area = normalizeArea(task.area) === 'Other' && !task.area
+    ? areaFromCategory(task.category)
+    : normalizeArea(task.area)
   const estimatedMinutes = normalizedBlockMinutes(task.estimatedMinutes)
   const status: TaskStatus = task.done ? 'Done' : task.status ?? 'Inbox'
   const now = new Date().toISOString()

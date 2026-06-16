@@ -289,12 +289,16 @@ function morningPriorityTasks(checkin: DailyCheckin): {
         category:
           task.area === 'Cyber'
             ? 'cyber-study'
+            : task.area === 'AI' || task.area === 'Vibe Coding'
+              ? 'ai'
             : task.area === 'Job'
               ? 'job-search'
               : task.area === 'English' || task.area === 'Expression Review'
                 ? 'english-practice'
                 : task.area === 'Life reset'
                   ? 'recovery'
+                  : task.area === 'Study'
+                    ? 'assessment'
                   : 'admin-life',
         estimatedMinutes: task.estimatedMinutes,
         difficulty: task.estimatedMinutes >= 45 ? 'hard' : task.estimatedMinutes >= 25 ? 'medium' : 'easy',
