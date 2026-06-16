@@ -90,6 +90,7 @@ import {
   categoryFromArea,
   createFocusBlock,
   createInboxTask,
+  isActiveTask,
   pickTaskForBlock,
   recommendNextBlocks,
   tinyActionForTask,
@@ -292,6 +293,8 @@ export default function App() {
       setGeneratingPlan(false)
       return { success: false, message }
     }
+    console.log('[DailyPlan] active tasks used:', context.tasks)
+    console.log('[DailyPlan] ranked tasks used:', context.checkin.rankedTasks ?? [])
     const feedbackContext = feedback.trim()
       ? {
           ...context,
@@ -330,6 +333,7 @@ export default function App() {
             fallbackReason: aiResult.fallbackReason || aiResult.message,
           }
       const fallbackReason = generated.fallbackReason || aiResult.fallbackReason
+      console.log('[DailyPlan] generated blocks:', generated.timeBlocks)
       const message = fallbackReason
         ? `Plan generated with local fallback. ${fallbackReason}`
         : 'Plan generated successfully.'
@@ -1029,7 +1033,7 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
   const rankedTasks = (loadCheckin()?.rankedTasks ?? [])
     .filter(task => task.title.trim())
     .sort((a, b) => a.orderIndex - b.orderIndex)
-  const pendingTasks = tasks.filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
+  const pendingTasks = tasks.filter(isActiveTask)
   const rankedOrder = new Map<string, number>()
   rankedTasks.forEach((rankedTask, index) => {
     if (rankedTask.taskId) rankedOrder.set(`id:${rankedTask.taskId}`, index)
@@ -1050,7 +1054,7 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
   const filteredTasks = orderedTasks.filter(task => areaFilter === 'Any' || task.area === areaFilter)
 
   const activeBlock = blocks.find(block => block.status === 'Doing')
-  const selectedTask = tasks.find(task => task.id === selectedTaskId) ?? filteredTasks[0] ?? null
+  const selectedTask = filteredTasks.find(task => task.id === selectedTaskId) ?? filteredTasks[0] ?? null
   const recommendations = recommendNextBlocks({
     tasks: rankedTasks.length > 0 ? orderedTasks : tasks,
     energy,
@@ -1227,7 +1231,7 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
           <h3>Start a Focus Block</h3>
           <p>Choose one inbox task, define the first tiny action, and start.</p>
         </div>
-        <span className="focus-block-soft-pill">{tasks.filter(task => !task.done).length} inbox</span>
+        <span className="focus-block-soft-pill">{pendingTasks.length} active</span>
       </div>
 
       {activeBlock ? (
@@ -1308,7 +1312,9 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
             <div className="start-now-control">
               <label>Choose task</label>
               <select value={selectedTaskId} onChange={e => setSelectedTaskId(e.target.value)}>
-                {filteredTasks.length === 0 && <option value="">No matching inbox tasks</option>}
+                {filteredTasks.length === 0 && (
+                  <option value="">No active tasks yet — add a task or choose a template.</option>
+                )}
                 {filteredTasks.map(task => (
                   <option key={task.id} value={task.id}>
                     {task.title} · {task.area} · {task.energy}

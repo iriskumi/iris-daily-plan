@@ -18,7 +18,13 @@ import type {
   GoogleCalendarImportMeta,
   Template,
 } from './types'
-import { defaultMealAnchors, normalizeTask } from './focusBlocks'
+import {
+  archiveCompletedOldTasks,
+  defaultMealAnchors,
+  isActiveTask,
+  isOldAssessmentTask,
+  normalizeTask,
+} from './focusBlocks'
 
 export const STORAGE_SCHEMA_VERSION = 1
 
@@ -85,8 +91,19 @@ function save(key: string, value: unknown): void {
 export const loadCheckin = (): DailyCheckin | null => load<DailyCheckin>(KEYS.checkin)
 export const saveCheckin = (c: DailyCheckin): void => save(KEYS.checkin, c)
 
-export const loadTasks = (): Task[] => (load<Task[]>(KEYS.tasks) ?? []).map(normalizeTask)
+export const loadTasks = (): Task[] => {
+  const raw = load<Task[]>(KEYS.tasks) ?? []
+  const normalized = raw.map(normalizeTask)
+  if (JSON.stringify(raw) !== JSON.stringify(normalized)) save(KEYS.tasks, normalized)
+  return normalized
+}
 export const saveTasks = (t: Task[]): void => save(KEYS.tasks, t.map(normalizeTask))
+export const loadActiveTasks = (): Task[] => loadTasks().filter(isActiveTask)
+export const archiveOldTasks = (): Task[] => {
+  const next = archiveCompletedOldTasks(loadTasks())
+  saveTasks(next)
+  return next
+}
 
 export const loadOpportunities = (): WorkOpportunity[] =>
   load<WorkOpportunity[]>(KEYS.opportunities) ?? []
@@ -319,15 +336,21 @@ function addCalendarCommitments(checkin: DailyCheckin, events: CalendarEvent[]):
 export function loadGeneratePlanContext(): GeneratePlanContext | null {
   const savedCheckin = loadCheckin()
   if (!savedCheckin) return null
+  const activeTasks = loadActiveTasks()
+  const activeTaskIds = new Set(activeTasks.map(task => task.id))
   const checkin: DailyCheckin = {
     ...savedCheckin,
+    rankedTasks: (savedCheckin.rankedTasks ?? [])
+      .filter(task => !isOldAssessmentTask(task))
+      .filter(task => !task.taskId || activeTaskIds.has(task.taskId))
+      .map((task, index) => ({ ...task, orderIndex: index })),
     planningInstructions: savedCheckin.planningInstructions ?? '',
   }
   const calendarEvents = sanitizeCalendarEvents(loadCalendarEvents())
   const planDateEvents = calendarEventsForDate(calendarEvents, checkin.date)
   return {
     checkin: addCalendarCommitments(checkin, planDateEvents),
-    tasks: loadTasks(),
+    tasks: activeTasks,
     opportunities: loadOpportunities(),
     bills: loadBills(),
     templates: loadTemplates(),

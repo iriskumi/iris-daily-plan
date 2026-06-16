@@ -40,19 +40,19 @@ const DEFAULT_TEMPLATES: Template[] = [
     createdAt: '',
   },
   {
-    id: 'default-cybersecurity',
-    name: 'Cybersecurity',
-    purpose: 'Certificate IV cyber study and assessment progress',
-    category: 'assessment',
+    id: 'default-cyber-study',
+    name: 'Cyber study',
+    purpose: 'Current cyber study from active tasks only',
+    category: 'cyber-study',
     subtasks: [
-      'Review current assessment requirement',
-      'Do one practical step',
-      'Write down evidence / screenshots / notes',
+      'Open the current cyber note or glossary',
+      'Review 8 terms only',
+      'Write one small next action',
     ],
-    estimatedMinutes: 75,
+    estimatedMinutes: 25,
     pomodoroEnabled: true,
-    pomodoroLength: 50,
-    breakLength: 10,
+    pomodoroLength: 25,
+    breakLength: 5,
     isDefault: true,
     createdAt: '',
   },
@@ -96,7 +96,12 @@ function getTemplates(): Template[] {
     saveTemplates(DEFAULT_TEMPLATES)
     return DEFAULT_TEMPLATES
   }
-  return saved
+  const migrated = saved.map(template => {
+    if (template.id !== 'default-cybersecurity') return template
+    return DEFAULT_TEMPLATES.find(item => item.id === 'default-cyber-study') ?? template
+  })
+  if (JSON.stringify(saved) !== JSON.stringify(migrated)) saveTemplates(migrated)
+  return migrated
 }
 
 const emptyForm = (): Omit<Template, 'id' | 'createdAt' | 'isDefault'> => ({

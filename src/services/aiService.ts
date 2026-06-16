@@ -12,6 +12,7 @@ import type {
   WorkOpportunity,
   Task,
 } from '../types'
+import { isActiveTask } from '../focusBlocks'
 
 const notConnected = <T>(): IntegrationResult<T> => ({
   success: false,
@@ -24,13 +25,24 @@ export async function generatePlanWithAI(
   options: { originalPlan?: GeneratedPlan; feedback?: string } = {},
 ): Promise<GeneratePlanResult> {
   try {
+    const activeContext: GeneratePlanContext = {
+      ...context,
+      tasks: context.tasks.filter(isActiveTask),
+      checkin: {
+        ...context.checkin,
+        planningInstructions: [
+          context.checkin.planningInstructions,
+          'Use only the tasks listed below. Do not invent tasks. Do not use previous assessments, previous due dates, or old project names unless they appear in the current active task list.',
+        ].filter(Boolean).join('\n'),
+      },
+    }
     const response = await fetch('/api/generate-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(
         options.originalPlan || options.feedback
-          ? { context, originalPlan: options.originalPlan ?? null, feedback: options.feedback ?? '' }
-          : context,
+          ? { context: activeContext, originalPlan: options.originalPlan ?? null, feedback: options.feedback ?? '' }
+          : activeContext,
       ),
     })
 

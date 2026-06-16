@@ -11,6 +11,7 @@ import type {
 } from './types'
 import { localDateString } from './focus'
 import { getDaysUntil } from './planner'
+import { isActiveTask } from './focusBlocks'
 
 function minutesFromTime(value?: string): number | null {
   if (!value) return null
@@ -197,7 +198,7 @@ export function reducePlanForLowEnergy(plan: GeneratedPlan): GeneratedPlan {
 export function getCarryOverSuggestions(tasks: Task[], log?: DailyLog | null): CarryOverSuggestion[] {
   const mentionedCarry = (log?.carryOverToTomorrow ?? '').toLowerCase()
   return tasks
-    .filter(task => !task.done)
+    .filter(isActiveTask)
     .slice()
     .sort((a, b) => {
       const aDue = a.deadline ? getDaysUntil(a.deadline) : 99

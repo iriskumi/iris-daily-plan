@@ -26,7 +26,8 @@ export const TASK_AREAS: TaskArea[] = [
 
 export const TASK_ENERGIES: TaskEnergy[] = ['Low', 'Medium', 'High']
 export const TASK_MODES: TaskMode[] = ['Focus', 'Light', 'Admin', 'Recovery']
-export const TASK_STATUSES: TaskStatus[] = ['Inbox', 'Planned', 'Doing', 'Done', 'Skipped']
+export const TASK_STATUSES: TaskStatus[] = ['Inbox', 'Planned', 'Doing', 'Done', 'Skipped', 'Archived']
+export const ACTIVE_TASK_STATUSES: TaskStatus[] = ['Inbox', 'Planned']
 export const BLOCK_LENGTHS = [
   { minutes: 5 as const, label: '5 min Start' },
   { minutes: 15 as const, label: '15 min Light' },
@@ -121,12 +122,33 @@ export function tinyActionForTask(title: string, area: TaskArea): string {
   return tinyActionForArea(area)
 }
 
+export function isOldAssessmentTask(task: Pick<Task, 'title'>): boolean {
+  const title = task.title.toLowerCase()
+  return (
+    title.includes('vu23222') ||
+    title.includes('cybersecurity vu23222') ||
+    title.includes('current assessment requirement')
+  )
+}
+
+export function isActiveTask(task: Task): boolean {
+  const normalized = normalizeTask(task)
+  return !normalized.done && ACTIVE_TASK_STATUSES.includes(normalized.status ?? 'Inbox')
+}
+
 export function normalizeTask(task: Task): Task {
   const area = normalizeArea(task.area) === 'Other' && !task.area
     ? areaFromCategory(task.category)
     : normalizeArea(task.area)
   const estimatedMinutes = normalizedBlockMinutes(task.estimatedMinutes)
-  const status: TaskStatus = task.done ? 'Done' : task.status ?? 'Inbox'
+  const shouldAutoArchiveOldAssessment =
+    isOldAssessmentTask(task) &&
+    (!task.status || task.status === 'Done' || task.status === 'Skipped' || task.status === 'Archived')
+  const status: TaskStatus = shouldAutoArchiveOldAssessment
+    ? 'Archived'
+    : task.done
+      ? 'Done'
+      : task.status ?? 'Inbox'
   const now = new Date().toISOString()
   return {
     ...task,
@@ -136,8 +158,25 @@ export function normalizeTask(task: Task): Task {
     estimatedMinutes,
     nextTinyAction: task.nextTinyAction?.trim() || task.nextAction?.trim() || tinyActionForTask(task.title, area),
     status,
+    done: status === 'Done' ? true : task.done,
     updatedAt: task.updatedAt ?? task.createdAt ?? now,
   }
+}
+
+export function archiveCompletedOldTasks(tasks: Task[]): Task[] {
+  const now = new Date().toISOString()
+  return tasks.map(task => {
+    const normalized = normalizeTask(task)
+    if (normalized.status === 'Done' || normalized.status === 'Skipped' || isOldAssessmentTask(normalized)) {
+      return {
+        ...normalized,
+        status: 'Archived',
+        done: normalized.status === 'Done' ? true : normalized.done,
+        updatedAt: now,
+      }
+    }
+    return normalized
+  })
 }
 
 export function createInboxTask(input: {
@@ -182,7 +221,7 @@ export function pickTaskForBlock(
 ): Task | null {
   const usable = tasks
     .map(normalizeTask)
-    .filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
+    .filter(isActiveTask)
     .filter(task => areaFilter === 'Any' || task.area === areaFilter)
   if (usable.length === 0) return null
   if (options.preserveOrder) return usable[0]

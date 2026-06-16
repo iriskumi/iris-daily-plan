@@ -9,7 +9,14 @@ import type {
   TaskArea,
 } from '../types'
 import { loadCheckin, loadSettings, loadTasks, saveCheckin, saveTasks } from '../storage'
-import { TASK_AREAS, categoryFromArea, createInboxTask, normalizeArea } from '../focusBlocks'
+import {
+  TASK_AREAS,
+  categoryFromArea,
+  createInboxTask,
+  isActiveTask,
+  isOldAssessmentTask,
+  normalizeArea,
+} from '../focusBlocks'
 
 const DAY_TYPES: { id: DayType; emoji: string; label: string; commitments: string }[] = [
   { id: 'normal', emoji: '☀️', label: 'Normal Day', commitments: '' },
@@ -79,14 +86,19 @@ function makeRankedRow(
 }
 
 function initialRankedTasks(saved?: RankedCheckinTask[]): RankedCheckinTask[] {
+  const inboxTasks = loadTasks()
+  const activeTaskIds = new Set(inboxTasks.filter(isActiveTask).map(task => task.id))
   if (saved && saved.length > 0) {
-    return saved
+    const activeSaved = saved
+      .filter(task => !isOldAssessmentTask(task))
+      .filter(task => !task.taskId || activeTaskIds.has(task.taskId))
       .map((task, index) => ({ ...task, area: normalizeArea(task.area), orderIndex: index }))
       .sort((a, b) => a.orderIndex - b.orderIndex)
+    if (activeSaved.length > 0) return activeSaved
   }
-  const inboxTasks = loadTasks().filter(task => !task.done && task.status !== 'Done' && task.status !== 'Skipped')
-  if (inboxTasks.length > 0) {
-    return inboxTasks.slice(0, 6).map((task, index) =>
+  const activeInboxTasks = inboxTasks.filter(isActiveTask)
+  if (activeInboxTasks.length > 0) {
+    return activeInboxTasks.slice(0, 6).map((task, index) =>
       makeRankedRow(
         task.title,
         normalizeArea(task.area),
@@ -476,7 +488,7 @@ export default function DailyCheckin({
                   <div className="form-group">
                     <label>Planning instructions</label>
                     <textarea
-                      placeholder="e.g. Keep today light, prioritise Cybersecurity assessment, no deep work after 7pm, bills first"
+                      placeholder="e.g. Keep today light, use only active tasks, no deep work after 7pm, bills first"
                       value={checkin.planningInstructions}
                       onChange={e => set('planningInstructions', e.target.value)}
                       style={{ minHeight: 70 }}

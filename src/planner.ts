@@ -7,6 +7,7 @@ import type {
   GeneratedPlan,
   TimeBlock,
 } from './types'
+import { isActiveTask } from './focusBlocks'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 const PROTECTED_EVENT_TERMS = [
@@ -261,15 +262,12 @@ function findMealSlot(
 function focusTitle(task: Task): string {
   if (task.id.startsWith('morning-main')) return 'Main priority focus block'
   if (task.id.startsWith('morning-secondary')) return 'Secondary priority focus block'
-  if (task.category === 'cyber-study' || task.category === 'assessment') return 'Cyber assessment focus block'
+  if (task.area) return `${task.area}: ${task.title}`
+  if (task.category === 'cyber-study' || task.category === 'assessment') return `Focus: ${task.title}`
   if (task.category === 'english-practice') return 'English Output Pomodoro'
   if (task.category === 'job-search') return 'Job search Pomodoro'
   if (task.category === 'consulting-freelance') return 'AI learning / consulting focus'
   return `${task.title} Pomodoro`
-}
-
-function cleanPriority(value?: string): string {
-  return (value ?? '').trim()
 }
 
 function morningPriorityTasks(checkin: DailyCheckin): {
@@ -278,6 +276,7 @@ function morningPriorityTasks(checkin: DailyCheckin): {
 } {
   const rankedTasks = (checkin.rankedTasks ?? [])
     .filter(task => task.title.trim())
+    .filter(task => !/vu23222|cybersecurity vu23222|current assessment requirement/i.test(task.title))
     .sort((a, b) => a.orderIndex - b.orderIndex)
   if (rankedTasks.length > 0) {
     const now = new Date().toISOString()
@@ -317,73 +316,9 @@ function morningPriorityTasks(checkin: DailyCheckin): {
     }
   }
 
-  const main = cleanPriority(checkin.morningMainTask)
-  const secondary = [
-    cleanPriority(checkin.morningSecondaryTask1),
-    cleanPriority(checkin.morningSecondaryTask2),
-  ].filter(Boolean)
-  const smallLife = cleanPriority(checkin.morningSmallLifeTask)
-  const now = new Date().toISOString()
-  const focusTasks: Task[] = []
-
-  if (main) {
-    focusTasks.push({
-      id: `morning-main-${checkin.date}`,
-      title: main,
-      category: 'assessment',
-      estimatedMinutes: 50,
-      difficulty: 'medium',
-      urgency: 'high',
-      importance: 'high',
-      minimumVersion: `${main} - 25 minute minimum version`,
-      nextAction: `Start ${main}`,
-      pomodoroEnabled: true,
-      pomodoroLength: 50,
-      breakLength: 10,
-      pomodoroSessions: 1,
-      done: false,
-      createdAt: now,
-    })
-  }
-
-  secondary.forEach((title, index) => {
-    focusTasks.push({
-      id: `morning-secondary-${index + 1}-${checkin.date}`,
-      title,
-      category: 'cyber-study',
-      estimatedMinutes: 40,
-      difficulty: 'medium',
-      urgency: 'medium',
-      importance: 'medium',
-      minimumVersion: `${title} - 15 minute version`,
-      nextAction: `Make progress on ${title}`,
-      pomodoroEnabled: true,
-      pomodoroLength: 40,
-      breakLength: 10,
-      pomodoroSessions: 1,
-      done: false,
-      createdAt: now,
-    })
-  })
-
   return {
-    focusTasks,
-    smallLifeTask: smallLife
-      ? {
-          id: `morning-small-life-${checkin.date}`,
-          title: smallLife,
-          category: 'admin-life',
-          estimatedMinutes: 20,
-          difficulty: 'easy',
-          urgency: 'medium',
-          importance: 'medium',
-          minimumVersion: `${smallLife} - 5 minute reset version`,
-          nextAction: `Do the smallest version of ${smallLife}`,
-          pomodoroEnabled: false,
-          done: false,
-          createdAt: now,
-        }
-      : null,
+    focusTasks: [],
+    smallLifeTask: null,
   }
 }
 
@@ -400,15 +335,12 @@ function generateTheme(checkin: DailyCheckin, top3Tasks: Task[]): string {
   if (dayType === 'low-energy') return 'Gentle progress day - small wins matter, rest counts'
   if (dayType === 'admin-catchup') return 'Admin day - clear the backlog, create space'
 
-  const hasAssessment = top3Tasks.some(t => t.category === 'assessment')
   const hasJobSearch = top3Tasks.some(t => t.category === 'job-search')
 
   if (energyLevel === 'high') {
-    if (hasAssessment) return 'Deep work day - final-term cyber assessment focus'
     return 'High-energy day - make serious progress'
   }
   if (energyLevel === 'medium') {
-    if (hasAssessment) return 'Steady day - chip away at the cyber assessment'
     if (hasJobSearch) return 'Steady day - study + job search balance'
     return 'Steady day - consistent action, no heroics'
   }
@@ -609,7 +541,7 @@ export function workLeadSelection(
 
 function selectTasks(tasks: Task[], checkin: DailyCheckin, referenceDate = new Date()) {
   const priorities = morningPriorityTasks(checkin)
-  const pending = tasks.filter(t => !t.done)
+  const pending = tasks.filter(isActiveTask)
   const priorityTitles = new Set([
     ...priorities.focusTasks.map(task => task.title.toLowerCase()),
     ...(priorities.smallLifeTask ? [priorities.smallLifeTask.title.toLowerCase()] : []),
@@ -760,6 +692,9 @@ export function planAssembly(
     calendarEvents,
     billsToday,
   )
+  console.log('[DailyPlan] active tasks used:', allTasks.filter(isActiveTask))
+  console.log('[DailyPlan] ranked tasks used:', checkin.rankedTasks ?? [])
+  console.log('[DailyPlan] generated blocks:', timeBlocks)
   const doNotToday = doNotTasks.slice(0, 5).map(t => t.title)
   if (calendarEvents.some(isProtectedCalendarEvent)) {
     doNotToday.unshift('Deep-focus Pomodoro blocks during protected calendar time')
@@ -778,6 +713,9 @@ export function planAssembly(
   const minimumViableDay: string[] = top3Tasks
     .slice(0, 1)
     .map(t => t.minimumVersion || `${t.title} - even 30 minutes counts`)
+  if (top3Tasks.length === 0) {
+    minimumViableDay.push('Add a small task or choose a template')
+  }
   if (includeRecoveryBlock) minimumViableDay.push('Complete recovery block')
   minimumViableDay.push('Shutdown routine completed')
 
@@ -789,8 +727,12 @@ export function planAssembly(
       nextAction: t.nextAction || 'Define the next action before you start',
     })),
     timeBlocks,
-    mustDo: top3Tasks.map(formatTaskLine),
-    optional: optionalTasks.map(formatTaskLine),
+    mustDo: top3Tasks.length > 0
+      ? top3Tasks.map(formatTaskLine)
+      : ['No active tasks yet — add a task or choose a template.'],
+    optional: optionalTasks.length > 0
+      ? optionalTasks.map(formatTaskLine)
+      : ['Add a small task', 'Start a 15-min block', 'Life reset', 'Review 5 expressions'],
     workLeadsToday: workLeadSelection(allOpportunities, checkin.energyLevel, referenceDate),
     billsToday,
     doNotToday,

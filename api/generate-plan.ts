@@ -320,6 +320,15 @@ function normalizePlan(raw: unknown, context: GeneratePlanContext): GeneratedPla
   }
 
   if (normalized.timeBlocks.length === 0 || normalized.minimumViableDay.length === 0) return null
+  const serializedPlan = JSON.stringify(normalized).toLowerCase()
+  if (
+    serializedPlan.includes('vu23222') ||
+    serializedPlan.includes('cybersecurity vu23222') ||
+    serializedPlan.includes('current assessment requirement') ||
+    serializedPlan.includes('cyber assessment')
+  ) {
+    return null
+  }
 
   return {
     ...normalized,
@@ -391,11 +400,17 @@ function buildMessages(
   feedback = '',
 ) {
   const isRevision = Boolean(originalPlan && feedback.trim())
+  const activeContext: GeneratePlanContext = {
+    ...requestContext,
+    tasks: requestContext.tasks.filter(task =>
+      !task.done && (task.status === 'Inbox' || task.status === 'Planned' || task.status === undefined),
+    ),
+  }
   return [
     {
       role: 'system',
       content:
-        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Build concrete hour-by-hour timeBlocks with startTime, endTime, title, type, label, and items. Use 50-minute Pomodoro focus blocks with 10-minute breaks for cybersecurity, AI learning, English output, and job search. Respect energy level, wake-up time, sleep target, planningInstructions, deadlines, bills, work leads, settings, recovery needs, imported calendar events, and the morning 1+2+1 priority layer in checkin. If checkin.morningMainTask is present, make it priority 1 and schedule it in the first best available focus block. Schedule checkin.morningSecondaryTask1 and morningSecondaryTask2 after the main task if time and energy allow. Schedule checkin.morningSmallLifeTask as a short low-energy admin/life block. Treat these morning priorities as a layer above the task inbox, not a replacement for it. Treat calendar events, fixedCommitments, lunch, and dinner as protected time. Lunch should usually be around 12:00 and dinner around 17:00; if class/work conflicts, move the meal earlier or later with a buffer. Do not schedule Pomodoro or deep work over lunch, dinner, class, Holmesglen, lecture, tutorial, work, shift, or appointment events. Meals are fixed recovery/energy blocks, not optional tasks. For Saturday class day, block 09:00-17:30 and schedule at most one extra focus block after class. Full bill tracking stays in Notion; only include bills that affect today’s plan. Do not invent API integrations or external data.',
+        'You are a practical daily planning assistant. Return JSON only. The JSON must match the Iris GeneratedPlan fields requested by the user. Use only the tasks listed below. Do not invent tasks. Do not use previous assessments, previous due dates, or old project names unless they appear in the current active task list. Generated focus/admin task blocks must come only from Step 3 rankedTasks, active Task Inbox items, user-created templates selected today, or protected meal/reset anchors. If no active tasks exist, say "No active tasks yet — add a task or choose a template." and use generic placeholders only: Add a small task, Start a 15-min block, Life reset, Review 5 expressions. Treat Done, Skipped, and Archived tasks as unavailable unless the user explicitly reactivated them. Build concrete timeBlocks with startTime, endTime, title, type, label, and items. Respect energy level, wake-up time, sleep target, planningInstructions, deadlines, bills, work leads, settings, recovery needs, imported calendar events, and Step 3 Today’s to-do rankedTasks. Treat calendar events, fixedCommitments, lunch, and dinner as protected time. Lunch should usually be around 12:00 and dinner around 17:00; if class/work conflicts, move the meal earlier or later with a buffer. Do not schedule Pomodoro or deep work over lunch, dinner, class, Holmesglen, lecture, tutorial, work, shift, or appointment events. Meals are fixed recovery/energy blocks, not optional tasks. Full bill tracking stays in Notion; only include bills that affect today’s plan. Do not invent API integrations or external data.',
     },
     {
       role: 'user',
@@ -405,7 +420,7 @@ function buildMessages(
             ? 'Revise the original plan using the user feedback. Preserve what still works, keep the same GeneratedPlan JSON format, and do not start from scratch unless the feedback requires it.'
             : 'Create one realistic daily plan in the existing Iris Daily Plan format. Return a single JSON object with these exact fields: date, theme, top3, timeBlocks, mustDo, optional, workLeadsToday, billsToday, doNotToday, minimumViableDay. Each timeBlocks item must include period, label, startTime, endTime, title, type, and items. Use exact ranges like 07:30-08:00 Wake up + breakfast. Use only this structured context. Calendar event descriptions are intentionally omitted for privacy; use only title, time, and basic location.',
         schema: PLAN_SCHEMA,
-        context: requestContext,
+        context: activeContext,
         originalPlan: originalPlan ?? null,
         feedback,
       }),

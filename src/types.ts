@@ -40,7 +40,7 @@ export type TaskArea =
 
 export type TaskEnergy = 'Low' | 'Medium' | 'High'
 export type TaskMode = 'Focus' | 'Light' | 'Admin' | 'Recovery'
-export type TaskStatus = 'Inbox' | 'Planned' | 'Doing' | 'Done' | 'Skipped'
+export type TaskStatus = 'Inbox' | 'Planned' | 'Doing' | 'Done' | 'Skipped' | 'Archived'
 export type FocusBlockStatus = 'Doing' | 'Done' | 'Partial' | 'Skipped' | 'Changed'
 export type MealAnchorStatus = 'Followed' | 'Partial' | 'Skipped' | 'Changed' | ''
 

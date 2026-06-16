@@ -8,7 +8,7 @@ import type {
   TaskMode,
   TaskStatus,
 } from '../types'
-import { loadTasks, saveTasks } from '../storage'
+import { archiveOldTasks, loadTasks, saveTasks } from '../storage'
 import { getDaysUntil } from '../planner'
 import PomodoroTimer from './PomodoroTimer'
 import {
@@ -18,6 +18,7 @@ import {
   TASK_STATUSES,
   categoryFromArea,
   createInboxTask,
+  isActiveTask,
   tinyActionForArea,
   tinyActionForTask,
 } from '../focusBlocks'
@@ -246,7 +247,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
 }
 
 const ALL_FILTER = 'all'
-type Filter = TaskCategory | 'all' | 'done'
+type Filter = TaskCategory | 'all' | 'done' | 'archived'
 
 export default function TaskInbox() {
   const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
@@ -320,14 +321,22 @@ export default function TaskInbox() {
     }
   }
 
+  function handleArchiveOldTasks() {
+    if (!confirm('Archive Done, Skipped, and old assessment tasks? This will hide them from planning but keep the data.')) return
+    setTasks(archiveOldTasks())
+    setFilter('archived')
+  }
+
   const filtered = tasks.filter(t => {
     if (filter === 'done') return t.done || t.status === 'Done'
-    if (filter === ALL_FILTER) return !t.done
-    return !t.done && t.category === filter
+    if (filter === 'archived') return t.status === 'Archived'
+    if (filter === ALL_FILTER) return isActiveTask(t)
+    return isActiveTask(t) && t.category === filter
   })
 
-  const pendingCount = tasks.filter(t => !t.done).length
+  const pendingCount = tasks.filter(isActiveTask).length
   const doneCount = tasks.filter(t => t.done).length
+  const archivedCount = tasks.filter(t => t.status === 'Archived').length
   const totalCount = tasks.length
   const doneRatio = totalCount > 0 ? doneCount / totalCount : 0
 
@@ -344,16 +353,24 @@ export default function TaskInbox() {
               {pendingCount} pending · {doneCount} done
             </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setShowForm(!showForm)
-              setEditingId(null)
-            }}
-          >
-            <Plus size={14} />
-            Add Task
-          </button>
+          <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={handleArchiveOldTasks}
+            >
+              Archive completed/old tasks
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setShowForm(!showForm)
+                setEditingId(null)
+              }}
+            >
+              <Plus size={14} />
+              Add Task
+            </button>
+          </div>
         </div>
       </div>
 
@@ -369,7 +386,7 @@ export default function TaskInbox() {
           All pending
         </button>
         {CATEGORIES.map(c => {
-          const count = tasks.filter(t => !t.done && t.category === c.id).length
+          const count = tasks.filter(t => isActiveTask(t) && t.category === c.id).length
           if (count === 0) return null
           return (
             <button
@@ -387,6 +404,14 @@ export default function TaskInbox() {
             onClick={() => setFilter('done')}
           >
             Done ({doneCount})
+          </button>
+        )}
+        {archivedCount > 0 && (
+          <button
+            className={`filter-chip ${filter === 'archived' ? 'active' : ''}`}
+            onClick={() => setFilter('archived')}
+          >
+            Archived ({archivedCount})
           </button>
         )}
       </div>
@@ -473,7 +498,7 @@ export default function TaskInbox() {
                       )}
 
                       {/* Pomodoro timer section */}
-                      {task.pomodoroEnabled && !task.done && (
+                      {task.pomodoroEnabled && isActiveTask(task) && (
                         <div className="pomo-toggle-row">
                           <button
                             className={`pomo-toggle-btn pomo-toggle-primary ${timerOpen ? 'active' : ''}`}
@@ -485,7 +510,7 @@ export default function TaskInbox() {
                         </div>
                       )}
 
-                      {timerOpen && task.pomodoroEnabled && (
+                      {timerOpen && task.pomodoroEnabled && isActiveTask(task) && (
                         <PomodoroTimer
                           pomodoroLength={task.pomodoroLength ?? 50}
                           breakLength={task.breakLength ?? 10}
