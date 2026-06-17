@@ -35,7 +35,7 @@ import {
   saveGoogleCalendarMeta,
   saveOpportunities,
 } from '../storage'
-import { getFocusStats } from '../focus'
+import { getFocusStats, getLocalDateKey } from '../focus'
 import { exportPlanToNotion } from '../services/notionService'
 import type {
   GmailScannedWorkLead,
@@ -154,7 +154,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
 
   function buildSummaryContext() {
     const plan = loadPlan()
-    const date = plan?.date ?? new Date().toISOString().slice(0, 10)
+    const date = plan?.date ?? getLocalDateKey()
     return {
       plan,
       tasks: loadTasks(),
@@ -193,7 +193,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         return
       }
       const plan = loadPlan()
-      const date = plan?.date ?? new Date().toISOString().slice(0, 10)
+      const date = plan?.date ?? getLocalDateKey()
       const log = loadDailyLog(date)
       const updatedLog = {
         ...log,
@@ -210,7 +210,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           updatedLog,
           getFocusStats(loadFocusSessions()),
           {
-            checkin: loadCheckin(),
+            checkin: loadCheckin(date),
             tasks: loadTasks(),
             calendarEvents: loadCalendarEvents(),
             opportunities: loadOpportunities(),
@@ -270,7 +270,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         log,
         getFocusStats(loadFocusSessions()),
         {
-          checkin: loadCheckin(),
+          checkin: loadCheckin(date),
           tasks: loadTasks(),
           calendarEvents: loadCalendarEvents(),
           opportunities: loadOpportunities(),

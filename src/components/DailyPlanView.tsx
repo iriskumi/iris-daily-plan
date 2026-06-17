@@ -31,7 +31,7 @@ import {
   saveTasks,
   saveTimeBlockFollowUp,
 } from '../storage'
-import { formatFocusStatsMarkdown, getFocusStats } from '../focus'
+import { formatFocusStatsMarkdown, getFocusStats, getLocalDateKey } from '../focus'
 import {
   formatCarryOverSuggestions,
   getCarryOverSuggestions,
@@ -84,11 +84,11 @@ function getPlanSourceLabel(plan: GeneratedPlan): string {
 }
 
 function todayString() {
-  return new Date().toISOString().slice(0, 10)
+  return getLocalDateKey()
 }
 
-function morningPriorityLines() {
-  const checkin = loadCheckin()
+function morningPriorityLines(date = getLocalDateKey()) {
+  const checkin = loadCheckin(date)
   if (!checkin) return []
   const rankedTasks = (checkin.rankedTasks ?? [])
     .filter(task => task.title.trim())
@@ -300,7 +300,7 @@ export default function DailyPlanView({
       dailyLog ?? loadDailyLog(plan.date),
       getFocusStats(loadFocusSessions()),
       {
-        checkin: loadCheckin(),
+        checkin: loadCheckin(plan.date),
         tasks: loadTasks(),
         calendarEvents: loadCalendarEvents(),
         opportunities: loadOpportunities(),
@@ -341,7 +341,7 @@ export default function DailyPlanView({
       updatedLog,
       focusStatsNow,
       {
-        checkin: loadCheckin(),
+        checkin: loadCheckin(plan.date),
         tasks: loadTasks(),
         calendarEvents: loadCalendarEvents(),
         opportunities: loadOpportunities(),
@@ -431,7 +431,7 @@ export default function DailyPlanView({
   const isStalePlan = plan.date < todayString()
   const focusStats = getFocusStats(loadFocusSessions())
   const realityCheck = getRealityCheck(plan)
-  const morningPriorities = morningPriorityLines()
+  const morningPriorities = morningPriorityLines(plan.date)
 
   return (
     <div className="page plan-page">

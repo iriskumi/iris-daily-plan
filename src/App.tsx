@@ -36,6 +36,8 @@ import type {
   TaskArea,
   TaskEnergy,
   TaskStatus,
+  CarryOverSuggestion,
+  RankedCheckinTask,
 } from './types'
 import {
   loadBills,
@@ -47,6 +49,7 @@ import {
   loadDailyLog,
   loadGoogleCalendarMeta,
   saveCalendarEvents,
+  saveCheckin,
   saveGoogleCalendarMeta,
   savePlan,
   loadGeneratePlanContext,
@@ -61,12 +64,11 @@ import {
   saveTasks,
   addFocusSession,
 } from './storage'
-import { getFocusStats, localDateString } from './focus'
+import { getFocusStats, getLocalDateKey, localDateString } from './focus'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
 import { getGoogleCalendarStatus, importCalendarCommitments } from './services/calendarService'
 import {
-  formatCarryOverSuggestions,
   getCarryOverSuggestions,
   getNextAction,
   getTodayBillReminders,
@@ -95,11 +97,17 @@ import {
   recommendNextBlocks,
   tinyActionForTask,
   tinyActionForArea,
+  normalizeArea,
 } from './focusBlocks'
 import './index.css'
 
 type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
+
+interface StartTodayResult {
+  steps: string[]
+  carryOverSuggestions: CarryOverSuggestion[]
+}
 
 const TABS: { id: Extract<Tab, 'today' | 'plan' | 'tasks'>; label: string; icon: React.ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
@@ -260,7 +268,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [taskView, setTaskView] = useState<TaskView>('tasks')
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
-  const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan())
+  const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan(getLocalDateKey()))
   const [urgentBills, setUrgentBills] = useState<Bill[]>([])
   const [activeWorkLeads, setActiveWorkLeads] = useState<WorkOpportunity[]>([])
   const [focusStats, setFocusStats] = useState(() => getFocusStats(loadFocusSessions()))
@@ -312,6 +320,7 @@ export default function App() {
       const generated = aiResult.data
         ? {
             ...aiResult.data,
+            date: feedbackContext.checkin.date,
             provider: aiResult.provider,
             aiUsed: aiResult.aiUsed,
             fallbackReason: aiResult.fallbackReason,
@@ -328,6 +337,7 @@ export default function App() {
                 calendarEvents: feedbackContext.calendarEvents,
               },
             ),
+            date: feedbackContext.checkin.date,
             provider: 'rule-based' as const,
             aiUsed: false,
             fallbackReason: aiResult.fallbackReason || aiResult.message,
@@ -502,6 +512,7 @@ export default function App() {
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
             onFocusBlocksChange={refreshReminders}
             onStartToday={async () => {
+              const todayKey = getLocalDateKey()
               const steps: string[] = []
               const meta = loadGoogleCalendarMeta()
               if (meta.calendarConnected) {
@@ -525,33 +536,39 @@ export default function App() {
                 steps.push('Calendar not connected; kept local commitments.')
               }
 
-              const checkin = loadCheckin()
-              steps.push(checkin ? 'Today check-in found.' : 'No check-in yet; use the check-in below.')
+              const todayCheckIn = loadCheckin(todayKey)
+              const todayPlan = loadPlan(todayKey)
+              steps.push(todayCheckIn ? 'Today check-in found.' : 'No check-in for today yet.')
 
               const yesterday = new Date()
               yesterday.setDate(yesterday.getDate() - 1)
-              const yesterdayLog = loadDailyLog(yesterday.toISOString().slice(0, 10))
+              const yesterdayLog = loadDailyLog(getLocalDateKey(yesterday))
               const suggestions = getCarryOverSuggestions(loadTasks(), yesterdayLog)
+              console.log('[StartToday] todayKey', todayKey)
+              console.log('[StartToday] todayCheckIn', todayCheckIn)
+              console.log('[StartToday] todayPlan', todayPlan)
+              console.log('[StartToday] carryOverSuggestions', suggestions)
               steps.push(
                 suggestions.length > 0
-                  ? `Loaded ${suggestions.length} carry-over suggestion${suggestions.length === 1 ? '' : 's'}.`
+                  ? `Found ${suggestions.length} unfinished task${suggestions.length === 1 ? '' : 's'} from previous days. Add them to today?`
                   : 'No carry-over backlog detected.',
               )
 
-              if (checkin && (!plan || plan.date !== checkin.date)) {
-                await handleGeneratePlan(
-                  suggestions.length > 0
-                    ? `Start Today carry-over:\n${formatCarryOverSuggestions(suggestions)}`
-                    : '',
-                  undefined,
-                  { stayOnTab: true },
-                )
-                steps.push('Generated or refreshed today’s plan.')
+              if (todayPlan) {
+                setPlan(todayPlan)
+                steps.push('Today’s plan loaded.')
+              } else if (todayCheckIn) {
+                steps.push('No plan for today yet.')
+                const outcome = await handleGeneratePlan('', undefined, { stayOnTab: true })
+                if (outcome.success) {
+                  steps.push('Built today from today’s check-in, active tasks, calendar, and meal anchors.')
+                }
               } else {
-                steps.push('Today’s plan is already available.')
+                setPlan(null)
+                steps.push('No plan for today yet.')
               }
 
-              return steps
+              return { steps, carryOverSuggestions: suggestions }
             }}
           />
         )}
@@ -606,7 +623,7 @@ interface TodayCommandCentreProps {
   onViewPlan: () => void
   onSendStartPlanToTodayPlan: (startPlan: StartPlan) => string
   onFocusBlocksChange: () => void
-  onStartToday: () => Promise<string[]>
+  onStartToday: () => Promise<StartTodayResult>
 }
 
 function TodayCommandCentre({
@@ -625,6 +642,7 @@ function TodayCommandCentre({
 }: TodayCommandCentreProps) {
   const [expanded, setExpanded] = useState<'bills' | 'work' | null>(null)
   const [startSteps, setStartSteps] = useState<string[]>([])
+  const [carryOverSuggestions, setCarryOverSuggestions] = useState<CarryOverSuggestion[]>([])
   const [starting, setStarting] = useState(false)
   const [showNextFocus, setShowNextFocus] = useState(false)
   const [startNowState, setStartNowState] = useState<StartNowState>('Afternoon slump')
@@ -646,9 +664,82 @@ function TodayCommandCentre({
 
   async function handleStartToday() {
     setStarting(true)
-    const steps = await onStartToday()
-    setStartSteps([...steps, `Next action: ${getNextAction(loadPlan()).title}`])
+    const result = await onStartToday()
+    setCarryOverSuggestions(result.carryOverSuggestions)
+    const todayKey = getLocalDateKey()
+    const todayPlan = loadPlan(todayKey)
+    const todayCheckin = loadCheckin(todayKey)
+    const activeTodayTasks = loadTasks()
+      .filter(isActiveTask)
+      .filter(task => task.createdAt && localDateString(new Date(task.createdAt)) === todayKey)
+    let nextActionSource = 'none'
+    let nextActionTitle = 'No next action yet — add a task or complete today’s check-in.'
+    if (todayPlan) {
+      nextActionSource = 'todayPlan'
+      nextActionTitle = getNextAction(todayPlan).title
+    } else {
+      const rankedTask = (todayCheckin?.rankedTasks ?? []).find(task => task.title.trim())
+      if (rankedTask) {
+        nextActionSource = 'todayRankedTasks'
+        nextActionTitle = rankedTask.title
+      } else if (activeTodayTasks[0]) {
+        nextActionSource = 'todayActiveTaskInbox'
+        nextActionTitle = activeTodayTasks[0].nextTinyAction || activeTodayTasks[0].title
+      }
+    }
+    console.log('[StartToday] nextActionSource', nextActionSource)
+    setStartSteps([...result.steps, `Next action: ${nextActionTitle}`])
     setStarting(false)
+  }
+
+  function handleReviewCarryOver() {
+    const lines = carryOverSuggestions.map(
+      suggestion => `${suggestion.taskTitle}: ${suggestion.suggestedAction}`,
+    )
+    setStartSteps(prev => [...prev, ...lines])
+  }
+
+  function handleAddCarryOverToToday() {
+    const todayKey = getLocalDateKey()
+    const todayCheckin = loadCheckin(todayKey)
+    if (!todayCheckin) {
+      setStartSteps(prev => [...prev, 'Start check-in first, then add carry-over to today.'])
+      return
+    }
+    const tasks = loadTasks()
+    const existingRows = todayCheckin.rankedTasks ?? []
+    const existingTaskIds = new Set(existingRows.map(task => task.taskId).filter(Boolean))
+    const additions: RankedCheckinTask[] = carryOverSuggestions
+      .filter(suggestion => !existingTaskIds.has(suggestion.taskId))
+      .map((suggestion, index) => {
+        const task = tasks.find(item => item.id === suggestion.taskId)
+        return {
+          id: `carry-${todayKey}-${suggestion.taskId}`,
+          taskId: suggestion.taskId,
+          title: suggestion.taskTitle,
+          area: normalizeArea(task?.area),
+          estimatedMinutes: task?.estimatedMinutes && task.estimatedMinutes >= 45
+            ? 45
+            : task?.estimatedMinutes && task.estimatedMinutes >= 25
+              ? 25
+              : 15,
+          orderIndex: existingRows.length + index,
+        }
+      })
+    if (additions.length === 0) {
+      setCarryOverSuggestions([])
+      setStartSteps(prev => [...prev, 'Carry-over is already in today’s to-do.'])
+      return
+    }
+    saveCheckin({
+      ...todayCheckin,
+      rankedTasks: [...existingRows, ...additions].map((task, index) => ({
+        ...task,
+        orderIndex: index,
+      })),
+    })
+    setCarryOverSuggestions([])
+    setStartSteps(prev => [...prev, `Added ${additions.length} carry-over task${additions.length === 1 ? '' : 's'} to today.`])
   }
 
   function handleGenerateStartPlan() {
@@ -880,6 +971,19 @@ function TodayCommandCentre({
             {startSteps.map(step => (
               <div key={step} className="start-flow-step">{step}</div>
             ))}
+            {carryOverSuggestions.length > 0 && (
+              <div className="start-plan-actions carry-over-actions">
+                <button className="btn btn-secondary" type="button" onClick={handleReviewCarryOver}>
+                  Review carry-over
+                </button>
+                <button className="btn btn-primary" type="button" onClick={handleAddCarryOverToToday}>
+                  Add selected to today
+                </button>
+                <button className="btn btn-secondary" type="button" onClick={() => setCarryOverSuggestions([])}>
+                  Skip for now
+                </button>
+              </div>
+            )}
           </div>
         )}
 

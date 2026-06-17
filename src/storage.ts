@@ -16,8 +16,10 @@ import type {
   GeneratedPlan,
   GeneratePlanContext,
   GoogleCalendarImportMeta,
+  RankedCheckinTask,
   Template,
 } from './types'
+import { getLocalDateKey } from './focus'
 import {
   archiveCompletedOldTasks,
   defaultMealAnchors,
@@ -30,10 +32,15 @@ export const STORAGE_SCHEMA_VERSION = 1
 
 const KEYS = {
   checkin: 'iris-checkin',
+  checkInsByDate: 'checkInsByDate',
+  legacyCheckIns: 'legacyCheckIns',
   tasks: 'iris-tasks',
   opportunities: 'iris-opportunities',
   bills: 'iris-bills',
   plan: 'iris-plan',
+  plansByDate: 'plansByDate',
+  legacyPlans: 'legacyPlans',
+  rankedTasksByDate: 'rankedTasksByDate',
   templates: 'iris-templates',
   settings: 'iris-settings',
   calendarEvents: 'iris-calendar-events',
@@ -43,7 +50,9 @@ const KEYS = {
   focusSessions: 'iris-focus-sessions',
   startPlans: 'startPlans',
   focusBlocks: 'iris_focus_blocks',
+  focusBlocksByDate: 'focusBlocksByDate',
   mealAnchors: 'iris_meal_anchors',
+  mealStatusByDate: 'mealStatusByDate',
 }
 
 interface VersionedValue<T> {
@@ -88,8 +97,74 @@ function save(key: string, value: unknown): void {
   localStorage.setItem(key, JSON.stringify(payload))
 }
 
-export const loadCheckin = (): DailyCheckin | null => load<DailyCheckin>(KEYS.checkin)
-export const saveCheckin = (c: DailyCheckin): void => save(KEYS.checkin, c)
+function mergeByDate<T extends { date?: string }>(
+  key: string,
+  value: T,
+  fallbackLegacyKey: string,
+): boolean {
+  const date = value.date
+  if (date) {
+    save(key, {
+      ...(load<Record<string, T>>(key) ?? {}),
+      [date]: value,
+    })
+    return true
+  }
+  save(fallbackLegacyKey, [...(load<T[]>(fallbackLegacyKey) ?? []), value])
+  return false
+}
+
+function migrateDailyStorage(): void {
+  const oldCheckin = load<DailyCheckin>(KEYS.checkin)
+  if (oldCheckin) {
+    mergeByDate(KEYS.checkInsByDate, oldCheckin, KEYS.legacyCheckIns)
+    localStorage.removeItem(KEYS.checkin)
+  }
+
+  const oldPlan = load<GeneratedPlan>(KEYS.plan)
+  if (oldPlan) {
+    mergeByDate(KEYS.plansByDate, oldPlan, KEYS.legacyPlans)
+    localStorage.removeItem(KEYS.plan)
+  }
+}
+
+export const loadCheckinsByDate = (): Record<string, DailyCheckin> => {
+  migrateDailyStorage()
+  return load<Record<string, DailyCheckin>>(KEYS.checkInsByDate) ?? {}
+}
+
+export const loadPlansByDate = (): Record<string, GeneratedPlan> => {
+  migrateDailyStorage()
+  return load<Record<string, GeneratedPlan>>(KEYS.plansByDate) ?? {}
+}
+
+export const loadRankedTasksByDate = (): Record<string, RankedCheckinTask[]> => {
+  migrateDailyStorage()
+  return load<Record<string, RankedCheckinTask[]>>(KEYS.rankedTasksByDate) ?? {}
+}
+
+export const saveRankedTasksForDate = (
+  date: string,
+  rankedTasks: RankedCheckinTask[],
+): void => {
+  save(KEYS.rankedTasksByDate, {
+    ...loadRankedTasksByDate(),
+    [date]: rankedTasks,
+  })
+}
+
+export const loadCheckin = (date = getLocalDateKey()): DailyCheckin | null =>
+  loadCheckinsByDate()[date] ?? null
+
+export const saveCheckin = (c: DailyCheckin): void => {
+  const date = c.date || getLocalDateKey()
+  const datedCheckin = { ...c, date }
+  save(KEYS.checkInsByDate, {
+    ...loadCheckinsByDate(),
+    [date]: datedCheckin,
+  })
+  saveRankedTasksForDate(date, datedCheckin.rankedTasks ?? [])
+}
 
 export const loadTasks = (): Task[] => {
   const raw = load<Task[]>(KEYS.tasks) ?? []
@@ -112,8 +187,15 @@ export const saveOpportunities = (o: WorkOpportunity[]): void => save(KEYS.oppor
 export const loadBills = (): Bill[] => load<Bill[]>(KEYS.bills) ?? []
 export const saveBills = (b: Bill[]): void => save(KEYS.bills, b)
 
-export const loadPlan = (): GeneratedPlan | null => load<GeneratedPlan>(KEYS.plan)
-export const savePlan = (p: GeneratedPlan): void => save(KEYS.plan, p)
+export const loadPlan = (date = getLocalDateKey()): GeneratedPlan | null =>
+  loadPlansByDate()[date] ?? null
+export const savePlan = (p: GeneratedPlan): void => {
+  const date = p.date || getLocalDateKey()
+  save(KEYS.plansByDate, {
+    ...loadPlansByDate(),
+    [date]: { ...p, date },
+  })
+}
 
 export const loadFocusSessions = (): FocusSession[] =>
   load<FocusSession[]>(KEYS.focusSessions) ?? []
@@ -125,8 +207,27 @@ export const addFocusSession = (session: FocusSession): FocusSession[] => {
   return next
 }
 
-export const loadFocusBlocks = (): FocusBlock[] => load<FocusBlock[]>(KEYS.focusBlocks) ?? []
-export const saveFocusBlocks = (blocks: FocusBlock[]): void => save(KEYS.focusBlocks, blocks)
+function groupFocusBlocksByDate(blocks: FocusBlock[]): Record<string, FocusBlock[]> {
+  return blocks.reduce<Record<string, FocusBlock[]>>((grouped, block) => {
+    grouped[block.date] = [...(grouped[block.date] ?? []), block]
+    return grouped
+  }, {})
+}
+
+export const loadFocusBlocksByDate = (): Record<string, FocusBlock[]> =>
+  load<Record<string, FocusBlock[]>>(KEYS.focusBlocksByDate) ?? {}
+
+export const loadFocusBlocks = (): FocusBlock[] => {
+  const legacyBlocks = load<FocusBlock[]>(KEYS.focusBlocks) ?? []
+  const datedBlocks = Object.values(loadFocusBlocksByDate()).flat()
+  const byId = new Map<string, FocusBlock>()
+  ;[...legacyBlocks, ...datedBlocks].forEach(block => byId.set(block.id, block))
+  return [...byId.values()]
+}
+export const saveFocusBlocks = (blocks: FocusBlock[]): void => {
+  save(KEYS.focusBlocks, blocks)
+  save(KEYS.focusBlocksByDate, groupFocusBlocksByDate(blocks))
+}
 export const saveFocusBlock = (block: FocusBlock): FocusBlock[] => {
   const next = [block, ...loadFocusBlocks().filter(item => item.id !== block.id)]
   saveFocusBlocks(next)
@@ -155,7 +256,10 @@ export const loadFocusBlocksForDate = (date: string): FocusBlock[] =>
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
 export const loadMealAnchors = (date: string): MealAnchor[] => {
-  const saved = load<Record<string, MealAnchor[]>>(KEYS.mealAnchors) ?? {}
+  const saved = {
+    ...(load<Record<string, MealAnchor[]>>(KEYS.mealStatusByDate) ?? {}),
+    ...(load<Record<string, MealAnchor[]>>(KEYS.mealAnchors) ?? {}),
+  }
   const savedForDate = saved[date] ?? []
   const defaults = defaultMealAnchors(date)
   return defaults.map(anchor => savedForDate.find(item => item.id === anchor.id) ?? anchor)
@@ -168,6 +272,10 @@ export const saveMealAnchor = (anchor: MealAnchor): MealAnchor[] => {
   )
   save(KEYS.mealAnchors, {
     ...saved,
+    [anchor.date]: nextForDate,
+  })
+  save(KEYS.mealStatusByDate, {
+    ...(load<Record<string, MealAnchor[]>>(KEYS.mealStatusByDate) ?? {}),
     [anchor.date]: nextForDate,
   })
   return nextForDate
@@ -334,7 +442,8 @@ function addCalendarCommitments(checkin: DailyCheckin, events: CalendarEvent[]):
 }
 
 export function loadGeneratePlanContext(): GeneratePlanContext | null {
-  const savedCheckin = loadCheckin()
+  const todayKey = getLocalDateKey()
+  const savedCheckin = loadCheckin(todayKey)
   if (!savedCheckin) return null
   const activeTasks = loadActiveTasks()
   const activeTaskIds = new Set(activeTasks.map(task => task.id))
@@ -347,9 +456,9 @@ export function loadGeneratePlanContext(): GeneratePlanContext | null {
     planningInstructions: savedCheckin.planningInstructions ?? '',
   }
   const calendarEvents = sanitizeCalendarEvents(loadCalendarEvents())
-  const planDateEvents = calendarEventsForDate(calendarEvents, checkin.date)
+  const planDateEvents = calendarEventsForDate(calendarEvents, todayKey)
   return {
-    checkin: addCalendarCommitments(checkin, planDateEvents),
+    checkin: addCalendarCommitments({ ...checkin, date: todayKey }, planDateEvents),
     tasks: activeTasks,
     opportunities: loadOpportunities(),
     bills: loadBills(),
@@ -365,6 +474,7 @@ export function exportBackupData(): AppBackup {
     exportedAt: new Date().toISOString(),
     data: {
       checkin: loadCheckin(),
+      checkInsByDate: loadCheckinsByDate(),
       dailyLogs: Object.values(loadDailyLogs()),
       timeBlockFollowUps: loadAllTimeBlockFollowUps(),
       focusSessions: loadFocusSessions(),
@@ -373,6 +483,8 @@ export function exportBackupData(): AppBackup {
       opportunities: loadOpportunities(),
       bills: loadBills(),
       plan: loadPlan(),
+      plansByDate: loadPlansByDate(),
+      rankedTasksByDate: loadRankedTasksByDate(),
       templates: loadTemplates(),
       settings: loadSettings(),
       calendarEvents: loadCalendarEvents(),
@@ -401,6 +513,7 @@ export function validateBackup(input: unknown): AppBackupData | null {
 
   return {
     checkin: candidate.checkin ?? null,
+    checkInsByDate: candidate.checkInsByDate ?? {},
     dailyLogs: isArray(candidate.dailyLogs)
       ? (candidate.dailyLogs as DailyLog[])
       : [],
@@ -415,6 +528,8 @@ export function validateBackup(input: unknown): AppBackupData | null {
     opportunities: candidate.opportunities as WorkOpportunity[],
     bills: candidate.bills as Bill[],
     plan: candidate.plan ?? null,
+    plansByDate: candidate.plansByDate ?? {},
+    rankedTasksByDate: candidate.rankedTasksByDate ?? {},
     templates: candidate.templates as Template[],
     settings: {
       ...defaultSettings(),
@@ -431,8 +546,11 @@ export function validateBackup(input: unknown): AppBackupData | null {
 }
 
 export function importBackupData(data: AppBackupData): void {
+  const checkInsByDate = { ...(data.checkInsByDate ?? {}) }
+  if (data.checkin?.date) checkInsByDate[data.checkin.date] = data.checkin
   if (data.checkin) saveCheckin(data.checkin)
   else localStorage.removeItem(KEYS.checkin)
+  save(KEYS.checkInsByDate, checkInsByDate)
   saveDailyLogs(
     Object.fromEntries(data.dailyLogs.map(log => [log.date, log])),
   )
@@ -442,8 +560,12 @@ export function importBackupData(data: AppBackupData): void {
   saveTasks(data.tasks)
   saveOpportunities(data.opportunities)
   saveBills(data.bills)
+  const plansByDate = { ...(data.plansByDate ?? {}) }
+  if (data.plan?.date) plansByDate[data.plan.date] = data.plan
   if (data.plan) savePlan(data.plan)
   else localStorage.removeItem(KEYS.plan)
+  save(KEYS.plansByDate, plansByDate)
+  save(KEYS.rankedTasksByDate, data.rankedTasksByDate ?? {})
   saveTemplates(data.templates)
   saveSettings(data.settings)
   saveCalendarEvents(data.calendarEvents)

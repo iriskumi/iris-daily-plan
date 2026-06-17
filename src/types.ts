@@ -424,6 +424,7 @@ export interface IntegrationResult<T> {
 
 export interface AppBackupData {
   checkin: DailyCheckin | null
+  checkInsByDate?: Record<string, DailyCheckin>
   dailyLogs: DailyLog[]
   timeBlockFollowUps?: Record<string, Record<string, TimeBlockFollowUp>>
   focusSessions: FocusSession[]
@@ -432,6 +433,8 @@ export interface AppBackupData {
   opportunities: WorkOpportunity[]
   bills: Bill[]
   plan: GeneratedPlan | null
+  plansByDate?: Record<string, GeneratedPlan>
+  rankedTasksByDate?: Record<string, RankedCheckinTask[]>
   templates: Template[]
   settings: AppSettings
   calendarEvents: CalendarEvent[]

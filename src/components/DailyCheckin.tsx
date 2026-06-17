@@ -9,6 +9,7 @@ import type {
   TaskArea,
 } from '../types'
 import { loadCheckin, loadSettings, loadTasks, saveCheckin, saveTasks } from '../storage'
+import { getLocalDateKey } from '../focus'
 import {
   TASK_AREAS,
   categoryFromArea,
@@ -43,7 +44,7 @@ const DAY_TYPES: { id: DayType; emoji: string; label: string; commitments: strin
 ]
 
 function todayString() {
-  return new Date().toISOString().split('T')[0]
+  return getLocalDateKey()
 }
 
 function defaultCheckin(): DailyCheckinType {
@@ -140,7 +141,7 @@ export default function DailyCheckin({
 }: Props) {
   const [currentStep, setCurrentStep] = useState(1)
   const [checkin, setCheckin] = useState<DailyCheckinType>(() => {
-    const saved = loadCheckin()
+    const saved = loadCheckin(todayString())
     const base = saved ? { ...defaultCheckin(), ...saved, date: todayString() } : defaultCheckin()
     return {
       ...base,
@@ -148,17 +149,20 @@ export default function DailyCheckin({
     }
   })
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
+  const [hasEdited, setHasEdited] = useState(false)
 
   useEffect(() => {
-    saveCheckin(checkin)
-  }, [checkin])
+    if (hasEdited) saveCheckin(checkin)
+  }, [checkin, hasEdited])
 
   function set<K extends keyof DailyCheckinType>(key: K, value: DailyCheckinType[K]) {
+    setHasEdited(true)
     setCheckin(prev => ({ ...prev, [key]: value }))
   }
 
   function handleDayType(dt: DayType) {
     const match = DAY_TYPES.find(d => d.id === dt)
+    setHasEdited(true)
     setCheckin(prev => ({
       ...prev,
       dayType: dt,
@@ -168,11 +172,13 @@ export default function DailyCheckin({
 
   async function handleGenerate() {
     syncRankedTasksToInbox()
+    setHasEdited(true)
     saveCheckin(checkin)
     await onGenerate()
   }
 
   function setRankedTasks(updater: (tasks: RankedCheckinTask[]) => RankedCheckinTask[]) {
+    setHasEdited(true)
     setCheckin(prev => {
       const next = updater(prev.rankedTasks ?? []).map((task, index) => ({
         ...task,
@@ -252,6 +258,7 @@ export default function DailyCheckin({
     })
     saveTasks([...createdTasks, ...updatedTasks])
     if (createdIdMap.size > 0) {
+      setHasEdited(true)
       setCheckin(prev => ({
         ...prev,
         rankedTasks: (prev.rankedTasks ?? []).map(task => ({
@@ -263,6 +270,8 @@ export default function DailyCheckin({
   }
 
   function handleStepAction() {
+    setHasEdited(true)
+    saveCheckin(checkin)
     if (currentStep < 4) {
       if (currentStep === 3) syncRankedTasksToInbox()
       setCurrentStep(step => step + 1)
