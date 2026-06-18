@@ -38,6 +38,7 @@ import type {
   TaskStatus,
   CarryOverSuggestion,
   RankedCheckinTask,
+  DailyCheckin as DailyCheckinType,
 } from './types'
 import {
   loadBills,
@@ -48,6 +49,8 @@ import {
   loadTasks,
   loadDailyLog,
   loadGoogleCalendarMeta,
+  loadCalendarEvents,
+  loadSettings,
   saveCalendarEvents,
   saveCheckin,
   saveGoogleCalendarMeta,
@@ -175,6 +178,8 @@ const START_NOW_AREAS: StartNowArea[] = [
   'Life reset',
 ]
 
+const IRIS_GROUNDING_LINE = '不要把今天和理想中的自己比较，只要把今天和半年前的自己比较。'
+
 function makeStartPlan(input: {
   state: StartNowState
   energy: number
@@ -262,6 +267,27 @@ function formatStartPlan(plan: StartPlan): string {
     `First tiny action: ${plan.firstTinyAction}`,
     `Timer: ${plan.timerMinutes} min`,
   ].join('\n')
+}
+
+function defaultGrowthCheckin(date: string): DailyCheckinType {
+  const settings = loadSettings()
+  return {
+    date,
+    dailyPlanBase: 'english-ai-cyber-growth',
+    dayType: 'normal',
+    wakeUpTime: '09:00',
+    sleepTarget: settings.defaultSleepTarget,
+    energyLevel: 'medium',
+    rankedTasks: [],
+    morningMainTask: '',
+    morningSecondaryTask1: '',
+    morningSecondaryTask2: '',
+    morningSmallLifeTask: '',
+    availableFocusTime: 'English + AI/Cyber Growth Day scaffold',
+    fixedCommitments: '',
+    planningInstructions: 'Use the English + AI/Cyber growth-day scaffold. Keep high-output work before 17:00 and quiet input after 17:00.',
+    notes: '',
+  }
 }
 
 export default function App() {
@@ -564,8 +590,26 @@ export default function App() {
                   steps.push('Built today from today’s check-in, active tasks, calendar, and meal anchors.')
                 }
               } else {
-                setPlan(null)
                 steps.push('No plan for today yet.')
+                const activeTasks = loadTasks().filter(isActiveTask)
+                const scaffold = planAssembly(
+                  defaultGrowthCheckin(todayKey),
+                  activeTasks,
+                  loadOpportunities(),
+                  loadBills(),
+                  new Date(),
+                  {
+                    defaultRecoveryBlockEnabled: loadSettings().defaultRecoveryBlockEnabled,
+                    calendarEvents: loadCalendarEvents(),
+                  },
+                )
+                savePlan(scaffold)
+                setPlan(scaffold)
+                steps.push(
+                  activeTasks.length > 0
+                    ? 'Built the English + AI/Cyber scaffold and placed active tasks into suitable blocks.'
+                    : 'Built the English + AI/Cyber Growth Day scaffold.',
+                )
               }
 
               return { steps, carryOverSuggestions: suggestions }
@@ -788,6 +832,13 @@ function TodayCommandCentre({
         <div className="page-header">
           <h2 className="page-title">Today</h2>
           <p className="page-subtitle">Start the day, check the next action, then protect your energy.</p>
+        </div>
+
+        <div className="grounding-banner">
+          <p lang="zh-Hans">{IRIS_GROUNDING_LINE}</p>
+          {new Date().getHours() >= 17 && (
+            <span>Evening mode: quiet input and light review.</span>
+          )}
         </div>
 
         <section className="start-now-card" aria-label="Start Now">

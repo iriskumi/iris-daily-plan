@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Check, GripVertical, Pencil, Plus, Zap } from 'lucide-react'
 import type {
   DailyCheckin as DailyCheckinType,
+  DailyPlanBase,
   DayType,
   EnergyLevel,
   GeneratePlanOutcome,
@@ -43,6 +44,19 @@ const DAY_TYPES: { id: DayType; emoji: string; label: string; commitments: strin
   { id: 'admin-catchup', emoji: '📋', label: 'Admin Catch-Up', commitments: '' },
 ]
 
+const PLAN_BASE_OPTIONS: { id: DailyPlanBase; label: string; note: string }[] = [
+  {
+    id: 'english-ai-cyber-growth',
+    label: 'English + AI/Cyber Growth Day',
+    note: 'Default scaffold: daytime output, evening quiet review',
+  },
+  { id: 'work-shift-day', label: 'Work shift day', note: 'Use existing shift-friendly planning' },
+  { id: 'class-day', label: 'Class day', note: 'Protect class time and buffers' },
+  { id: 'low-energy-day', label: 'Low energy day', note: 'Smaller blocks and more recovery' },
+  { id: 'admin-recovery-day', label: 'Admin recovery day', note: 'Quiet backlog clearing' },
+  { id: 'free-build-day', label: 'Free build day', note: 'Open project time' },
+]
+
 function todayString() {
   return getLocalDateKey()
 }
@@ -51,6 +65,7 @@ function defaultCheckin(): DailyCheckinType {
   const settings = loadSettings()
   return {
     date: todayString(),
+    dailyPlanBase: 'english-ai-cyber-growth',
     dayType: 'normal',
     wakeUpTime: '07:30',
     sleepTarget: settings.defaultSleepTarget,
@@ -333,19 +348,37 @@ export default function DailyCheckin({
               </div>
 
               {step.id === 1 && (
-                <div className="day-type-grid">
-                  {DAY_TYPES.map(dt => (
-                    <button
-                      key={dt.id}
-                      className={`day-type-card ${checkin.dayType === dt.id ? 'selected' : ''}`}
-                      type="button"
-                      onClick={() => handleDayType(dt.id)}
+                <>
+                  <div className="form-group">
+                    <label>Planning base</label>
+                    <select
+                      value={checkin.dailyPlanBase ?? 'english-ai-cyber-growth'}
+                      onChange={event => set('dailyPlanBase', event.target.value as DailyPlanBase)}
                     >
-                      <span className="dtc-emoji">{dt.emoji}</span>
-                      <span className="dtc-label">{dt.label}</span>
-                    </button>
-                  ))}
-                </div>
+                      {PLAN_BASE_OPTIONS.map(option => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="field-hint">
+                      {PLAN_BASE_OPTIONS.find(option => option.id === (checkin.dailyPlanBase ?? 'english-ai-cyber-growth'))?.note}
+                    </small>
+                  </div>
+                  <div className="day-type-grid">
+                    {DAY_TYPES.map(dt => (
+                      <button
+                        key={dt.id}
+                        className={`day-type-card ${checkin.dayType === dt.id ? 'selected' : ''}`}
+                        type="button"
+                        onClick={() => handleDayType(dt.id)}
+                      >
+                        <span className="dtc-emoji">{dt.emoji}</span>
+                        <span className="dtc-label">{dt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
 
               {step.id === 2 && (

@@ -21,6 +21,20 @@ const PROTECTED_EVENT_TERMS = [
 ]
 type BlockType = NonNullable<TimeBlock['type']>
 
+type BaseBlockId =
+  | 'breakfast-input'
+  | 'shadowing'
+  | 'course-learning'
+  | 'lunch-reset'
+  | 'project-coding'
+  | 'break-reset'
+  | 'technical-retelling'
+  | 'chunk-bank'
+  | 'dinner-reset'
+  | 'quiet-reading'
+  | 'notes-organisation'
+  | 'tomorrow-planning'
+
 interface TimeWindow {
   start: number
   end: number
@@ -133,6 +147,7 @@ function blockFromWindow(
   title: string,
   type: BlockType,
   items: string[],
+  metadata: Partial<Pick<TimeBlock, 'baseBlockId' | 'baseBlockName' | 'outputLevel' | 'recommendedWindow' | 'canBeMoved'>> = {},
 ): TimeBlock {
   return {
     period: type === 'recovery' ? 'recovery' : type === 'shutdown' ? 'shutdown' : periodForTime(start),
@@ -142,7 +157,196 @@ function blockFromWindow(
     title,
     type,
     items,
+    ...metadata,
   }
+}
+
+function shouldUseGrowthDay(checkin: DailyCheckin): boolean {
+  const base = checkin.dailyPlanBase ?? 'english-ai-cyber-growth'
+  return base === 'english-ai-cyber-growth' && checkin.dayType === 'normal'
+}
+
+function growthBlockPlacement(task: Task): BaseBlockId {
+  const area = task.area ?? ''
+  const text = `${task.title} ${task.category} ${area}`.toLowerCase()
+  if (area === 'Life reset' || task.category === 'recovery') return 'break-reset'
+  if (area === 'Expression Review' || text.includes('expression')) return 'chunk-bank'
+  if (area === 'English' || text.includes('english') || text.includes('speaking') || text.includes('writing')) {
+    return text.includes('review') ? 'chunk-bank' : 'technical-retelling'
+  }
+  if (area === 'Vibe Coding' || text.includes('coding') || text.includes('project') || text.includes('app')) {
+    return 'project-coding'
+  }
+  if (area === 'Cyber' || area === 'AI' || area === 'Study' || text.includes('cyber') || text.includes('course')) {
+    return text.includes('lab') || text.includes('assessment') ? 'project-coding' : 'course-learning'
+  }
+  if (area === 'Admin' || task.category === 'admin-life' || task.category === 'finance-bills') return 'notes-organisation'
+  if (area === 'Job' || task.category === 'job-search') return 'project-coding'
+  return 'project-coding'
+}
+
+function tinyActionForGrowthBlock(id: BaseBlockId): string {
+  switch (id) {
+    case 'shadowing':
+      return 'Prepare shadowing material. Open one 2-3 minute clip.'
+    case 'course-learning':
+      return 'Open the course page and preview the title plus 5 key terms.'
+    case 'project-coding':
+      return 'Start project block. Write one English task goal before coding.'
+    case 'technical-retelling':
+      return 'Answer out loud: What did I learn and why does it matter?'
+    case 'chunk-bank':
+      return 'Collect 5 useful chunks from today’s material.'
+    case 'quiet-reading':
+      return 'Open quiet reading material. Mark new concepts and useful phrases only.'
+    case 'notes-organisation':
+      return 'Write 3 things I learned and 1 thing I still don’t understand.'
+    case 'tomorrow-planning':
+      return 'Choose tomorrow’s main technical topic and one project task.'
+    case 'breakfast-input':
+      return 'Breakfast + light English input. No heavy output yet.'
+    case 'lunch-reset':
+      return 'Lunch + audiobook or podcast. No Pomodoro, no guilt.'
+    case 'dinner-reset':
+      return 'Dinner + rest. No output or shadowing.'
+    case 'break-reset':
+      return 'Break, walk, or reset. Clear your head.'
+  }
+}
+
+function taskLineForGrowthBlock(task: Task, placement: BaseBlockId): string {
+  const label = placement === 'notes-organisation' || placement === 'quiet-reading'
+    ? 'Quiet placement'
+    : 'Suggested placement'
+  return `${label}: ${formatTaskLine(task)}`
+}
+
+function createGrowthDayScaffold(
+  tasks: Task[],
+  commitments: ScheduledCommitment[],
+  calendarEvents: CalendarEvent[],
+): TimeBlock[] {
+  const taskPlacements = new Map<BaseBlockId, string[]>()
+  tasks.forEach(task => {
+    const placement = growthBlockPlacement(task)
+    taskPlacements.set(placement, [
+      ...(taskPlacements.get(placement) ?? []),
+      taskLineForGrowthBlock(task, placement),
+    ])
+  })
+
+  const block = (
+    id: BaseBlockId,
+    start: number,
+    end: number,
+    title: string,
+    type: BlockType,
+    outputLevel: 'high' | 'low',
+    recommendedWindow: 'daytime' | 'evening' | 'any',
+    items: string[],
+  ) =>
+    blockFromWindow(start, end, title, type, [
+      tinyActionForGrowthBlock(id),
+      ...items,
+      ...(taskPlacements.get(id) ?? []),
+    ], {
+      baseBlockId: id,
+      baseBlockName: title,
+      outputLevel,
+      recommendedWindow,
+      canBeMoved: true,
+    })
+
+  const scaffold = [
+    block('breakfast-input', 9 * 60, 9 * 60 + 30, 'Breakfast + light English input', 'meal', 'low', 'any', [
+      'Podcast, audiobook, or light English only',
+      'Warm up without pressure',
+    ]),
+    block('shadowing', 9 * 60 + 30, 10 * 60 + 30, 'Shadowing', 'focus', 'high', 'daytime', [
+      '0-10 listen once without pausing',
+      '10-25 sentence-by-sentence shadowing',
+      '25-40 delayed shadowing without looking',
+      '40-50 record oral summary',
+      '50-60 replay and note 3 issues',
+      'Materials: WorkLife, ABC Conversations, The Assembly, Gruen, AWS/Cisco/Google Cloud video',
+    ]),
+    block('course-learning', 10 * 60 + 30, 12 * 60, 'AI / IT / Cyber English course', 'focus', 'high', 'daytime', [
+      'Preview title and key terms',
+      'Watch with English subtitles',
+      'Write 5 English summary sentences',
+      'Cornell note: Topic / Key idea / Technical terms / Example / Why it matters / One sentence summary',
+    ]),
+    block('lunch-reset', 12 * 60, 13 * 60, 'Lunch + audiobook / podcast', 'meal', 'low', 'any', [
+      'Protected meal block',
+      'No Pomodoro, no deep work, no guilt',
+    ]),
+    block('project-coding', 13 * 60, 15 * 60, 'Project / Coding / Practical work', 'focus', 'high', 'daytime', [
+      'Suitable: Daily Plan Hub, Expression Review Hub, AI Job Helper, MM Audiobook Finder, Book Finder, automations, Cyber lab',
+      '13:00-13:10 write English task goal',
+      '13:10-14:20 implementation',
+      '14:20-14:40 debug or ask AI in English',
+      '14:40-15:00 English progress log',
+    ]),
+    block('break-reset', 15 * 60, 15 * 60 + 30, 'Break / walk / reset', 'recovery', 'low', 'any', [
+      'Walk, water, stretch, or quiet reset',
+    ]),
+    block('technical-retelling', 15 * 60 + 30, 16 * 60 + 30, 'Technical retelling + English writing', 'focus', 'high', 'daytime', [
+      '30 min oral retelling: what I learned, why it matters, beginner explanation, own project use',
+      '30 min writing: 300-500 words',
+    ]),
+    block('chunk-bank', 16 * 60 + 30, 17 * 60, 'Chunk Bank', 'focus', 'high', 'daytime', [
+      'Technical: This reduces the risk of... / This allows the system to...',
+      'Workplace: I just wanted to clarify... / My understanding is that...',
+      'Academic: In practical terms... / The key point here is...',
+    ]),
+    block('dinner-reset', 17 * 60, 18 * 60, 'Dinner + rest', 'meal', 'low', 'evening', [
+      'Protected dinner block',
+      'No output, no shadowing, no interview practice',
+    ]),
+    block('quiet-reading', 18 * 60, 19 * 60, 'Quiet English reading / documentation', 'admin', 'low', 'evening', [
+      'AWS docs, OpenAI docs, Cisco notes, cybersecurity blog, or course transcript',
+      'Labels: New concept / Useful phrase / I already know this / I need to review this',
+    ]),
+    block('notes-organisation', 19 * 60, 19 * 60 + 40, 'Course notes organisation', 'admin', 'low', 'evening', [
+      'Today’s technical topic',
+      '3 things I learned',
+      '5 useful expressions',
+      '1 thing I still don’t understand',
+      'Tomorrow’s next step',
+    ]),
+    block('tomorrow-planning', 19 * 60 + 40, 20 * 60, 'Tomorrow plan + light review', 'shutdown', 'low', 'evening', [
+      'Tomorrow’s main technical topic',
+      'Tomorrow’s project task',
+      'Tomorrow’s shadowing material',
+      'One expression I want to use',
+    ]),
+  ]
+
+  const commitmentBlocks = commitments.map(commitment =>
+    blockFromWindow(commitment.start, commitment.end, commitment.title, commitment.type, commitment.items, {
+      outputLevel: commitment.type === 'class' || commitment.type === 'work' ? 'high' : 'low',
+      recommendedWindow: 'any',
+      canBeMoved: false,
+    }),
+  )
+  const busy = commitments
+  const visibleScaffold = scaffold.filter(item => {
+    if (!item.startTime || !item.endTime) return true
+    const start = parseTimeToMinutes(item.startTime)
+    const end = parseTimeToMinutes(item.endTime)
+    return !overlapsCommitment(start, end, busy)
+  })
+  const calendarNotes = calendarEvents.length > 0
+    ? [blockFromWindow(8 * 60 + 50, 9 * 60, 'Calendar check', 'admin', [
+        'Review today’s synced commitments before starting the scaffold',
+      ], {
+        outputLevel: 'low',
+        recommendedWindow: 'any',
+        canBeMoved: true,
+      })]
+    : []
+  return [...calendarNotes, ...visibleScaffold, ...commitmentBlocks]
+    .sort((a, b) => parseTimeToMinutes(a.startTime, 0) - parseTimeToMinutes(b.startTime, 0))
 }
 
 function inferBlockType(title: string): BlockType {
@@ -325,6 +529,10 @@ function morningPriorityTasks(checkin: DailyCheckin): {
 function generateTheme(checkin: DailyCheckin, top3Tasks: Task[]): string {
   const { dayType, energyLevel } = checkin
 
+  if (shouldUseGrowthDay(checkin)) {
+    return 'English + AI/Cyber Growth Day - daytime output, evening quiet input'
+  }
+
   if (dayType === 'saturday-class')
     return 'Holmesglen Saturday - class is the main event today'
   if (dayType === 'evening-class') {
@@ -368,6 +576,13 @@ export function timeBlockGeneration(
     ...manualCommitments(checkin),
     ...(hasClassCommitment ? [] : defaultClassCommitments(checkin)),
   ])
+  if (shouldUseGrowthDay(checkin)) {
+    return createGrowthDayScaffold(
+      [...top3Tasks, ..._optionalTasks],
+      commitments,
+      calendarEvents,
+    )
+  }
   const blocks: TimeBlock[] = []
 
   const morningEnd = Math.min(wake + 30, dayEnd)
@@ -584,6 +799,9 @@ export function markdownExport(plan: Omit<GeneratedPlan, 'notionMarkdown'>, top3
 
   let md = `# Daily Plan - ${dateFormatted}\n\n`
   md += `## Today's Theme\n${plan.theme}\n\n`
+  if (plan.dailyPlanBase === 'english-ai-cyber-growth') {
+    md += `This is your default growth-day scaffold. Add today’s real tasks into the blocks.\n\n`
+  }
 
   const morningPriorities = top3Tasks.filter(task => task.id.startsWith('morning-'))
   if (morningPriorities.length > 0) {
@@ -684,10 +902,12 @@ export function planAssembly(
   const includeRecoveryBlock = options.defaultRecoveryBlockEnabled ?? true
   const calendarEvents = options.calendarEvents ?? []
   const billsToday = billPrioritization(allBills, referenceDate)
+  const growthDay = shouldUseGrowthDay(checkin)
+  const scaffoldTasks = growthDay ? allTasks.filter(isActiveTask) : top3Tasks
   const timeBlocks = timeBlockGeneration(
     checkin,
-    top3Tasks,
-    optionalTasks,
+    scaffoldTasks,
+    growthDay ? [] : optionalTasks,
     includeRecoveryBlock,
     calendarEvents,
     billsToday,
@@ -709,18 +929,26 @@ export function planAssembly(
   if (checkin.energyLevel === 'low') {
     doNotToday.unshift('Pushing through exhaustion - rest is work today')
   }
+  if (shouldUseGrowthDay(checkin)) {
+    doNotToday.unshift('Loud output after 17:00 - evening mode is quiet input and light review')
+  }
 
   const minimumViableDay: string[] = top3Tasks
     .slice(0, 1)
     .map(t => t.minimumVersion || `${t.title} - even 30 minutes counts`)
   if (top3Tasks.length === 0) {
-    minimumViableDay.push('Add a small task or choose a template')
+    minimumViableDay.push(
+      shouldUseGrowthDay(checkin)
+        ? 'Follow one scaffold block and write what happened'
+        : 'Add a small task or choose a template',
+    )
   }
   if (includeRecoveryBlock) minimumViableDay.push('Complete recovery block')
   minimumViableDay.push('Shutdown routine completed')
 
   const planWithoutMarkdown: Omit<GeneratedPlan, 'notionMarkdown'> = {
     date: checkin.date,
+    dailyPlanBase: checkin.dailyPlanBase ?? 'english-ai-cyber-growth',
     theme,
     top3: top3Tasks.map(t => ({
       task: t.title,

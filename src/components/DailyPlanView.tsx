@@ -76,6 +76,8 @@ const FOLLOW_UP_OPTIONS = [
   { value: 'changed', label: 'Changed' },
 ] as const
 
+const IRIS_GROUNDING_LINE = '不要把今天和理想中的自己比较，只要把今天和半年前的自己比较。'
+
 function getPlanSourceLabel(plan: GeneratedPlan): string {
   if (plan.aiUsed && plan.provider === 'gemini') return 'Gemini'
   if (plan.aiUsed && plan.provider === 'deepseek') return 'DeepSeek'
@@ -432,6 +434,7 @@ export default function DailyPlanView({
   const focusStats = getFocusStats(loadFocusSessions())
   const realityCheck = getRealityCheck(plan)
   const morningPriorities = morningPriorityLines(plan.date)
+  const isEveningMode = new Date().getHours() >= 17
 
   return (
     <div className="page plan-page">
@@ -449,6 +452,17 @@ export default function DailyPlanView({
           <Sparkles size={11} />
           {sourceLabel}
         </div>
+      </div>
+
+      <div className="grounding-banner">
+        <p lang="zh-Hans">{IRIS_GROUNDING_LINE}</p>
+        {plan.dailyPlanBase === 'english-ai-cyber-growth' && (
+          <span>
+            {isEveningMode
+              ? 'Evening mode: quiet input and light review.'
+              : 'This is your default growth-day scaffold. Add today’s real tasks into the blocks.'}
+          </span>
+        )}
       </div>
 
       {/* Header */}
@@ -530,6 +544,9 @@ export default function DailyPlanView({
         </div>
         {plan.timeBlocks.map((block, i) => {
           const blockKey = getTimeBlockKey(block, i)
+          const outputHeavyEvening =
+            block.outputLevel === 'high' &&
+            Boolean(block.startTime && block.startTime >= '17:00')
           const followUp = followUps[blockKey] ?? {
             date: plan.date,
             blockKey,
@@ -557,6 +574,11 @@ export default function DailyPlanView({
                   <li key={j}>{item}</li>
                 ))}
               </ul>
+              {outputHeavyEvening && (
+                <div className="evening-output-warning">
+                  This is an output-heavy task. Evening mode is usually quieter.
+                </div>
+              )}
               <div className="time-block-follow-up">
                 <div className="follow-up-options" role="group" aria-label={`Follow-up for ${getTimeBlockTitle(block)}`}>
                   {FOLLOW_UP_OPTIONS.map(option => (

@@ -8,6 +8,14 @@ export type DayType =
   | 'low-energy'
   | 'admin-catchup'
 
+export type DailyPlanBase =
+  | 'english-ai-cyber-growth'
+  | 'work-shift-day'
+  | 'class-day'
+  | 'low-energy-day'
+  | 'admin-recovery-day'
+  | 'free-build-day'
+
 export type TaskCategory =
   | 'cyber-study'
   | 'assessment'
@@ -46,6 +54,7 @@ export type MealAnchorStatus = 'Followed' | 'Partial' | 'Skipped' | 'Changed' | 
 
 export interface DailyCheckin {
   date: string
+  dailyPlanBase?: DailyPlanBase
   dayType: DayType
   wakeUpTime: string
   sleepTarget: string
@@ -305,12 +314,18 @@ export interface TimeBlock {
   title?: string
   type?: 'focus' | 'class' | 'work' | 'admin' | 'recovery' | 'meal' | 'buffer' | 'shutdown'
   items: string[]
+  baseBlockId?: string
+  baseBlockName?: string
+  outputLevel?: 'high' | 'low'
+  recommendedWindow?: 'daytime' | 'evening' | 'any'
+  canBeMoved?: boolean
 }
 
 export type PlanProvider = 'gemini' | 'deepseek' | 'openai' | 'rule-based'
 
 export interface GeneratedPlan {
   date: string
+  dailyPlanBase?: DailyPlanBase
   theme: string
   top3: Array<{ task: string; nextAction: string }>
   timeBlocks: TimeBlock[]

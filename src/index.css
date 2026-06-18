@@ -251,6 +251,44 @@ body {
   line-height: 1.65;
 }
 
+.grounding-banner {
+  margin: -0.45rem 0 1.25rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px solid rgba(255, 143, 199, 0.22);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(255, 215, 234, 0.34), rgba(250, 248, 246, 0.94)),
+    #FFFCF9;
+  color: var(--text);
+}
+
+.grounding-banner p {
+  margin: 0;
+  font-family: var(--font-cjk);
+  font-size: 15px;
+  line-height: 1.7;
+  font-weight: 500;
+}
+
+.grounding-banner span {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.evening-output-warning {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 143, 199, 0.24);
+  border-radius: var(--control-radius);
+  background: rgba(255, 215, 234, 0.22);
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* ── Cards ─────────────────────────────────────────── */
 
 .card {
@@ -378,6 +416,14 @@ textarea {
   resize: vertical;
   min-height: 80px;
   line-height: 1.55;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .form-row {

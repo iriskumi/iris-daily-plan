@@ -86,7 +86,7 @@ export function normalizedBlockMinutes(minutes?: number): 5 | 15 | 25 | 45 {
 export function tinyActionForArea(area: TaskArea): string {
   if (area === 'Cyber') return 'Open the relevant notes, glossary, or screenshots folder.'
   if (area === 'AI') return 'Open the AI note, news item, or tool page and capture only 3 useful points.'
-  if (area === 'Vibe Coding') return 'Open the project folder and identify the next smallest code/UI change.'
+  if (area === 'Vibe Coding') return 'Write one English sentence: Today I will fix/build/test...'
   if (area === 'Job') return 'Open the JD and highlight 3 requirements only.'
   if (area === 'English') return 'Write or say one sentence only.'
   if (area === 'Admin') return 'Open the relevant email, form, or page only.'
@@ -116,8 +116,8 @@ export function tinyActionForTask(title: string, area: TaskArea): string {
   if (/\b(glossary|cisco|cyber)\b/i.test(normalizedTitle)) {
     return 'Open the glossary and review 8 terms only.'
   }
-  if (/\b(cursor|codex|deploy|bug|ui)\b/i.test(normalizedTitle)) {
-    return 'Open the project folder and find the next smallest code or UI change.'
+  if (/\b(cursor|codex|deploy|bug|ui|project|coding)\b/i.test(normalizedTitle)) {
+    return 'Write one English sentence: Today I will fix/build/test...'
   }
   return tinyActionForArea(area)
 }
@@ -295,6 +295,12 @@ export function recommendNextBlocks(input: {
   const task = pickTaskForBlock(input.tasks, input.energy, input.areaFilter, {
     preserveOrder: input.preserveOrder,
   })
+  const minutesNow = now.getHours() * 60 + now.getMinutes()
+  const eveningMode = minutesNow >= 17 * 60
+  const defaultLabel = eveningMode ? 'Quiet reading' : 'Project / Coding'
+  const defaultDetail = eveningMode
+    ? 'Open one document and mark only New concept / Useful phrase.'
+    : 'Write one English sentence: Today I will fix/build/test...'
   const firstEnd = addMinutes(now, resetMinutes)
   const secondEnd = addMinutes(firstEnd, focusMinutes)
   const breakEnd = addMinutes(secondEnd, 10)
@@ -311,8 +317,8 @@ export function recommendNextBlocks(input: {
     {
       id: 'focus',
       time: `${formatTime(firstEnd)}-${formatTime(secondEnd)}`,
-      label: task ? `Focus: ${task.title}` : 'Focus: add one task first',
-      detail: task?.nextTinyAction || 'Choose one inbox task and make the first action tiny.',
+      label: task ? `Focus: ${task.title}` : defaultLabel,
+      detail: task?.nextTinyAction || defaultDetail,
       minutes: focusMinutes,
       area: task?.area,
     },

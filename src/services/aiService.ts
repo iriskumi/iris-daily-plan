@@ -33,6 +33,9 @@ export async function generatePlanWithAI(
         planningInstructions: [
           context.checkin.planningInstructions,
           'Use only the tasks listed below. Do not invent tasks. Do not use previous assessments, previous due dates, or old project names unless they appear in the current active task list.',
+          context.checkin.dailyPlanBase === 'english-ai-cyber-growth'
+            ? 'Default planning base: English + AI/Cyber Growth Day. Keep high-output work such as shadowing, speaking, retelling, writing, project/coding, active course work, assessment output, and job writing between 09:00 and 17:00. After 17:00 suggest only quiet input, reading, notes, expression review, light admin, dinner/reset, and tomorrow planning unless the user explicitly added an evening output task.'
+            : '',
         ].filter(Boolean).join('\n'),
       },
     }

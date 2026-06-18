@@ -5,6 +5,29 @@ import { loadTemplates, saveTemplates, loadTasks, saveTasks } from '../storage'
 
 const DEFAULT_TEMPLATES: Template[] = [
   {
+    id: 'default-english-ai-cyber-growth-day',
+    name: 'English + AI/Cyber Growth Day',
+    purpose: 'Default scaffold for English output, AI/IT/Cyber learning, project work, and quiet evening review',
+    category: 'ai',
+    subtasks: [
+      '09:00 Breakfast + light English input',
+      '09:30 Shadowing',
+      '10:30 AI / IT / Cyber English course',
+      '13:00 Project / Coding / Practical work',
+      '15:30 Technical retelling + English writing',
+      '16:30 Chunk Bank',
+      '18:00 Quiet reading / documentation',
+      '19:00 Notes organisation',
+      '19:40 Tomorrow plan + light review',
+    ],
+    estimatedMinutes: 420,
+    pomodoroEnabled: false,
+    pomodoroLength: 25,
+    breakLength: 5,
+    isDefault: true,
+    createdAt: '',
+  },
+  {
     id: 'default-english-output',
     name: 'English Output',
     purpose: 'English speaking and output practice',
@@ -100,8 +123,13 @@ function getTemplates(): Template[] {
     if (template.id !== 'default-cybersecurity') return template
     return DEFAULT_TEMPLATES.find(item => item.id === 'default-cyber-study') ?? template
   })
-  if (JSON.stringify(saved) !== JSON.stringify(migrated)) saveTemplates(migrated)
-  return migrated
+  const existingIds = new Set(migrated.map(template => template.id))
+  const withMissingDefaults = [
+    ...DEFAULT_TEMPLATES.filter(template => !existingIds.has(template.id)),
+    ...migrated,
+  ]
+  if (JSON.stringify(saved) !== JSON.stringify(withMissingDefaults)) saveTemplates(withMissingDefaults)
+  return withMissingDefaults
 }
 
 const emptyForm = (): Omit<Template, 'id' | 'createdAt' | 'isDefault'> => ({
