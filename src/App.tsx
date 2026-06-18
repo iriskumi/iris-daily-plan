@@ -39,6 +39,7 @@ import type {
   CarryOverSuggestion,
   RankedCheckinTask,
   DailyCheckin as DailyCheckinType,
+  TaskTemplate,
 } from './types'
 import {
   loadBills,
@@ -101,7 +102,9 @@ import {
   tinyActionForTask,
   tinyActionForArea,
   normalizeArea,
+  normalizeTask,
 } from './focusBlocks'
+import { DEFAULT_TASK_TEMPLATES, QUICK_TEMPLATE_IDS } from './taskTemplates'
 import './index.css'
 
 type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
@@ -287,6 +290,62 @@ function defaultGrowthCheckin(date: string): DailyCheckinType {
     fixedCommitments: '',
     planningInstructions: 'Use the English + AI/Cyber growth-day scaffold. Keep high-output work before 17:00 and quiet input after 17:00.',
     notes: '',
+  }
+}
+
+function rankedEstimate(minutes: number): RankedCheckinTask['estimatedMinutes'] {
+  if (minutes <= 15) return 15
+  if (minutes <= 25) return 25
+  if (minutes <= 45) return 45
+  return 60
+}
+
+function taskFromTemplate(template: TaskTemplate): Task {
+  const now = new Date().toISOString()
+  return normalizeTask({
+    id: crypto.randomUUID(),
+    title: template.title,
+    area: template.area,
+    energy: template.energy,
+    mode: template.mode,
+    status: 'Inbox',
+    category: categoryFromArea(template.area),
+    estimatedMinutes: template.estimatedMinutes,
+    difficulty: template.energy === 'High' ? 'hard' : template.energy === 'Medium' ? 'medium' : 'easy',
+    urgency: 'medium',
+    importance: template.outputLevel === 'high' ? 'high' : 'medium',
+    nextTinyAction: template.firstTinyAction,
+    nextAction: template.firstTinyAction,
+    checklist: [template.firstTinyAction, template.description],
+    pomodoroEnabled: template.mode === 'Focus',
+    pomodoroLength: template.estimatedMinutes,
+    breakLength: template.estimatedMinutes >= 45 ? 10 : 5,
+    pomodoroSessions: 1,
+    done: false,
+    createdAt: now,
+    updatedAt: now,
+  })
+}
+
+function focusBlockFromTemplate(template: TaskTemplate, task: Task): FocusBlock {
+  const now = new Date()
+  const plannedEnd = new Date(now.getTime() + template.estimatedMinutes * 60 * 1000)
+  return {
+    id: crypto.randomUUID(),
+    date: getLocalDateKey(now),
+    startTime: now.toISOString(),
+    plannedEndTime: plannedEnd.toISOString(),
+    minutes: template.estimatedMinutes,
+    taskId: task.id,
+    taskTitle: template.title,
+    area: template.area,
+    mode: template.mode,
+    energy: template.energy,
+    firstTinyAction: template.firstTinyAction,
+    status: 'Doing',
+    notes: `Started from template: ${template.defaultBlockType}`,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
   }
 }
 
@@ -699,12 +758,54 @@ function TodayCommandCentre({
   const [startNowTimer, setStartNowTimer] = useState<5 | 15 | null>(null)
   const [startNowMessage, setStartNowMessage] = useState<string | null>(null)
   const [startNowCopied, setStartNowCopied] = useState(false)
+  const [selectedQuickTemplate, setSelectedQuickTemplate] = useState<TaskTemplate | null>(null)
+  const [quickTemplateMessage, setQuickTemplateMessage] = useState<string | null>(null)
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const workReminders = getTodayWorkReminders(activeWorkLeads)
   const billReminders = getTodayBillReminders(urgentBills)
   const nextAction = getNextAction(currentPlan)
   const nowContext = getNowContext(currentPlan)
+  const quickTemplates = QUICK_TEMPLATE_IDS
+    .map(id => DEFAULT_TASK_TEMPLATES.find(template => template.id === id))
+    .filter((template): template is TaskTemplate => Boolean(template))
+
+  function saveTemplateTask(template: TaskTemplate): Task {
+    const task = taskFromTemplate(template)
+    saveTasks([task, ...loadTasks()])
+    return task
+  }
+
+  function addTemplateToToday(template: TaskTemplate) {
+    const task = saveTemplateTask(template)
+    const todayKey = getLocalDateKey()
+    const todayCheckin = loadCheckin(todayKey) ?? defaultGrowthCheckin(todayKey)
+    const rankedTasks = todayCheckin.rankedTasks ?? []
+    saveCheckin({
+      ...todayCheckin,
+      rankedTasks: [
+        ...rankedTasks,
+        {
+          id: crypto.randomUUID(),
+          taskId: task.id,
+          title: template.title,
+          area: template.area,
+          estimatedMinutes: rankedEstimate(template.estimatedMinutes),
+          orderIndex: rankedTasks.length,
+        },
+      ],
+    })
+    setSelectedQuickTemplate(null)
+    setQuickTemplateMessage(`Added "${template.title}" to Today’s to-do.`)
+  }
+
+  function startTemplateNow(template: TaskTemplate) {
+    const task = saveTemplateTask(template)
+    saveFocusBlock(focusBlockFromTemplate(template, task))
+    onFocusBlocksChange()
+    setSelectedQuickTemplate(null)
+    setQuickTemplateMessage(`Started "${template.title}" as a Focus Block.`)
+  }
 
   async function handleStartToday() {
     setStarting(true)
@@ -840,6 +941,44 @@ function TodayCommandCentre({
             <span>Evening mode: quiet input and light review.</span>
           )}
         </div>
+
+        <section className="dashboard-template-panel">
+          <div>
+            <div className="section-label">Task Templates</div>
+            <h3>Quick add</h3>
+          </div>
+          <div className="quick-template-row">
+            {quickTemplates.map(template => (
+              <button
+                key={template.id}
+                className="quick-template-chip"
+                type="button"
+                onClick={() => setSelectedQuickTemplate(template)}
+              >
+                {template.title
+                  .replace('Shadowing: 2-3 min clip', 'Shadowing')
+                  .replace('AI / IT / Cyber course block', 'Course block')
+                  .replace('Project / Coding block', 'Vibe Coding')
+                  .replace('Quiet English reading', 'Quiet Reading')
+                  .replace('Expression Review 5', 'Review 5')
+                  .replace('Tomorrow planning', 'Tomorrow Plan')
+                  .replace('10-minute reset', '10-min Reset')}
+              </button>
+            ))}
+          </div>
+          {selectedQuickTemplate && (
+            <div className="quick-template-confirm">
+              <span>{selectedQuickTemplate.firstTinyAction}</span>
+              <button className="btn btn-primary" type="button" onClick={() => addTemplateToToday(selectedQuickTemplate)}>
+                Add to Today
+              </button>
+              <button className="btn btn-secondary" type="button" onClick={() => startTemplateNow(selectedQuickTemplate)}>
+                Start now
+              </button>
+            </div>
+          )}
+          {quickTemplateMessage && <div className="start-now-status">{quickTemplateMessage}</div>}
+        </section>
 
         <section className="start-now-card" aria-label="Start Now">
           <div className="start-now-header">

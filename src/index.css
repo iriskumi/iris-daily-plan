@@ -3028,6 +3028,227 @@ textarea {
   height: 13px;
 }
 
+.dashboard-template-panel,
+.task-template-recommended {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-template-panel h3 {
+  margin: 0.2rem 0 0.65rem;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.quick-template-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.quick-template-chip {
+  border: 1px solid rgba(255, 143, 199, 0.28);
+  background: rgba(255, 215, 234, 0.22);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.45rem 0.72rem;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.quick-template-chip:hover {
+  border-color: rgba(255, 93, 174, 0.42);
+  background: rgba(255, 215, 234, 0.36);
+}
+
+.quick-template-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.quick-template-confirm span {
+  flex: 1 1 220px;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.task-template-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) repeat(5, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.task-template-search,
+.task-template-filters select {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: #FFFCF9;
+  color: var(--text);
+}
+
+.task-template-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.75rem;
+}
+
+.task-template-search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.task-template-filters select {
+  padding: 0 0.7rem;
+  font-size: 13px;
+}
+
+.task-template-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-template-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.task-template-group-header {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.task-template-group-header span {
+  font-weight: 500;
+}
+
+.task-template-group-header small {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.task-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0 1rem 1rem;
+}
+
+.task-template-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #FFFCF9;
+  padding: 0.9rem;
+}
+
+.task-template-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.task-template-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.task-template-top p {
+  margin: 0.25rem 0 0;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.task-template-window {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 0.18rem 0.48rem;
+  font-size: 11px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.window-daytime {
+  background: rgba(255, 215, 234, 0.28);
+}
+
+.window-evening {
+  background: rgba(196, 168, 130, 0.14);
+}
+
+.window-any {
+  background: var(--surface-2);
+}
+
+.task-template-meta,
+.task-template-tags,
+.task-template-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.task-template-meta span,
+.task-template-tags span {
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 0.2rem 0.48rem;
+}
+
+.task-template-action {
+  margin-top: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--control-radius);
+  background: rgba(255, 215, 234, 0.18);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.task-template-buttons .btn {
+  font-size: 12px;
+  padding: 0.42rem 0.62rem;
+}
+
+@media (max-width: 760px) {
+  .task-template-filters,
+  .task-template-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .subnav-shell {
   max-width: 780px;
   margin: 0 auto;

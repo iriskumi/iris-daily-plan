@@ -1,463 +1,285 @@
-import { useState } from 'react'
-import { Plus, Pencil, Copy, Trash2, X, Check, ChevronDown, ChevronUp } from 'lucide-react'
-import type { Template, TaskCategory, Task } from '../types'
-import { loadTemplates, saveTemplates, loadTasks, saveTasks } from '../storage'
+import { useMemo, useState } from 'react'
+import { Check, ChevronDown, ChevronUp, Play, Plus, Search } from 'lucide-react'
+import type {
+  DailyCheckin,
+  FocusBlock,
+  RankedCheckinTask,
+  RecommendedWindow,
+  Task,
+  TaskArea,
+  TaskEnergy,
+  TaskTemplate,
+} from '../types'
+import {
+  loadCheckin,
+  loadTaskTemplates,
+  loadTasks,
+  saveCheckin,
+  saveFocusBlock,
+  saveTaskTemplates,
+  saveTasks,
+} from '../storage'
+import { getLocalDateKey } from '../focus'
+import { categoryFromArea, normalizeTask } from '../focusBlocks'
+import {
+  DEFAULT_TASK_TEMPLATES,
+  TASK_TEMPLATE_GROUPS,
+  templatesForCurrentTime,
+} from '../taskTemplates'
 
-const DEFAULT_TEMPLATES: Template[] = [
-  {
-    id: 'default-english-ai-cyber-growth-day',
-    name: 'English + AI/Cyber Growth Day',
-    purpose: 'Default scaffold for English output, AI/IT/Cyber learning, project work, and quiet evening review',
-    category: 'ai',
-    subtasks: [
-      '09:00 Breakfast + light English input',
-      '09:30 Shadowing',
-      '10:30 AI / IT / Cyber English course',
-      '13:00 Project / Coding / Practical work',
-      '15:30 Technical retelling + English writing',
-      '16:30 Chunk Bank',
-      '18:00 Quiet reading / documentation',
-      '19:00 Notes organisation',
-      '19:40 Tomorrow plan + light review',
-    ],
-    estimatedMinutes: 420,
-    pomodoroEnabled: false,
-    pomodoroLength: 25,
-    breakLength: 5,
-    isDefault: true,
-    createdAt: '',
-  },
-  {
-    id: 'default-english-output',
-    name: 'English Output',
-    purpose: 'English speaking and output practice',
-    category: 'english-practice',
-    subtasks: [
-      'Shadowing — 10 minutes',
-      'Record a 1-minute summary',
-      'Add 3 useful expressions to notes',
-      'Use 1 expression in a sentence',
-    ],
-    estimatedMinutes: 40,
-    pomodoroEnabled: true,
-    pomodoroLength: 50,
-    breakLength: 10,
-    isDefault: true,
-    createdAt: '',
-  },
-  {
-    id: 'default-ai-learning',
-    name: 'AI Learning',
-    purpose: 'Practical AI skill building',
-    category: 'consulting-freelance',
-    subtasks: [
-      'Watch or read one small AI lesson',
-      'Try one small hands-on action',
-      'Write down one usable takeaway',
-    ],
-    estimatedMinutes: 50,
-    pomodoroEnabled: true,
-    pomodoroLength: 50,
-    breakLength: 10,
-    isDefault: true,
-    createdAt: '',
-  },
-  {
-    id: 'default-cyber-study',
-    name: 'Cyber study',
-    purpose: 'Current cyber study from active tasks only',
-    category: 'cyber-study',
-    subtasks: [
-      'Open the current cyber note or glossary',
-      'Review 8 terms only',
-      'Write one small next action',
-    ],
-    estimatedMinutes: 25,
-    pomodoroEnabled: true,
-    pomodoroLength: 25,
-    breakLength: 5,
-    isDefault: true,
-    createdAt: '',
-  },
-  {
-    id: 'default-exercise',
-    name: 'Exercise',
-    purpose: 'Basic health and energy maintenance',
-    category: 'recovery',
-    subtasks: [
-      '10-minute walk or light workout',
-      'Stretching',
-      'Log completion',
-    ],
-    estimatedMinutes: 20,
-    pomodoroEnabled: false,
-    pomodoroLength: 25,
-    breakLength: 5,
-    isDefault: true,
-    createdAt: '',
-  },
-]
+const ALL = 'all'
 
-const CATEGORY_LABELS: Record<TaskCategory, string> = {
-  assessment: 'Assessment',
-  'cyber-study': 'Cyber Study',
-  'job-search': 'Job Search',
-  'work-shift': 'Work / Holmesglen',
-  'admin-life': 'Admin / Life',
-  ai: 'AI',
-  'english-practice': 'English Practice',
-  'japanese-practice': 'Japanese Practice',
-  exercise: 'Exercise',
-  recovery: 'Recovery',
-  'finance-bills': 'Finance / Bills',
-  'consulting-freelance': 'Consulting / Freelance',
-}
-
-function getTemplates(): Template[] {
-  const saved = loadTemplates()
+function getTaskTemplates(): TaskTemplate[] {
+  const saved = loadTaskTemplates()
   if (saved.length === 0) {
-    saveTemplates(DEFAULT_TEMPLATES)
-    return DEFAULT_TEMPLATES
+    saveTaskTemplates(DEFAULT_TASK_TEMPLATES)
+    return DEFAULT_TASK_TEMPLATES
   }
-  const migrated = saved.map(template => {
-    if (template.id !== 'default-cybersecurity') return template
-    return DEFAULT_TEMPLATES.find(item => item.id === 'default-cyber-study') ?? template
-  })
-  const existingIds = new Set(migrated.map(template => template.id))
-  const withMissingDefaults = [
-    ...DEFAULT_TEMPLATES.filter(template => !existingIds.has(template.id)),
-    ...migrated,
+  const savedIds = new Set(saved.map(template => template.id))
+  const merged = [
+    ...DEFAULT_TASK_TEMPLATES.filter(template => !savedIds.has(template.id)),
+    ...saved,
   ]
-  if (JSON.stringify(saved) !== JSON.stringify(withMissingDefaults)) saveTemplates(withMissingDefaults)
-  return withMissingDefaults
+  if (merged.length !== saved.length) saveTaskTemplates(merged)
+  return merged
 }
 
-const emptyForm = (): Omit<Template, 'id' | 'createdAt' | 'isDefault'> => ({
-  name: '',
-  purpose: '',
-  category: 'cyber-study',
-  subtasks: [''],
-  estimatedMinutes: 50,
-  pomodoroEnabled: true,
-  pomodoroLength: 50,
-  breakLength: 10,
-})
-
-interface TemplateFormProps {
-  initial?: Partial<Omit<Template, 'id' | 'createdAt' | 'isDefault'>>
-  onSave: (data: Omit<Template, 'id' | 'createdAt' | 'isDefault'>) => void
-  onCancel: () => void
+function rankedEstimate(minutes: number): RankedCheckinTask['estimatedMinutes'] {
+  if (minutes <= 15) return 15
+  if (minutes <= 25) return 25
+  if (minutes <= 45) return 45
+  return 60
 }
 
-function TemplateForm({ initial, onSave, onCancel }: TemplateFormProps) {
-  const [form, setForm] = useState({ ...emptyForm(), ...initial })
-  const [subtasksText, setSubtasksText] = useState((initial?.subtasks ?? ['']).join('\n'))
-
-  function f<K extends keyof typeof form>(key: K, val: (typeof form)[K]) {
-    setForm(prev => ({ ...prev, [key]: val }))
+function defaultCheckin(date: string): DailyCheckin {
+  return {
+    date,
+    dailyPlanBase: 'english-ai-cyber-growth',
+    dayType: 'normal',
+    wakeUpTime: '09:00',
+    sleepTarget: '22:30',
+    energyLevel: 'medium',
+    rankedTasks: [],
+    morningMainTask: '',
+    morningSecondaryTask1: '',
+    morningSecondaryTask2: '',
+    morningSmallLifeTask: '',
+    availableFocusTime: 'English + AI/Cyber Growth Day scaffold',
+    fixedCommitments: '',
+    planningInstructions: '',
+    notes: '',
   }
+}
 
-  return (
-    <div className="inline-form">
-      <div className="form-title">
-        <Plus size={14} />
-        {initial?.name ? 'Edit Template' : 'New Template'}
-      </div>
+function taskFromTemplate(template: TaskTemplate): Task {
+  const now = new Date().toISOString()
+  return normalizeTask({
+    id: crypto.randomUUID(),
+    title: template.title,
+    area: template.area,
+    energy: template.energy,
+    mode: template.mode,
+    status: 'Inbox',
+    category: categoryFromArea(template.area),
+    deadline: '',
+    estimatedMinutes: template.estimatedMinutes,
+    difficulty: template.energy === 'High' ? 'hard' : template.energy === 'Medium' ? 'medium' : 'easy',
+    urgency: 'medium',
+    importance: template.outputLevel === 'high' ? 'high' : 'medium',
+    nextTinyAction: template.firstTinyAction,
+    nextAction: template.firstTinyAction,
+    checklist: [
+      template.firstTinyAction,
+      template.description,
+      `Block: ${template.defaultBlockType}`,
+    ],
+    pomodoroEnabled: template.mode === 'Focus',
+    pomodoroLength: template.estimatedMinutes,
+    breakLength: template.estimatedMinutes >= 45 ? 10 : 5,
+    pomodoroSessions: 1,
+    done: false,
+    createdAt: now,
+    updatedAt: now,
+  })
+}
 
-      <div className="form-row">
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Template name *</label>
-          <input
-            autoFocus
-            placeholder="e.g. Morning Writing"
-            value={form.name}
-            onChange={e => f('name', e.target.value)}
-          />
-        </div>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Category</label>
-          <select value={form.category} onChange={e => f('category', e.target.value as TaskCategory)}>
-            {(Object.entries(CATEGORY_LABELS) as [TaskCategory, string][]).map(([id, label]) => (
-              <option key={id} value={id}>{label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="form-group mt-1">
-        <label>Purpose</label>
-        <input
-          placeholder="What is this routine for?"
-          value={form.purpose}
-          onChange={e => f('purpose', e.target.value)}
-        />
-      </div>
-
-      <div className="form-group">
-        <label>Subtasks (one per line)</label>
-        <textarea
-          placeholder={'e.g.\nReview notes\nDo one practice problem\nWrite takeaway'}
-          value={subtasksText}
-          onChange={e => {
-            setSubtasksText(e.target.value)
-            f('subtasks', e.target.value.split('\n').filter(s => s.trim()))
-          }}
-          style={{ minHeight: 100, fontSize: 13 }}
-        />
-      </div>
-
-      <div className="form-row">
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Estimated minutes</label>
-          <input
-            type="number"
-            min={5}
-            step={5}
-            value={form.estimatedMinutes}
-            onChange={e => f('estimatedMinutes', Number(e.target.value))}
-          />
-        </div>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Focus mode</label>
-          <div className="btn-group">
-            <button
-              type="button"
-              className={`btn-option ${form.pomodoroEnabled ? 'selected' : ''}`}
-              onClick={() => f('pomodoroEnabled', true)}
-            >
-              Pomodoro on
-            </button>
-            <button
-              type="button"
-              className={`btn-option ${!form.pomodoroEnabled ? 'selected' : ''}`}
-              onClick={() => f('pomodoroEnabled', false)}
-            >
-              Off
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {form.pomodoroEnabled && (
-        <div className="form-row mt-1">
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Focus (min)</label>
-            <input
-              type="number"
-              min={10}
-              step={5}
-              value={form.pomodoroLength}
-              onChange={e => f('pomodoroLength', Number(e.target.value))}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Break (min)</label>
-            <input
-              type="number"
-              min={5}
-              step={5}
-              value={form.breakLength}
-              onChange={e => f('breakLength', Number(e.target.value))}
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="form-actions">
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            if (!form.name.trim()) return
-            onSave(form)
-          }}
-        >
-          <Check size={14} />
-          Save
-        </button>
-        <button className="btn btn-secondary" onClick={onCancel}>
-          <X size={14} />
-          Cancel
-        </button>
-      </div>
-    </div>
-  )
+function focusBlockFromTemplate(template: TaskTemplate, task: Task): FocusBlock {
+  const now = new Date()
+  const plannedEnd = new Date(now.getTime() + template.estimatedMinutes * 60 * 1000)
+  return {
+    id: crypto.randomUUID(),
+    date: getLocalDateKey(now),
+    startTime: now.toISOString(),
+    plannedEndTime: plannedEnd.toISOString(),
+    minutes: template.estimatedMinutes,
+    taskId: task.id,
+    taskTitle: template.title,
+    area: template.area,
+    mode: template.mode,
+    energy: template.energy,
+    firstTinyAction: template.firstTinyAction,
+    status: 'Doing',
+    notes: `Started from template: ${template.defaultBlockType}`,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  }
 }
 
 interface TemplateCardProps {
-  template: Template
-  onAddToday: () => void
-  onEdit: () => void
-  onDuplicate: () => void
-  onDelete: () => void
-  isDefault?: boolean
+  template: TaskTemplate
+  onAddInbox: (template: TaskTemplate) => void
+  onAddToday: (template: TaskTemplate) => void
+  onStart: (template: TaskTemplate) => void
 }
 
-function TemplateCard({ template, onAddToday, onEdit, onDuplicate, onDelete, isDefault }: TemplateCardProps) {
-  const [expanded, setExpanded] = useState(false)
-  const [added, setAdded] = useState(false)
-
-  function handleAdd() {
-    onAddToday()
-    setAdded(true)
-    setTimeout(() => setAdded(false), 2000)
-  }
-
+function TemplateCard({ template, onAddInbox, onAddToday, onStart }: TemplateCardProps) {
   return (
-    <div className="template-card">
-      <div className="template-card-header">
-        <div className="template-card-title-row">
-          <span className="template-name">{template.name}</span>
-          {isDefault && <span className="template-default-badge">default</span>}
-          {template.pomodoroEnabled && (
-            <span className="template-pomo-badge">
-              🍅 {template.pomodoroLength}min
-            </span>
-          )}
+    <div className="task-template-card">
+      <div className="task-template-top">
+        <div>
+          <div className="task-template-title">{template.title}</div>
+          <p>{template.description}</p>
         </div>
-        <div className="template-card-actions">
-          <button
-            className={`btn ${added ? 'btn-secondary' : 'btn-primary'}`}
-            style={{ fontSize: '0.78rem', padding: '0.35rem 0.7rem' }}
-            onClick={handleAdd}
-          >
-            {added ? <Check size={12} /> : <Plus size={12} />}
-            {added ? 'Added' : 'Add to plan'}
-          </button>
-          <button className="btn-ghost" onClick={() => setExpanded(e => !e)} title="Details">
-            {expanded ? <ChevronUp /> : <ChevronDown />}
-          </button>
-          <button className="btn-ghost" onClick={onEdit} title="Edit">
-            <Pencil />
-          </button>
-          <button className="btn-ghost" onClick={onDuplicate} title="Duplicate">
-            <Copy />
-          </button>
-          {!isDefault && (
-            <button className="btn-danger-ghost" onClick={onDelete} title="Delete">
-              <Trash2 />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {template.purpose && (
-        <div className="template-purpose">{template.purpose}</div>
-      )}
-
-      <div className="template-meta-row">
-        <span className={`badge badge-${template.category}`}>
-          {CATEGORY_LABELS[template.category]}
+        <span className={`task-template-window window-${template.recommendedWindow}`}>
+          {template.recommendedWindow}
         </span>
-        <span className="text-xs text-muted">
-          ~{template.estimatedMinutes}min
-        </span>
-        {template.pomodoroEnabled && (
-          <span className="text-xs text-muted">
-            {template.breakLength}min break
-          </span>
-        )}
       </div>
-
-      {expanded && template.subtasks.length > 0 && (
-        <ul className="template-subtask-list">
-          {template.subtasks.map((t, i) => (
-            <li key={i}>{t}</li>
-          ))}
-        </ul>
-      )}
+      <div className="task-template-meta">
+        <span>{template.area}</span>
+        <span>{template.estimatedMinutes} min</span>
+        <span>{template.energy}</span>
+        <span>{template.outputLevel} output</span>
+      </div>
+      <div className="task-template-action">{template.firstTinyAction}</div>
+      <div className="task-template-tags">
+        {template.tags.slice(0, 4).map(tag => (
+          <span key={tag}>{tag}</span>
+        ))}
+      </div>
+      <div className="task-template-buttons">
+        <button className="btn btn-secondary" type="button" onClick={() => onAddInbox(template)}>
+          <Plus size={13} />
+          Add to Task Inbox
+        </button>
+        <button className="btn btn-primary" type="button" onClick={() => onAddToday(template)}>
+          <Check size={13} />
+          Add to Today’s to-do
+        </button>
+        <button className="btn btn-secondary" type="button" onClick={() => onStart(template)}>
+          <Play size={13} />
+          Start as Focus Block
+        </button>
+      </div>
     </div>
   )
 }
 
 export default function RecurringTemplates() {
-  const [templates, setTemplates] = useState<Template[]>(getTemplates)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [templates] = useState<TaskTemplate[]>(getTaskTemplates)
+  const [query, setQuery] = useState('')
+  const [groupFilter, setGroupFilter] = useState<string>(ALL)
+  const [areaFilter, setAreaFilter] = useState<TaskArea | typeof ALL>(ALL)
+  const [energyFilter, setEnergyFilter] = useState<TaskEnergy | typeof ALL>(ALL)
+  const [windowFilter, setWindowFilter] = useState<RecommendedWindow | typeof ALL>(ALL)
+  const [durationFilter, setDurationFilter] = useState<string>(ALL)
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(TASK_TEMPLATE_GROUPS))
   const [toast, setToast] = useState<string | null>(null)
 
-  function persist(updated: Template[]) {
-    setTemplates(updated)
-    saveTemplates(updated)
+  const recommended = templatesForCurrentTime()
+
+  function showToast(message: string) {
+    setToast(message)
+    window.setTimeout(() => setToast(null), 2200)
   }
 
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(null), 2500)
-  }
-
-  function addTemplate(data: Omit<Template, 'id' | 'createdAt' | 'isDefault'>) {
-    persist([
-      ...templates,
-      { ...data, id: crypto.randomUUID(), isDefault: false, createdAt: new Date().toISOString() },
-    ])
-    setShowForm(false)
-  }
-
-  function updateTemplate(id: string, data: Omit<Template, 'id' | 'createdAt' | 'isDefault'>) {
-    persist(templates.map(t => (t.id === id ? { ...t, ...data } : t)))
-    setEditingId(null)
-  }
-
-  function duplicateTemplate(t: Template) {
-    persist([
-      ...templates,
-      {
-        ...t,
-        id: crypto.randomUUID(),
-        name: `${t.name} (copy)`,
-        isDefault: false,
-        createdAt: new Date().toISOString(),
-      },
-    ])
-    showToast(`"${t.name}" duplicated`)
-  }
-
-  function deleteTemplate(id: string) {
-    if (confirm('Delete this template?')) {
-      persist(templates.filter(t => t.id !== id))
-    }
-  }
-
-  function addToPlan(template: Template) {
+  function persistTask(task: Task): Task {
     const tasks = loadTasks()
-    const newTask: Task = {
-      id: crypto.randomUUID(),
-      title: template.name,
-      category: template.category,
-      estimatedMinutes: template.estimatedMinutes,
-      difficulty: 'medium',
-      urgency: 'medium',
-      importance: 'high',
-      nextAction: template.subtasks[0] ?? '',
-      checklist: template.subtasks,
-      pomodoroEnabled: template.pomodoroEnabled,
-      pomodoroLength: template.pomodoroLength,
-      breakLength: template.breakLength,
-      pomodoroSessions: 1,
-      done: false,
-      createdAt: new Date().toISOString(),
-    }
-    saveTasks([newTask, ...tasks])
-    showToast(`"${template.name}" added to Tasks`)
+    saveTasks([task, ...tasks])
+    return task
   }
+
+  function addToInbox(template: TaskTemplate): Task {
+    const task = persistTask(taskFromTemplate(template))
+    showToast(`Added "${template.title}" to Task Inbox.`)
+    return task
+  }
+
+  function addToToday(template: TaskTemplate): Task {
+    const task = addToInbox(template)
+    const date = getLocalDateKey()
+    const checkin = loadCheckin(date) ?? defaultCheckin(date)
+    const rankedTasks = checkin.rankedTasks ?? []
+    saveCheckin({
+      ...checkin,
+      rankedTasks: [
+        ...rankedTasks,
+        {
+          id: crypto.randomUUID(),
+          taskId: task.id,
+          title: template.title,
+          area: template.area,
+          estimatedMinutes: rankedEstimate(template.estimatedMinutes),
+          orderIndex: rankedTasks.length,
+        },
+      ],
+    })
+    showToast(`Added "${template.title}" to Today’s to-do.`)
+    return task
+  }
+
+  function startTemplate(template: TaskTemplate) {
+    const task = addToInbox(template)
+    saveFocusBlock(focusBlockFromTemplate(template, task))
+    showToast(`Started "${template.title}" as a Focus Block.`)
+  }
+
+  function toggleGroup(group: string) {
+    setOpenGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(group)) next.delete(group)
+      else next.add(group)
+      return next
+    })
+  }
+
+  const filtered = useMemo(() => {
+    const text = query.trim().toLowerCase()
+    return templates.filter(template => {
+      if (groupFilter !== ALL && template.group !== groupFilter) return false
+      if (areaFilter !== ALL && template.area !== areaFilter) return false
+      if (energyFilter !== ALL && template.energy !== energyFilter) return false
+      if (windowFilter !== ALL && template.recommendedWindow !== windowFilter) return false
+      if (durationFilter === 'short' && template.estimatedMinutes > 15) return false
+      if (durationFilter === 'medium' && (template.estimatedMinutes < 16 || template.estimatedMinutes > 45)) return false
+      if (durationFilter === 'long' && template.estimatedMinutes < 46) return false
+      if (!text) return true
+      return [
+        template.title,
+        template.description,
+        template.area,
+        template.defaultBlockType,
+        ...template.tags,
+      ].join(' ').toLowerCase().includes(text)
+    })
+  }, [areaFilter, durationFilter, energyFilter, groupFilter, query, templates, windowFilter])
+
+  const grouped = TASK_TEMPLATE_GROUPS.map(group => ({
+    group,
+    templates: filtered.filter(template => template.group === group),
+  })).filter(section => section.templates.length > 0)
+
+  const areas = Array.from(new Set(templates.map(template => template.area)))
 
   return (
     <div className="page">
       <div className="page-header">
         <div className="flex-between">
           <div>
-            <h2 className="page-title">Recurring Templates</h2>
+            <h2 className="page-title">Task Templates</h2>
             <p className="page-subtitle">
-              Daily building blocks — one click to add to today's plan.
+              Reusable blocks for English output, AI/Cyber learning, project work, quiet review, and resets.
             </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => { setShowForm(!showForm); setEditingId(null) }}
-          >
-            <Plus size={14} />
-            New Template
-          </button>
         </div>
       </div>
 
@@ -468,40 +290,80 @@ export default function RecurringTemplates() {
         </div>
       )}
 
-      {showForm && !editingId && (
-        <TemplateForm onSave={addTemplate} onCancel={() => setShowForm(false)} />
-      )}
+      <section className="task-template-recommended">
+        <div className="plan-section-title">Recommended now</div>
+        <div className="quick-template-row">
+          {recommended.map(template => (
+            <button key={template.id} className="quick-template-chip" type="button" onClick={() => addToToday(template)}>
+              {template.title}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <div className="template-list">
-        {templates.map(t =>
-          editingId === t.id ? (
-            <TemplateForm
-              key={t.id}
-              initial={t}
-              onSave={data => updateTemplate(t.id, data)}
-              onCancel={() => setEditingId(null)}
-            />
-          ) : (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              isDefault={t.isDefault}
-              onAddToday={() => addToPlan(t)}
-              onEdit={() => { setEditingId(t.id); setShowForm(false) }}
-              onDuplicate={() => duplicateTemplate(t)}
-              onDelete={() => deleteTemplate(t.id)}
-            />
-          ),
-        )}
-      </div>
+      <section className="task-template-filters">
+        <label className="task-template-search">
+          <Search size={14} />
+          <input
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search templates"
+          />
+        </label>
+        <select value={groupFilter} onChange={event => setGroupFilter(event.target.value)}>
+          <option value={ALL}>All groups</option>
+          {TASK_TEMPLATE_GROUPS.map(group => <option key={group} value={group}>{group}</option>)}
+        </select>
+        <select value={areaFilter} onChange={event => setAreaFilter(event.target.value as TaskArea | typeof ALL)}>
+          <option value={ALL}>All areas</option>
+          {areas.map(area => <option key={area} value={area}>{area}</option>)}
+        </select>
+        <select value={energyFilter} onChange={event => setEnergyFilter(event.target.value as TaskEnergy | typeof ALL)}>
+          <option value={ALL}>All energy</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+        <select value={windowFilter} onChange={event => setWindowFilter(event.target.value as RecommendedWindow | typeof ALL)}>
+          <option value={ALL}>Any window</option>
+          <option value="daytime">Daytime</option>
+          <option value="evening">Evening</option>
+          <option value="any">Any</option>
+        </select>
+        <select value={durationFilter} onChange={event => setDurationFilter(event.target.value)}>
+          <option value={ALL}>Any duration</option>
+          <option value="short">15 min or less</option>
+          <option value="medium">16-45 min</option>
+          <option value="long">46+ min</option>
+        </select>
+      </section>
 
-      <div className="card mt-2" style={{ borderStyle: 'dashed' }}>
-        <p className="text-sm text-muted" style={{ lineHeight: 1.7 }}>
-          <strong style={{ color: 'var(--text-2)' }}>How to use:</strong> Click{' '}
-          <strong>Add to plan</strong> to push a template into your Task Inbox — it will appear
-          at the top with all settings filled in. The planner schedules up to 3 deep-focus
-          Pomodoro blocks per day (1 on low-energy days). Expand ↓ to see subtasks.
-        </p>
+      <div className="task-template-groups">
+        {grouped.map(section => {
+          const open = openGroups.has(section.group)
+          return (
+            <section key={section.group} className="task-template-group">
+              <button className="task-template-group-header" type="button" onClick={() => toggleGroup(section.group)}>
+                <span>{section.group}</span>
+                <small>{section.templates.length} template{section.templates.length === 1 ? '' : 's'}</small>
+                {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              {open && (
+                <div className="task-template-grid">
+                  {section.templates.map(template => (
+                    <TemplateCard
+                      key={template.id}
+                      template={template}
+                      onAddInbox={addToInbox}
+                      onAddToday={addToToday}
+                      onStart={startTemplate}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )
+        })}
       </div>
     </div>
   )

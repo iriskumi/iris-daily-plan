@@ -51,6 +51,8 @@ export type TaskMode = 'Focus' | 'Light' | 'Admin' | 'Recovery'
 export type TaskStatus = 'Inbox' | 'Planned' | 'Doing' | 'Done' | 'Skipped' | 'Archived'
 export type FocusBlockStatus = 'Doing' | 'Done' | 'Partial' | 'Skipped' | 'Changed'
 export type MealAnchorStatus = 'Followed' | 'Partial' | 'Skipped' | 'Changed' | ''
+export type RecommendedWindow = 'daytime' | 'evening' | 'any'
+export type OutputLevel = 'high' | 'medium' | 'mixed' | 'low'
 
 export interface DailyCheckin {
   date: string
@@ -261,6 +263,22 @@ export interface Template {
   createdAt: string
 }
 
+export interface TaskTemplate {
+  id: string
+  group: string
+  title: string
+  area: TaskArea
+  mode: TaskMode
+  energy: TaskEnergy
+  estimatedMinutes: number
+  recommendedWindow: RecommendedWindow
+  firstTinyAction: string
+  description: string
+  defaultBlockType: string
+  outputLevel: OutputLevel
+  tags: string[]
+}
+
 export type WorkOpportunityType =
   | 'full-time'
   | 'casual'
@@ -316,7 +334,7 @@ export interface TimeBlock {
   items: string[]
   baseBlockId?: string
   baseBlockName?: string
-  outputLevel?: 'high' | 'low'
+  outputLevel?: OutputLevel
   recommendedWindow?: 'daytime' | 'evening' | 'any'
   canBeMoved?: boolean
 }

@@ -76,11 +76,13 @@ export function energyFromMinutes(minutes: number): TaskEnergy {
   return 'High'
 }
 
-export function normalizedBlockMinutes(minutes?: number): 5 | 15 | 25 | 45 {
+export function normalizedBlockMinutes(minutes?: number): 5 | 15 | 25 | 45 | 60 | 90 {
   if (!minutes || minutes <= 5) return 5
   if (minutes <= 15) return 15
   if (minutes <= 25) return 25
-  return 45
+  if (minutes <= 45) return 45
+  if (minutes <= 60) return 60
+  return 90
 }
 
 export function tinyActionForArea(area: TaskArea): string {

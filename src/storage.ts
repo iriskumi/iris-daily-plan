@@ -17,6 +17,7 @@ import type {
   GeneratePlanContext,
   GoogleCalendarImportMeta,
   RankedCheckinTask,
+  TaskTemplate,
   Template,
 } from './types'
 import { getLocalDateKey } from './focus'
@@ -42,6 +43,7 @@ const KEYS = {
   legacyPlans: 'legacyPlans',
   rankedTasksByDate: 'rankedTasksByDate',
   templates: 'iris-templates',
+  taskTemplates: 'iris_task_templates',
   settings: 'iris-settings',
   calendarEvents: 'iris-calendar-events',
   googleCalendarMeta: 'iris-google-calendar-meta',
@@ -373,6 +375,8 @@ export const saveTimeBlockFollowUp = (followUp: TimeBlockFollowUp): void => {
 
 export const loadTemplates = (): Template[] => load<Template[]>(KEYS.templates) ?? []
 export const saveTemplates = (t: Template[]): void => save(KEYS.templates, t)
+export const loadTaskTemplates = (): TaskTemplate[] => load<TaskTemplate[]>(KEYS.taskTemplates) ?? []
+export const saveTaskTemplates = (t: TaskTemplate[]): void => save(KEYS.taskTemplates, t)
 
 export const loadCalendarEvents = (): CalendarEvent[] =>
   load<CalendarEvent[]>(KEYS.calendarEvents) ?? []
