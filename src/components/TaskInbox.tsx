@@ -22,6 +22,7 @@ import {
   tinyActionForArea,
   tinyActionForTask,
 } from '../focusBlocks'
+import { DURATION_GROUPS, isStandardDuration, longBlockHint } from '../durations'
 
 const CATEGORIES: { id: TaskCategory; label: string }[] = [
   { id: 'assessment', label: 'Assessment' },
@@ -159,18 +160,26 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
       <div className="form-row mt-1">
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Est. time (minutes)</label>
-          <div className="btn-group">
-            {[5, 15, 25, 45].map(minutes => (
-              <button
-                key={minutes}
-                type="button"
-                className={`btn-option ${form.estimatedMinutes === minutes ? 'selected' : ''}`}
-                onClick={() => f('estimatedMinutes', minutes as 5 | 15 | 25 | 45)}
-              >
-                {minutes}m
-              </button>
+          <select
+            value={form.estimatedMinutes}
+            onChange={event => f('estimatedMinutes', Number(event.target.value))}
+          >
+            {!isStandardDuration(form.estimatedMinutes) && (
+              <option value={form.estimatedMinutes}>{form.estimatedMinutes} min (custom / legacy)</option>
+            )}
+            {DURATION_GROUPS.map(group => (
+              <optgroup key={group.label} label={group.label}>
+                {group.values.map(minutes => (
+                  <option key={minutes} value={minutes}>{minutes} min</option>
+                ))}
+              </optgroup>
             ))}
-          </div>
+          </select>
+          {longBlockHint(form.estimatedMinutes) && (
+            <div className={`long-block-hint ${form.estimatedMinutes >= 150 ? 'strong' : ''}`}>
+              {longBlockHint(form.estimatedMinutes)}
+            </div>
+          )}
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Mode</label>
@@ -229,7 +238,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
               energy: form.energy ?? 'Medium',
               mode: form.mode ?? 'Focus',
               status: form.status ?? 'Inbox',
-              estimatedMinutes: form.estimatedMinutes as 5 | 15 | 25 | 45,
+              estimatedMinutes: form.estimatedMinutes,
               nextTinyAction: form.nextTinyAction?.trim() || suggestedTinyAction,
             })
           }}
@@ -267,7 +276,7 @@ export default function TaskInbox() {
       area: data.area ?? 'Other',
       energy: data.energy ?? 'Medium',
       mode: data.mode ?? 'Focus',
-      estimatedMinutes: data.estimatedMinutes as 5 | 15 | 25 | 45,
+      estimatedMinutes: data.estimatedMinutes,
       nextTinyAction: data.nextTinyAction,
     })
     task.status = data.status ?? 'Inbox'
@@ -288,7 +297,7 @@ export default function TaskInbox() {
         energy: data.energy ?? 'Medium',
         mode: data.mode ?? 'Focus',
         status: data.status ?? 'Inbox',
-        estimatedMinutes: data.estimatedMinutes as 5 | 15 | 25 | 45,
+        estimatedMinutes: data.estimatedMinutes,
         category: categoryFromArea(data.area ?? 'Other'),
         nextTinyAction,
         nextAction: nextTinyAction,
@@ -512,7 +521,7 @@ export default function TaskInbox() {
 
                       {timerOpen && task.pomodoroEnabled && isActiveTask(task) && (
                         <PomodoroTimer
-                          pomodoroLength={task.pomodoroLength ?? 50}
+                          pomodoroLength={task.pomodoroLength ?? task.estimatedMinutes ?? 50}
                           breakLength={task.breakLength ?? 10}
                           sessions={task.pomodoroSessions ?? 1}
                           taskId={task.id}

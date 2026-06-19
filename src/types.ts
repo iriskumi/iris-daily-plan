@@ -54,6 +54,22 @@ export type MealAnchorStatus = 'Followed' | 'Partial' | 'Skipped' | 'Changed' | 
 export type RecommendedWindow = 'daytime' | 'evening' | 'any'
 export type OutputLevel = 'high' | 'medium' | 'mixed' | 'low'
 
+export type DurationMinutes =
+  | 5
+  | 10
+  | 15
+  | 20
+  | 25
+  | 30
+  | 40
+  | 45
+  | 60
+  | 75
+  | 90
+  | 120
+  | 150
+  | 180
+
 export interface DailyCheckin {
   date: string
   dailyPlanBase?: DailyPlanBase
@@ -77,7 +93,7 @@ export interface RankedCheckinTask {
   taskId?: string
   title: string
   area: TaskArea
-  estimatedMinutes: 15 | 25 | 45 | 60
+  estimatedMinutes: number
   orderIndex: number
 }
 
@@ -195,7 +211,7 @@ export interface Task {
   status?: TaskStatus
   category: TaskCategory
   deadline?: string
-  estimatedMinutes: number | 5 | 15 | 25 | 45
+  estimatedMinutes: number
   difficulty: Difficulty
   urgency: Urgency
   importance: Importance

@@ -10,6 +10,7 @@ import type {
   TaskStatus,
 } from './types'
 import { localDateString } from './focus'
+import { DURATION_OPTIONS } from './durations'
 
 export const TASK_AREAS: TaskArea[] = [
   'Cyber',
@@ -28,12 +29,10 @@ export const TASK_ENERGIES: TaskEnergy[] = ['Low', 'Medium', 'High']
 export const TASK_MODES: TaskMode[] = ['Focus', 'Light', 'Admin', 'Recovery']
 export const TASK_STATUSES: TaskStatus[] = ['Inbox', 'Planned', 'Doing', 'Done', 'Skipped', 'Archived']
 export const ACTIVE_TASK_STATUSES: TaskStatus[] = ['Inbox', 'Planned']
-export const BLOCK_LENGTHS = [
-  { minutes: 5 as const, label: '5 min Start' },
-  { minutes: 15 as const, label: '15 min Light' },
-  { minutes: 25 as const, label: '25 min Focus' },
-  { minutes: 45 as const, label: '45 min Deep' },
-]
+export const BLOCK_LENGTHS = DURATION_OPTIONS.map(minutes => ({
+  minutes,
+  label: `${minutes} min`,
+}))
 
 export function areaFromCategory(category: TaskCategory): TaskArea {
   if (category === 'cyber-study' || category === 'assessment') return 'Cyber'
@@ -76,13 +75,9 @@ export function energyFromMinutes(minutes: number): TaskEnergy {
   return 'High'
 }
 
-export function normalizedBlockMinutes(minutes?: number): 5 | 15 | 25 | 45 | 60 | 90 {
-  if (!minutes || minutes <= 5) return 5
-  if (minutes <= 15) return 15
-  if (minutes <= 25) return 25
-  if (minutes <= 45) return 45
-  if (minutes <= 60) return 60
-  return 90
+export function normalizedBlockMinutes(minutes?: number): number {
+  if (!minutes || !Number.isFinite(minutes) || minutes <= 0) return 25
+  return Math.round(minutes)
 }
 
 export function tinyActionForArea(area: TaskArea): string {
@@ -186,7 +181,7 @@ export function createInboxTask(input: {
   area: TaskArea
   energy: TaskEnergy
   mode: TaskMode
-  estimatedMinutes: 5 | 15 | 25 | 45
+  estimatedMinutes: number
   nextTinyAction?: string
 }): Task {
   const now = new Date().toISOString()
@@ -242,7 +237,7 @@ export function pickTaskForBlock(
 }
 
 export function createFocusBlock(input: {
-  minutes: 5 | 15 | 25 | 45
+  minutes: number
   task: Task
   energy: TaskEnergy
 }): FocusBlock {

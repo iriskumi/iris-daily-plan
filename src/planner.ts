@@ -7,6 +7,7 @@ import type {
   GeneratedPlan,
   TimeBlock,
 } from './types'
+import { longBlockHint } from './durations'
 import { isActiveTask } from './focusBlocks'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
@@ -636,21 +637,24 @@ export function timeBlockGeneration(
   let cursor = morningEnd + 10
 
   focusTasks.slice(0, focusLimit).forEach(task => {
-    const slot = findNextSlot(cursor, 50, focusEnd, [...commitments, ...mealWindows, ...scheduledFocus])
+    const focusDuration = Math.max(5, task.estimatedMinutes || task.pomodoroLength || 50)
+    const slot = findNextSlot(cursor, focusDuration, focusEnd, [...commitments, ...mealWindows, ...scheduledFocus])
     if (slot === null) return
     const title = focusTitle(task)
-    blocks.push(blockFromWindow(slot, slot + 50, title, 'focus', [
-      formatTaskLine({ ...task, pomodoroEnabled: true, pomodoroLength: 50, breakLength: 10 }),
-      '50-minute Pomodoro - no multitasking',
+    const hint = longBlockHint(focusDuration)
+    blocks.push(blockFromWindow(slot, slot + focusDuration, title, 'focus', [
+      formatTaskLine({ ...task, pomodoroEnabled: true, pomodoroLength: focusDuration, breakLength: 10 }),
+      `${focusDuration}-minute focus block - no multitasking`,
+      ...(hint ? [hint] : []),
     ]))
-    scheduledFocus.push({ start: slot, end: slot + 60 })
-    const breakStart = slot + 50
+    scheduledFocus.push({ start: slot, end: slot + focusDuration + 10 })
+    const breakStart = slot + focusDuration
     if (breakStart + 10 <= dayEnd && !overlapsCommitment(breakStart, breakStart + 10, [...commitments, ...mealWindows])) {
       blocks.push(blockFromWindow(breakStart, breakStart + 10, 'Break', 'buffer', [
         'Stand up, water, quick reset',
       ]))
     }
-    cursor = slot + (energyLevel === 'low' ? 90 : 70)
+    cursor = slot + focusDuration + (energyLevel === 'low' ? 30 : 20)
   })
 
   const smallLifeTask = morningPriorityTasks(checkin).smallLifeTask

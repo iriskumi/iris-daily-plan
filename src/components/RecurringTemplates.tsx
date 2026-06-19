@@ -35,20 +35,17 @@ function getTaskTemplates(): TaskTemplate[] {
     saveTaskTemplates(DEFAULT_TASK_TEMPLATES)
     return DEFAULT_TASK_TEMPLATES
   }
-  const savedIds = new Set(saved.map(template => template.id))
+  const defaultIds = new Set(DEFAULT_TASK_TEMPLATES.map(template => template.id))
   const merged = [
-    ...DEFAULT_TASK_TEMPLATES.filter(template => !savedIds.has(template.id)),
-    ...saved,
+    ...DEFAULT_TASK_TEMPLATES,
+    ...saved.filter(template => !defaultIds.has(template.id)),
   ]
-  if (merged.length !== saved.length) saveTaskTemplates(merged)
+  if (JSON.stringify(merged) !== JSON.stringify(saved)) saveTaskTemplates(merged)
   return merged
 }
 
 function rankedEstimate(minutes: number): RankedCheckinTask['estimatedMinutes'] {
-  if (minutes <= 15) return 15
-  if (minutes <= 25) return 25
-  if (minutes <= 45) return 45
-  return 60
+  return minutes
 }
 
 function defaultCheckin(date: string): DailyCheckin {

@@ -3,6 +3,7 @@ import type { TaskCategory, FocusStats } from '../types'
 import { addFocusSession, loadFocusSessions } from '../storage'
 import { getFocusStats, localDateString } from '../focus'
 import FocusGarden from './FocusGarden'
+import { longBlockHint } from '../durations'
 
 type Phase = 'idle' | 'focus' | 'break' | 'session-done' | 'all-done'
 type CompanionState = 'idle' | 'focus' | 'break' | 'completed' | 'distracted'
@@ -306,6 +307,12 @@ export default function PomodoroTimer({
           {sessionsCompleted}/{sessions}
         </span>
       </div>
+
+      {longBlockHint(pomodoroLength) && (
+        <div className={`long-block-hint ${pomodoroLength >= 150 ? 'strong' : ''}`}>
+          {longBlockHint(pomodoroLength)}
+        </div>
+      )}
 
       <div className="pomo-stage">
         <FocusCompanion state={companionState} />

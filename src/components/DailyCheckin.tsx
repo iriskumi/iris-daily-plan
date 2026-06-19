@@ -19,6 +19,7 @@ import {
   isOldAssessmentTask,
   normalizeArea,
 } from '../focusBlocks'
+import { durationValuesWithLegacy, isStandardDuration } from '../durations'
 
 const DAY_TYPES: { id: DayType; emoji: string; label: string; commitments: string }[] = [
   { id: 'normal', emoji: '☀️', label: 'Normal Day', commitments: '' },
@@ -82,14 +83,12 @@ function defaultCheckin(): DailyCheckinType {
   }
 }
 
-const ESTIMATE_OPTIONS: Array<15 | 25 | 45 | 60> = [15, 25, 45, 60]
-
 function makeRankedRow(
   title: string,
   area: TaskArea,
   orderIndex: number,
   taskId?: string,
-  estimatedMinutes: 15 | 25 | 45 | 60 = 25,
+  estimatedMinutes = 25,
 ): RankedCheckinTask {
   return {
     id: taskId ?? crypto.randomUUID(),
@@ -120,13 +119,7 @@ function initialRankedTasks(saved?: RankedCheckinTask[]): RankedCheckinTask[] {
         normalizeArea(task.area),
         index,
         task.id,
-        task.estimatedMinutes >= 60
-          ? 60
-          : task.estimatedMinutes >= 45
-            ? 45
-            : task.estimatedMinutes >= 25
-              ? 25
-              : 15,
+        task.estimatedMinutes,
       ),
     )
   }
@@ -246,7 +239,7 @@ export default function DailyCheckin({
           area: normalizeArea(row.area),
           energy: row.estimatedMinutes <= 15 ? 'Low' : row.estimatedMinutes <= 25 ? 'Medium' : 'High',
           mode: row.area === 'Admin' ? 'Admin' : row.area === 'Life reset' ? 'Recovery' : 'Focus',
-          estimatedMinutes: row.estimatedMinutes === 60 ? 45 : row.estimatedMinutes as 15 | 25 | 45,
+          estimatedMinutes: row.estimatedMinutes,
         })
         return [row.id, {
           ...task,
@@ -476,14 +469,14 @@ export default function DailyCheckin({
                             value={task.estimatedMinutes}
                             onChange={event =>
                               updateRankedTask(task.id, {
-                                estimatedMinutes: Number(event.target.value) as 15 | 25 | 45 | 60,
+                                estimatedMinutes: Number(event.target.value),
                               })
                             }
                             aria-label={`Estimate for task ${index + 1}`}
                           >
-                            {ESTIMATE_OPTIONS.map(minutes => (
+                            {durationValuesWithLegacy(task.estimatedMinutes).map(minutes => (
                               <option key={minutes} value={minutes}>
-                                {minutes} min
+                                {minutes} min{isStandardDuration(minutes) ? '' : ' (custom / legacy)'}
                               </option>
                             ))}
                           </select>

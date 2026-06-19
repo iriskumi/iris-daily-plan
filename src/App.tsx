@@ -90,7 +90,6 @@ import Settings from './components/Settings'
 import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import {
-  BLOCK_LENGTHS,
   TASK_AREAS,
   TASK_ENERGIES,
   categoryFromArea,
@@ -104,6 +103,7 @@ import {
   normalizeArea,
   normalizeTask,
 } from './focusBlocks'
+import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
 import { DEFAULT_TASK_TEMPLATES, QUICK_TEMPLATE_IDS } from './taskTemplates'
 import './index.css'
 
@@ -294,10 +294,7 @@ function defaultGrowthCheckin(date: string): DailyCheckinType {
 }
 
 function rankedEstimate(minutes: number): RankedCheckinTask['estimatedMinutes'] {
-  if (minutes <= 15) return 15
-  if (minutes <= 25) return 25
-  if (minutes <= 45) return 45
-  return 60
+  return minutes
 }
 
 function taskFromTemplate(template: TaskTemplate): Task {
@@ -863,11 +860,7 @@ function TodayCommandCentre({
           taskId: suggestion.taskId,
           title: suggestion.taskTitle,
           area: normalizeArea(task?.area),
-          estimatedMinutes: task?.estimatedMinutes && task.estimatedMinutes >= 45
-            ? 45
-            : task?.estimatedMinutes && task.estimatedMinutes >= 25
-              ? 25
-              : 15,
+          estimatedMinutes: task?.estimatedMinutes ?? 15,
           orderIndex: existingRows.length + index,
         }
       })
@@ -1315,7 +1308,7 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
   const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
   const [blocks, setBlocks] = useState<FocusBlock[]>(() => loadFocusBlocksForDate(today))
   const [mealAnchors, setMealAnchors] = useState<MealAnchor[]>(() => loadMealAnchors(today))
-  const [blockMinutes, setBlockMinutes] = useState<5 | 15 | 25 | 45>(15)
+  const [blockMinutes, setBlockMinutes] = useState<number>(15)
   const [energy, setEnergy] = useState<TaskEnergy>('Medium')
   const [areaFilter, setAreaFilter] = useState<TaskArea | 'Any'>('Any')
   const [selectedTaskId, setSelectedTaskId] = useState('')
@@ -1418,7 +1411,7 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
       return
     }
     setSelectedTaskId(picked.id)
-    setBlockMinutes(picked.estimatedMinutes === 45 ? 45 : picked.estimatedMinutes === 25 ? 25 : picked.estimatedMinutes === 5 ? 5 : 15)
+    setBlockMinutes(picked.estimatedMinutes)
     setBlockMessage(`Picked: ${picked.title}`)
   }
 
@@ -1543,6 +1536,11 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
             <strong>{activeBlock.firstTinyAction}</strong>
           </div>
           <div className="current-block-timer">{formatCountdown(remainingSeconds)}</div>
+          {longBlockHint(activeBlock.minutes) && (
+            <div className={`long-block-hint ${activeBlock.minutes >= 150 ? 'strong' : ''}`}>
+              {longBlockHint(activeBlock.minutes)}
+            </div>
+          )}
           <div className="start-plan-actions">
             <button className="btn btn-secondary" type="button" onClick={regenerateActiveTinyAction}>
               <Sparkles size={14} />
@@ -1560,18 +1558,23 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
           <div className="focus-block-builder">
             <div className="start-now-control">
               <label>Block length</label>
-              <div className="start-now-options">
-                {BLOCK_LENGTHS.map(item => (
-                  <button
-                    key={item.minutes}
-                    className={`btn-option ${blockMinutes === item.minutes ? 'selected' : ''}`}
-                    type="button"
-                    onClick={() => setBlockMinutes(item.minutes)}
-                  >
-                    {item.label}
-                  </button>
+              <select value={blockMinutes} onChange={event => setBlockMinutes(Number(event.target.value))}>
+                {!isStandardDuration(blockMinutes) && (
+                  <option value={blockMinutes}>{blockMinutes} min (custom / legacy)</option>
+                )}
+                {DURATION_GROUPS.map(group => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.values.map(minutes => (
+                      <option key={minutes} value={minutes}>{minutes} min</option>
+                    ))}
+                  </optgroup>
                 ))}
-              </div>
+              </select>
+              {longBlockHint(blockMinutes) && (
+                <div className={`long-block-hint ${blockMinutes >= 150 ? 'strong' : ''}`}>
+                  {longBlockHint(blockMinutes)}
+                </div>
+              )}
             </div>
             <div className="start-now-control">
               <label>Current energy</label>

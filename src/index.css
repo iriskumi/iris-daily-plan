@@ -3552,6 +3552,24 @@ textarea {
   font: inherit;
 }
 
+.long-block-hint {
+  margin-top: 0.45rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #E8D9BF;
+  border-radius: 10px;
+  background: #FAF3E8;
+  color: #756044;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.long-block-hint.strong {
+  border-color: #D8BE8B;
+  background: #F8EDDA;
+  color: #684D2D;
+  font-weight: 500;
+}
+
 .focus-block-tiny-preview {
   margin: 0.45rem 0 0;
   padding: 0.65rem 0.75rem;
