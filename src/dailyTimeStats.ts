@@ -137,7 +137,7 @@ function usefulSummary(stats: DailyTimeStatistics): string {
     'Vibe Coding': stats.vibeCodingMinutes,
     Cyber: stats.cyberMinutes,
     AI: stats.aiMinutes,
-    'English Output': stats.englishOutputMinutes,
+    English: stats.englishOutputMinutes,
     'Expression Review': stats.expressionReviewMinutes,
     Job: stats.jobMinutes,
     Admin: stats.adminMinutes,
@@ -146,7 +146,7 @@ function usefulSummary(stats: DailyTimeStatistics): string {
     'None recorded': 0,
   }
   const parts = [`Main focus: ${stats.mainFocusArea} ${formatDuration(minutesByArea[stats.mainFocusArea] ?? 0)}.`]
-  if (stats.englishOutputMinutes > 0 && stats.mainFocusArea !== 'English Output') parts.push(`English output: ${formatDuration(stats.englishOutputMinutes)}.`)
+  if (stats.englishOutputMinutes > 0 && stats.mainFocusArea !== 'English') parts.push(`English output: ${formatDuration(stats.englishOutputMinutes)}.`)
   if (stats.recoveryMinutes > 0) parts.push(`Recovery: ${formatDuration(stats.recoveryMinutes)}.`)
   parts.push(`Completed ${stats.completedBlocks} blocks, partial ${stats.partialBlocks}.`)
   return parts.join(' ')
@@ -226,7 +226,7 @@ export function calculateDailyTimeStatistics({
 
   const productive: Array<[string, number]> = [
     ['Vibe Coding', stats.vibeCodingMinutes], ['Cyber', stats.cyberMinutes],
-    ['AI', stats.aiMinutes], ['English Output', stats.englishOutputMinutes],
+    ['AI', stats.aiMinutes], ['English', stats.englishOutputMinutes],
     ['Expression Review', stats.expressionReviewMinutes], ['Job', stats.jobMinutes],
     ['Admin', stats.adminMinutes], ['Study', stats.studyMinutes],
   ]

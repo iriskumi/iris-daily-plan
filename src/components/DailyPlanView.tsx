@@ -46,10 +46,18 @@ import {
   getCarryOverSuggestions,
   getRealityCheck,
 } from '../productivity'
-import { exportPlanToNotion } from '../services/notionService'
+import {
+  checkNotionSchema,
+  createMissingNotionProperties,
+  exportPlanToNotion,
+} from '../services/notionService'
 import { summarizeToday } from '../services/aiService'
 import FocusGarden from './FocusGarden'
 import { calculateDailyTimeStatistics } from '../dailyTimeStats'
+import {
+  NOTION_SCHEMA_MANUAL_INSTRUCTIONS,
+  type NotionSchemaCheckResult,
+} from '../notionSchema'
 
 const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
   morning: <Sun size={13} />,
@@ -273,6 +281,9 @@ export default function DailyPlanView({
   const [blockDraft, setBlockDraft] = useState<{ index: number; block: TimeBlock } | null>(null)
   const [editingPriorities, setEditingPriorities] = useState(false)
   const [blockActionMessage, setBlockActionMessage] = useState<string | null>(null)
+  const [notionSchema, setNotionSchema] = useState<NotionSchemaCheckResult | null>(null)
+  const [notionSchemaMessage, setNotionSchemaMessage] = useState<string | null>(null)
+  const [checkingNotionSchema, setCheckingNotionSchema] = useState(false)
   const [followUps, setFollowUps] = useState(() =>
     plan ? loadTimeBlockFollowUps(plan.date) : {},
   )
@@ -541,6 +552,16 @@ export default function DailyPlanView({
     setPushingNotion(false)
     setNotionStatus(result.message)
     setNotionUrl(result.data?.pageUrl ?? null)
+  }
+
+  async function handleNotionSchema(createMissing = false) {
+    setCheckingNotionSchema(true)
+    const result = createMissing
+      ? await createMissingNotionProperties()
+      : await checkNotionSchema()
+    setCheckingNotionSchema(false)
+    setNotionSchema(result.data)
+    setNotionSchemaMessage(result.message)
   }
 
   async function handleFinishDay() {
@@ -1125,7 +1146,38 @@ export default function DailyPlanView({
               <Zap size={14} />
               Re-generate
             </button>
+            <button className="btn btn-secondary" type="button" onClick={() => handleNotionSchema(false)} disabled={checkingNotionSchema}>
+              <Wrench size={14} />
+              {checkingNotionSchema ? 'Checking...' : 'Check Notion schema'}
+            </button>
           </div>
+          {notionSchemaMessage && (
+            <div className="notion-schema-status">
+              <strong>{notionSchemaMessage}</strong>
+              {notionSchema && (
+                <>
+                  <span>{notionSchema.existing.length} required properties ready</span>
+                  {notionSchema.missing.length > 0 && (
+                    <span>Missing: {notionSchema.missing.map(item => item.name).join(', ')}</span>
+                  )}
+                  {notionSchema.incompatible.length > 0 && (
+                    <span>Wrong type: {notionSchema.incompatible.map(item => `${item.name} (${item.actualType})`).join(', ')}</span>
+                  )}
+                  {notionSchema.missing.length > 0 && notionSchema.canCreateMissing && (
+                    <button className="btn btn-secondary" type="button" onClick={() => handleNotionSchema(true)} disabled={checkingNotionSchema}>
+                      Create missing properties
+                    </button>
+                  )}
+                  {(notionSchema.missing.length > 0 || notionSchema.incompatible.length > 0) && (
+                    <details>
+                      <summary>Manual setup instructions</summary>
+                      <pre>{NOTION_SCHEMA_MANUAL_INSTRUCTIONS}</pre>
+                    </details>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {notionStatus && (
             <div className="notion-status">
               {notionStatus}

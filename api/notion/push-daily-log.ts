@@ -255,7 +255,7 @@ function buildPageProperties(
   const add = (name: string, allowedTypes: string[], value: (type: string) => unknown) => {
     const property = schema[name]
     if (!property) {
-      console.warn(`[Notion Daily Log] Skipping missing property: ${name}`)
+      console.warn(`[Notion] Missing property skipped: ${name}`)
       return
     }
     if (!allowedTypes.includes(property.type)) {
@@ -295,7 +295,8 @@ function buildPageProperties(
     ['Skipped Blocks', timeStats.skippedBlocks],
   ]
   numberProperties.forEach(([name, value]) => add(name, ['number'], () => ({ number: value })))
-  add('Main Focus Area', ['rich_text', 'select'], richTextOrSelect(timeStats.mainFocusArea))
+  const mainFocusArea = timeStats.mainFocusArea === 'None recorded' ? 'Other' : timeStats.mainFocusArea
+  add('Main Focus Area', ['rich_text', 'select'], richTextOrSelect(mainFocusArea))
   add('Useful Output Summary', ['rich_text', 'select'], richTextOrSelect(timeStats.usefulOutputSummary))
   return properties
 }

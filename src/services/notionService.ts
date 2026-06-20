@@ -6,6 +6,7 @@ import type {
   NotionDailyLogPayload,
   NotionExportResult,
 } from '../types'
+import type { NotionSchemaCheckResult } from '../notionSchema'
 
 const notConnected = <T>(): IntegrationResult<T> => ({
   success: false,
@@ -45,3 +46,19 @@ export async function exportPlanToNotion(
 export async function testNotionConnection(): Promise<IntegrationResult<NotionExportResult>> {
   return notConnected<NotionExportResult>()
 }
+
+async function requestNotionSchema(method: 'GET' | 'POST'): Promise<IntegrationResult<NotionSchemaCheckResult>> {
+  try {
+    const response = await fetch('/api/notion/schema', { method })
+    return (await response.json()) as IntegrationResult<NotionSchemaCheckResult>
+  } catch {
+    return {
+      success: false,
+      message: 'Could not reach the Notion schema checker.',
+      data: null,
+    }
+  }
+}
+
+export const checkNotionSchema = () => requestNotionSchema('GET')
+export const createMissingNotionProperties = () => requestNotionSchema('POST')
