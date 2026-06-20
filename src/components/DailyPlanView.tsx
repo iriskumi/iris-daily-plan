@@ -49,6 +49,7 @@ import {
 import { exportPlanToNotion } from '../services/notionService'
 import { summarizeToday } from '../services/aiService'
 import FocusGarden from './FocusGarden'
+import { calculateDailyTimeStatistics } from '../dailyTimeStats'
 
 const PERIOD_ICONS: Record<TimeBlock['period'], React.ReactNode> = {
   morning: <Sun size={13} />,
@@ -534,6 +535,7 @@ export default function DailyPlanView({
         bills: loadBills(),
         markdown: markdownForCopy,
         followUps: Object.values(followUps),
+        focusBlocks: loadFocusBlocksForDate(plan.date),
       },
     )
     setPushingNotion(false)
@@ -581,6 +583,7 @@ export default function DailyPlanView({
           followUpsMarkdown(plan, followUps),
         ].filter(Boolean).join('\n\n'),
         followUps: Object.values(followUps),
+        focusBlocks: loadFocusBlocksForDate(plan.date),
       },
     )
     setFinishingDay(false)
@@ -660,6 +663,12 @@ export default function DailyPlanView({
   const realityCheck = getRealityCheck(plan)
   const morningPriorities = morningPriorityLines(plan.date)
   const isEveningMode = new Date().getHours() >= 17
+  const notionTimeStats = calculateDailyTimeStatistics({
+    plan,
+    focusBlocks: focusBlocksToday,
+    followUps: Object.values(followUps),
+    tasks: loadTasks(),
+  })
 
   return (
     <div className="page plan-page">
@@ -1089,6 +1098,15 @@ export default function DailyPlanView({
       <div className="plan-section">
         <div className="plan-section-title">Notion Daily Log</div>
         <div className="notion-export-card">
+          <div className="notion-time-preview" aria-label="Notion time statistics preview">
+            <div><span>Focus Minutes</span><strong>{notionTimeStats.focusMinutes}</strong></div>
+            <div><span>Vibe Coding</span><strong>{notionTimeStats.vibeCodingMinutes}</strong></div>
+            <div><span>Cyber</span><strong>{notionTimeStats.cyberMinutes}</strong></div>
+            <div><span>AI</span><strong>{notionTimeStats.aiMinutes}</strong></div>
+            <div><span>English Output</span><strong>{notionTimeStats.englishOutputMinutes}</strong></div>
+            <div><span>Recovery</span><strong>{notionTimeStats.recoveryMinutes}</strong></div>
+            <div className="notion-time-preview-main"><span>Main Focus Area</span><strong>{notionTimeStats.mainFocusArea}</strong></div>
+          </div>
           <pre className="notion-preview">{markdownForCopy}</pre>
           <div className="flex gap-sm">
             <button className="btn btn-primary" onClick={handleFinishDay} disabled={finishingDay}>

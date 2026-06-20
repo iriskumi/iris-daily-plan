@@ -26,10 +26,12 @@ import {
   loadCheckin,
   loadDailyLog,
   loadFocusSessions,
+  loadFocusBlocksForDate,
   loadGoogleCalendarMeta,
   loadOpportunities,
   loadPlan,
   loadTasks,
+  loadTimeBlockFollowUps,
   saveCalendarEvents,
   saveDailyLog,
   saveGoogleCalendarMeta,
@@ -216,6 +218,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
             opportunities: loadOpportunities(),
             bills: loadBills(),
             markdown: plan.notionMarkdown,
+            focusBlocks: loadFocusBlocksForDate(date),
+            followUps: Object.values(loadTimeBlockFollowUps(date)),
           },
         )
         setActiveMsg(
@@ -276,6 +280,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           opportunities: loadOpportunities(),
           bills: loadBills(),
           markdown: plan.notionMarkdown,
+          focusBlocks: loadFocusBlocksForDate(date),
+          followUps: Object.values(loadTimeBlockFollowUps(date)),
         },
       )
       setRunningAction(null)

@@ -1950,6 +1950,45 @@ textarea {
   padding: 1.1rem 1.25rem;
 }
 
+.notion-time-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.8rem;
+}
+
+.notion-time-preview > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.notion-time-preview span {
+  color: var(--section-label);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notion-time-preview strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.notion-time-preview .notion-time-preview-main { grid-column: span 3; }
+
+@media (max-width: 640px) {
+  .notion-time-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .notion-time-preview .notion-time-preview-main { grid-column: span 2; }
+}
+
 .notion-status {
   margin-top: 0.75rem;
   font-size: 0.9rem;

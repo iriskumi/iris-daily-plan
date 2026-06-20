@@ -9,6 +9,7 @@ import type {
   TimeBlock,
   WorkOpportunity,
 } from '../../src/types.js'
+import { calculateDailyTimeStatistics, type DailyTimeStatistics } from '../../src/dailyTimeStats.js'
 
 interface VercelRequest {
   method?: string
@@ -33,6 +34,15 @@ interface NotionBlock {
 interface NotionText {
   type: 'text'
   text: { content: string }
+}
+
+interface NotionDatabaseProperty {
+  type: string
+}
+
+interface NotionDatabaseResult {
+  properties?: Record<string, NotionDatabaseProperty>
+  message?: string
 }
 
 function sendJson(
@@ -95,6 +105,7 @@ function workLine(item: WorkOpportunity): string {
 }
 
 function timeBlockKey(blockItem: TimeBlock, index: number): string {
+  if (blockItem.id) return blockItem.id
   return [
     blockItem.startTime ?? 'no-start',
     blockItem.endTime ?? 'no-end',
@@ -139,7 +150,7 @@ function morningPriorityLines(payload: NotionDailyLogPayload): string[] {
   ].filter(Boolean)
 }
 
-function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
+function buildChildren(payload: NotionDailyLogPayload, timeStats: DailyTimeStatistics): NotionBlock[] {
   const { plan, dailyLog, focusStats } = payload
   const top3 = plan.top3.map((item, index) => `${index + 1}. ${item.task} -> ${item.nextAction}`)
   const schedule = plan.timeBlocks.map(blockItem => {
@@ -166,9 +177,26 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
     .slice(0, 12)
     .map(task => task.nextAction ? `${task.title} -> ${task.nextAction}` : task.title)
   const focusLines = [
-    `Today: ${focusStats.todaySessions} sessions / ${focusStats.todayMinutes} minutes`,
+    `Today: ${focusStats.todaySessions} sessions / ${timeStats.focusMinutes} counted minutes`,
     `This week: ${focusStats.weekSessions} sessions / ${focusStats.weekMinutes} minutes`,
   ]
+  const timeSummaryLines = [
+    `Focus: ${Number((timeStats.focusMinutes / 60).toFixed(1))}h`,
+    `Main focus: ${timeStats.mainFocusArea}`,
+    `Vibe Coding: ${timeStats.vibeCodingMinutes} min`,
+    `Cyber: ${timeStats.cyberMinutes} min`,
+    `AI: ${timeStats.aiMinutes} min`,
+    `English Output: ${timeStats.englishOutputMinutes} min`,
+    `Expression Review: ${timeStats.expressionReviewMinutes} min`,
+    `Job: ${timeStats.jobMinutes} min`,
+    `Admin: ${timeStats.adminMinutes} min`,
+    `Study: ${timeStats.studyMinutes} min`,
+    `Recovery: ${timeStats.recoveryMinutes} min`,
+  ]
+  const countedBlockLines = timeStats.blocks.map(item => {
+    const notes = item.notes ? ` | ${item.notes}` : ''
+    return `${item.time} | ${item.title} | ${item.area} | ${item.status} | ${item.countedMinutes} min counted${notes}`
+  })
   const dayType = payload.checkin?.dayType ?? 'Not recorded'
   const energy = payload.checkin?.energyLevel ?? (dailyLog.energyAfterDoing || 'Not recorded')
   const morningPriorities = morningPriorityLines(payload)
@@ -178,7 +206,7 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
     block('paragraph', `Date: ${plan.date}`),
     block('paragraph', `Day Type: ${dayType}`),
     block('paragraph', `Energy: ${energy}`),
-    block('paragraph', `Focus Minutes: ${focusStats.todayMinutes}`),
+    block('paragraph', `Focus Minutes: ${timeStats.focusMinutes}`),
     block('paragraph', `Planner source: ${planSource(payload)}`),
     block('heading_3', 'Morning 1+2+1 Priorities'),
     ...bullets(morningPriorities),
@@ -194,6 +222,10 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
     ...splitParagraphs(plan.theme),
     block('heading_3', 'Time block follow-up table'),
     ...bullets(followUpLines),
+    block('heading_2', 'Time Summary'),
+    ...bullets(timeSummaryLines),
+    block('heading_2', 'Blocks'),
+    ...bullets(countedBlockLines),
     block('heading_3', 'Hour-by-hour schedule'),
     ...bullets(schedule),
     block('heading_3', 'Notes'),
@@ -211,6 +243,61 @@ function buildChildren(payload: NotionDailyLogPayload): NotionBlock[] {
     block('heading_3', 'Unfinished task snapshot'),
     ...bullets(unfinished),
   ].slice(0, 95)
+}
+
+function buildPageProperties(
+  schema: Record<string, NotionDatabaseProperty>,
+  payload: NotionDailyLogPayload,
+  timeStats: DailyTimeStatistics,
+  title: string,
+): Record<string, unknown> {
+  const properties: Record<string, unknown> = {}
+  const add = (name: string, allowedTypes: string[], value: (type: string) => unknown) => {
+    const property = schema[name]
+    if (!property) {
+      console.warn(`[Notion Daily Log] Skipping missing property: ${name}`)
+      return
+    }
+    if (!allowedTypes.includes(property.type)) {
+      console.warn(`[Notion Daily Log] Skipping ${name}; expected ${allowedTypes.join(' or ')}, found ${property.type}`)
+      return
+    }
+    properties[name] = value(property.type)
+  }
+  const richTextOrSelect = (content: string) => (type: string) => type === 'select'
+    ? { select: { name: content.slice(0, 100) } }
+    : { rich_text: text(content) }
+
+  const titleProperty = schema.Name?.type === 'title'
+    ? 'Name'
+    : Object.entries(schema).find(([, property]) => property.type === 'title')?.[0]
+  if (titleProperty) properties[titleProperty] = { title: text(title) }
+  else console.warn('[Notion Daily Log] No title property found in database.')
+
+  add('Date', ['date'], () => ({ date: { start: payload.plan.date } }))
+  add('Summary', ['rich_text'], () => ({ rich_text: text(payload.dailyLog.eveningSummary || payload.dailyLog.actualDone || '-') }))
+  add('Planner Source', ['rich_text', 'select'], richTextOrSelect(planSource(payload)))
+  add('Carry Over', ['rich_text'], () => ({ rich_text: text(payload.dailyLog.carryOverToTomorrow || '-') }))
+
+  const numberProperties: Array<[string, number]> = [
+    ['Focus Minutes', timeStats.focusMinutes],
+    ['Vibe Coding Minutes', timeStats.vibeCodingMinutes],
+    ['Cyber Minutes', timeStats.cyberMinutes],
+    ['AI Minutes', timeStats.aiMinutes],
+    ['English Output Minutes', timeStats.englishOutputMinutes],
+    ['Expression Review Minutes', timeStats.expressionReviewMinutes],
+    ['Job Minutes', timeStats.jobMinutes],
+    ['Admin Minutes', timeStats.adminMinutes],
+    ['Study Minutes', timeStats.studyMinutes],
+    ['Recovery Minutes', timeStats.recoveryMinutes],
+    ['Completed Blocks', timeStats.completedBlocks],
+    ['Partial Blocks', timeStats.partialBlocks],
+    ['Skipped Blocks', timeStats.skippedBlocks],
+  ]
+  numberProperties.forEach(([name, value]) => add(name, ['number'], () => ({ number: value })))
+  add('Main Focus Area', ['rich_text', 'select'], richTextOrSelect(timeStats.mainFocusArea))
+  add('Useful Output Summary', ['rich_text', 'select'], richTextOrSelect(timeStats.usefulOutputSummary))
+  return properties
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -244,24 +331,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const title = `Daily Log - ${payload.plan.date}`
+  const timeStats = calculateDailyTimeStatistics({
+    plan: payload.plan,
+    focusBlocks: payload.focusBlocks,
+    followUps: payload.followUps,
+    tasks: payload.tasks,
+  })
+  const notionHeaders = {
+    Authorization: `Bearer ${notionKey}`,
+    'Content-Type': 'application/json',
+    'Notion-Version': '2022-06-28',
+  }
+  const databaseResponse = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
+    method: 'GET',
+    headers: notionHeaders,
+  })
+  const database = (await databaseResponse.json()) as NotionDatabaseResult
+  if (!databaseResponse.ok || !database.properties) {
+    sendJson(res, {
+      success: false,
+      message: database.message || 'Could not inspect the Notion Daily Logs database properties.',
+      data: null,
+    }, databaseResponse.status)
+    return
+  }
   const response = await fetch('https://api.notion.com/v1/pages', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      'Content-Type': 'application/json',
-      'Notion-Version': '2022-06-28',
-    },
+    headers: notionHeaders,
     body: JSON.stringify({
       parent: { database_id: databaseId },
-      properties: {
-        Name: {
-          title: [{ text: { content: title } }],
-        },
-        Date: {
-          date: { start: payload.plan.date },
-        },
-      },
-      children: buildChildren(payload),
+      properties: buildPageProperties(database.properties, payload, timeStats, title),
+      children: buildChildren(payload, timeStats),
     }),
   })
 

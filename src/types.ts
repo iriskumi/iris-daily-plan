@@ -366,12 +366,13 @@ export interface TimeBlock {
     | 'review'
     | 'planning'
   items: string[]
+  area?: TaskArea
   bullets?: string[]
   details?: string
   location?: string
   source?: 'generated' | 'calendar' | 'task' | 'manual' | 'template'
   taskId?: string
-  status?: 'Planned' | 'Followed' | 'Partial' | 'Skipped' | 'Changed'
+  status?: 'Planned' | 'Done' | 'Followed' | 'Partial' | 'Skipped' | 'Changed'
   notes?: string
   manualEdited?: boolean
   createdAt?: string
@@ -485,6 +486,7 @@ export interface NotionDailyLogPayload {
   plan: GeneratedPlan
   dailyLog: DailyLog
   focusStats: FocusStats
+  focusBlocks?: FocusBlock[]
   followUps?: TimeBlockFollowUp[]
   checkin?: DailyCheckin | null
   tasks: Task[]
