@@ -19,6 +19,7 @@ import type {
   RankedCheckinTask,
   TaskTemplate,
   Template,
+  TimeBlock,
 } from './types'
 import { getLocalDateKey } from './focus'
 import {
@@ -137,7 +138,42 @@ export const loadCheckinsByDate = (): Record<string, DailyCheckin> => {
 
 export const loadPlansByDate = (): Record<string, GeneratedPlan> => {
   migrateDailyStorage()
-  return load<Record<string, GeneratedPlan>>(KEYS.plansByDate) ?? {}
+  const stored = load<Record<string, GeneratedPlan>>(KEYS.plansByDate) ?? {}
+  const normalized = Object.fromEntries(
+    Object.entries(stored).map(([date, plan]) => [date, normalizeGeneratedPlan(plan, date)]),
+  )
+  if (JSON.stringify(stored) !== JSON.stringify(normalized)) save(KEYS.plansByDate, normalized)
+  return normalized
+}
+
+function blockId(date: string, block: TimeBlock, index: number): string {
+  const identity = [date, block.startTime, block.endTime, block.title ?? block.label, index]
+    .filter(Boolean)
+    .join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+  return `block-${identity || index}`
+}
+
+function normalizeGeneratedPlan(plan: GeneratedPlan, fallbackDate: string): GeneratedPlan {
+  const date = plan.date || fallbackDate
+  const generatedAt = plan.generatedAt || new Date().toISOString()
+  return {
+    ...plan,
+    date,
+    timeBlocks: plan.timeBlocks.map((block, index) => ({
+      ...block,
+      id: block.id || blockId(date, block, index),
+      date,
+      items: block.items ?? block.bullets ?? [],
+      bullets: block.bullets ?? block.items ?? [],
+      source: block.source ?? 'generated',
+      status: block.status ?? 'Planned',
+      createdAt: block.createdAt ?? generatedAt,
+      updatedAt: block.updatedAt ?? generatedAt,
+    })),
+  }
 }
 
 export const loadRankedTasksByDate = (): Record<string, RankedCheckinTask[]> => {
@@ -193,9 +229,10 @@ export const loadPlan = (date = getLocalDateKey()): GeneratedPlan | null =>
   loadPlansByDate()[date] ?? null
 export const savePlan = (p: GeneratedPlan): void => {
   const date = p.date || getLocalDateKey()
+  const normalized = normalizeGeneratedPlan({ ...p, date }, date)
   save(KEYS.plansByDate, {
     ...loadPlansByDate(),
-    [date]: { ...p, date },
+    [date]: normalized,
   })
 }
 

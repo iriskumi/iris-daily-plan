@@ -346,6 +346,57 @@ function focusBlockFromTemplate(template: TaskTemplate, task: Task): FocusBlock 
   }
 }
 
+type ManualEditStrategy = 'keep' | 'overwrite' | 'rebuild-unstarted'
+
+function hasManualPlanEdits(plan: GeneratedPlan | null): boolean {
+  return Boolean(plan?.prioritiesManualEdited || plan?.timeBlocks.some(block =>
+    block.manualEdited || block.status && block.status !== 'Planned',
+  ))
+}
+
+function askManualEditStrategy(): ManualEditStrategy {
+  const answer = window.prompt(
+    'This plan contains manual edits. Type KEEP to keep it, OVERWRITE to replace it, or UNSTARTED to rebuild only empty/unstarted blocks.',
+    'KEEP',
+  )?.trim().toUpperCase()
+  if (answer === 'OVERWRITE') return 'overwrite'
+  if (answer === 'UNSTARTED') return 'rebuild-unstarted'
+  return 'keep'
+}
+
+function mergeProtectedPlan(existing: GeneratedPlan, generated: GeneratedPlan): GeneratedPlan {
+  const protectedBlocks = existing.timeBlocks.filter(block => block.manualEdited || block.status && block.status !== 'Planned')
+  const replacementBlocks = [...generated.timeBlocks]
+  const usedIndexes = new Set<number>()
+  protectedBlocks.forEach(block => {
+    let matchIndex = replacementBlocks.findIndex((candidate, index) =>
+      !usedIndexes.has(index) && Boolean(
+        (block.taskId && candidate.taskId === block.taskId) ||
+        (block.baseBlockId && candidate.baseBlockId === block.baseBlockId) ||
+        (block.id && candidate.id === block.id),
+      ),
+    )
+    if (matchIndex < 0) {
+      const originalIndex = existing.timeBlocks.findIndex(candidate => candidate.id === block.id)
+      matchIndex = originalIndex < replacementBlocks.length ? originalIndex : -1
+    }
+    if (matchIndex >= 0) {
+      replacementBlocks[matchIndex] = block
+      usedIndexes.add(matchIndex)
+    } else {
+      replacementBlocks.push(block)
+    }
+  })
+  return {
+    ...generated,
+    top3: existing.prioritiesManualEdited ? existing.top3 : generated.top3,
+    prioritiesManualEdited: existing.prioritiesManualEdited,
+    timeBlocks: replacementBlocks.sort((a, b) =>
+      (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99'),
+    ),
+  }
+}
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [taskView, setTaskView] = useState<TaskView>('tasks')
@@ -382,6 +433,16 @@ export default function App() {
       setGenerationMessage(message)
       setGeneratingPlan(false)
       return { success: false, message }
+    }
+    const existingPlan = loadPlan(context.checkin.date)
+    const editStrategy = hasManualPlanEdits(existingPlan) ? askManualEditStrategy() : 'overwrite'
+    if (editStrategy === 'keep' && existingPlan) {
+      const message = 'Kept your manually edited plan. Choose OVERWRITE or UNSTARTED when you want to rebuild it.'
+      setPlan(existingPlan)
+      setGenerationMessage(message)
+      setGeneratingPlan(false)
+      if (!options.stayOnTab) setTab('plan')
+      return { success: true, message, plan: existingPlan }
     }
     console.log('[DailyPlan] active tasks used:', context.tasks)
     console.log('[DailyPlan] ranked tasks used:', context.checkin.rankedTasks ?? [])
@@ -424,19 +485,22 @@ export default function App() {
             aiUsed: false,
             fallbackReason: aiResult.fallbackReason || aiResult.message,
           }
-      const fallbackReason = generated.fallbackReason || aiResult.fallbackReason
-      console.log('[DailyPlan] generated blocks:', generated.timeBlocks)
+      const finalPlan = editStrategy === 'rebuild-unstarted' && existingPlan
+        ? mergeProtectedPlan(existingPlan, generated)
+        : generated
+      const fallbackReason = finalPlan.fallbackReason || aiResult.fallbackReason
+      console.log('[DailyPlan] generated blocks:', finalPlan.timeBlocks)
       const message = fallbackReason
         ? `Plan generated with local fallback. ${fallbackReason}`
         : 'Plan generated successfully.'
-      savePlan(generated)
-      setPlan(generated)
+      savePlan(finalPlan)
+      setPlan(finalPlan)
       setGenerationMessage(message)
       if (!options.stayOnTab) setTab('plan')
       return {
         success: true,
         message,
-        plan: generated,
+        plan: finalPlan,
         fallbackReason,
       }
     } catch (error) {
@@ -679,6 +743,10 @@ export default function App() {
             onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
             onGoToCheckin={() => goToTab('today')}
             onReducePlan={handleLowEnergyMode}
+            onPlanChange={updatedPlan => {
+              savePlan(updatedPlan)
+              setPlan(updatedPlan)
+            }}
           />
         )}
         {tab === 'tasks' && (

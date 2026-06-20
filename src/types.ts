@@ -341,13 +341,40 @@ export interface Bill {
 }
 
 export interface TimeBlock {
+  id?: string
+  date?: string
   period: 'morning' | 'afternoon' | 'evening' | 'recovery' | 'shutdown'
   label: string
   startTime?: string
   endTime?: string
   title?: string
-  type?: 'focus' | 'class' | 'work' | 'admin' | 'recovery' | 'meal' | 'buffer' | 'shutdown'
+  type?:
+    | 'focus'
+    | 'class'
+    | 'work'
+    | 'admin'
+    | 'recovery'
+    | 'meal'
+    | 'buffer'
+    | 'shutdown'
+    | 'reset'
+    | 'light'
+    | 'break'
+    | 'project'
+    | 'output'
+    | 'input'
+    | 'review'
+    | 'planning'
   items: string[]
+  bullets?: string[]
+  location?: string
+  source?: 'generated' | 'calendar' | 'task' | 'manual' | 'template'
+  taskId?: string
+  status?: 'Planned' | 'Followed' | 'Partial' | 'Skipped' | 'Changed'
+  notes?: string
+  manualEdited?: boolean
+  createdAt?: string
+  updatedAt?: string
   baseBlockId?: string
   baseBlockName?: string
   outputLevel?: OutputLevel
@@ -374,6 +401,7 @@ export interface GeneratedPlan {
   provider?: PlanProvider
   aiUsed?: boolean
   fallbackReason?: string
+  prioritiesManualEdited?: boolean
 }
 
 export interface GeneratePlanOutcome {

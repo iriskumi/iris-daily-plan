@@ -14,6 +14,14 @@ import {
   XCircle,
   Shield,
   BookOpen,
+  Pencil,
+  CopyPlus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Plus,
+  Play,
+  Wrench,
 } from 'lucide-react'
 import type { DailyLog, GeneratedPlan, TimeBlock, TimeBlockFollowUp } from '../types'
 import {
@@ -28,6 +36,7 @@ import {
   loadTasks,
   loadTimeBlockFollowUps,
   saveDailyLog,
+  saveFocusBlock,
   saveTasks,
   saveTimeBlockFollowUp,
 } from '../storage'
@@ -59,6 +68,7 @@ function getTimeBlockRange(block: TimeBlock): string | null {
 }
 
 function getTimeBlockKey(block: TimeBlock, index: number): string {
+  if (block.id) return block.id
   return [
     block.startTime ?? 'no-start',
     block.endTime ?? 'no-end',
@@ -67,6 +77,46 @@ function getTimeBlockKey(block: TimeBlock, index: number): string {
     block.title ?? block.label,
     index,
   ].join('|')
+}
+
+const BLOCK_TYPES: NonNullable<TimeBlock['type']>[] = [
+  'meal', 'reset', 'focus', 'light', 'admin', 'class', 'break', 'recovery',
+  'buffer', 'project', 'output', 'input', 'review', 'planning',
+]
+
+function minutesFromTime(value?: string): number | null {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) return null
+  const [hours, minutes] = value.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+function formatMinutes(value: number): string {
+  const wrapped = ((value % 1440) + 1440) % 1440
+  return `${String(Math.floor(wrapped / 60)).padStart(2, '0')}:${String(wrapped % 60).padStart(2, '0')}`
+}
+
+function periodFromTime(value?: string): TimeBlock['period'] {
+  const minutes = minutesFromTime(value)
+  if (minutes === null || minutes < 12 * 60) return 'morning'
+  if (minutes < 17 * 60) return 'afternoon'
+  return 'evening'
+}
+
+function blockWarnings(block: TimeBlock, blocks: TimeBlock[]): string[] {
+  const start = minutesFromTime(block.startTime)
+  const end = minutesFromTime(block.endTime)
+  const warnings: string[] = []
+  if (start !== null && end !== null && end <= start) warnings.push('End time is before the start time.')
+  if (start !== null && end !== null && end > start) {
+    const overlaps = blocks.some(other => {
+      if (other.id === block.id) return false
+      const otherStart = minutesFromTime(other.startTime)
+      const otherEnd = minutesFromTime(other.endTime)
+      return otherStart !== null && otherEnd !== null && otherEnd > otherStart && start < otherEnd && end > otherStart
+    })
+    if (overlaps) warnings.push('This block overlaps another block.')
+  }
+  return warnings
 }
 
 const FOLLOW_UP_OPTIONS = [
@@ -201,6 +251,7 @@ interface Props {
   onRegenerate: (feedback: string) => void
   onGoToCheckin: () => void
   onReducePlan: () => void
+  onPlanChange: (plan: GeneratedPlan) => void
 }
 
 export default function DailyPlanView({
@@ -209,6 +260,7 @@ export default function DailyPlanView({
   onRegenerate,
   onGoToCheckin,
   onReducePlan,
+  onPlanChange,
 }: Props) {
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState('')
@@ -216,6 +268,9 @@ export default function DailyPlanView({
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
   const [pushingNotion, setPushingNotion] = useState(false)
   const [finishingDay, setFinishingDay] = useState(false)
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
+  const [editingPriorities, setEditingPriorities] = useState(false)
+  const [blockActionMessage, setBlockActionMessage] = useState<string | null>(null)
   const [followUps, setFollowUps] = useState(() =>
     plan ? loadTimeBlockFollowUps(plan.date) : {},
   )
@@ -284,6 +339,146 @@ export default function DailyPlanView({
     }
     setFollowUps(prev => ({ ...prev, [blockKey]: next }))
     saveTimeBlockFollowUp(next)
+    const followUpStatus = patch.status
+    if (followUpStatus) {
+      const statusByFollowUp: Record<Exclude<TimeBlockFollowUp['status'], ''>, NonNullable<TimeBlock['status']>> = {
+        followed: 'Followed', partial: 'Partial', skipped: 'Skipped', changed: 'Changed',
+      }
+      persistPlan({
+        ...plan,
+        timeBlocks: plan.timeBlocks.map(item => item.id === block.id
+          ? { ...item, status: statusByFollowUp[followUpStatus], updatedAt: new Date().toISOString() }
+          : item),
+      })
+    }
+  }
+
+  function persistPlan(next: GeneratedPlan) {
+    onPlanChange(next)
+  }
+
+  function updateBlock(id: string, patch: Partial<TimeBlock>) {
+    if (!plan) return
+    const now = new Date().toISOString()
+    persistPlan({
+      ...plan,
+      timeBlocks: plan.timeBlocks.map(block => {
+        if (block.id !== id) return block
+        const next = { ...block, ...patch }
+        const items = patch.items ?? patch.bullets ?? next.items
+        return {
+          ...next,
+          period: patch.startTime ? periodFromTime(patch.startTime) : next.period,
+          label: next.startTime && next.endTime ? `${next.startTime}-${next.endTime}` : next.label,
+          items,
+          bullets: items,
+          manualEdited: true,
+          updatedAt: now,
+        }
+      }),
+    })
+  }
+
+  function insertBlock(index: number, block: TimeBlock) {
+    if (!plan) return
+    const next = [...plan.timeBlocks]
+    next.splice(index, 0, block)
+    persistPlan({ ...plan, timeBlocks: next })
+  }
+
+  function duplicateBlock(index: number) {
+    if (!plan) return
+    const source = plan.timeBlocks[index]
+    const now = new Date().toISOString()
+    insertBlock(index + 1, {
+      ...source,
+      id: crypto.randomUUID(),
+      title: `${getTimeBlockTitle(source)} copy`,
+      source: 'manual',
+      manualEdited: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
+
+  function addBlockAfter(index: number) {
+    if (!plan) return
+    const previous = plan.timeBlocks[index]
+    const startTime = previous.endTime ?? previous.startTime ?? '09:00'
+    const start = minutesFromTime(startTime) ?? 9 * 60
+    const now = new Date().toISOString()
+    const block: TimeBlock = {
+      id: crypto.randomUUID(), date: plan.date, period: periodFromTime(startTime),
+      label: `${startTime}-${formatMinutes(start + 25)}`, startTime,
+      endTime: formatMinutes(start + 25), title: 'New block', type: 'focus',
+      items: [], bullets: [], source: 'manual', status: 'Planned', notes: '',
+      manualEdited: true, createdAt: now, updatedAt: now,
+    }
+    insertBlock(index + 1, block)
+    setEditingBlockId(block.id ?? null)
+  }
+
+  function deleteBlock(index: number) {
+    if (!plan || !window.confirm('Delete this time block?')) return
+    persistPlan({ ...plan, timeBlocks: plan.timeBlocks.filter((_, itemIndex) => itemIndex !== index) })
+  }
+
+  function moveBlock(index: number, direction: -1 | 1) {
+    if (!plan) return
+    const target = index + direction
+    if (target < 0 || target >= plan.timeBlocks.length) return
+    const blocks = [...plan.timeBlocks]
+    ;[blocks[index], blocks[target]] = [blocks[target], blocks[index]]
+    persistPlan({ ...plan, timeBlocks: blocks })
+  }
+
+  function startBlockAsFocus(block: TimeBlock) {
+    if (!plan) return
+    const start = new Date()
+    const duration = Math.max(5, (minutesFromTime(block.endTime) ?? 0) - (minutesFromTime(block.startTime) ?? -25))
+    saveFocusBlock({
+      id: crypto.randomUUID(), date: plan.date, startTime: start.toISOString(),
+      plannedEndTime: new Date(start.getTime() + duration * 60000).toISOString(),
+      minutes: duration, taskId: block.taskId ?? block.id ?? crypto.randomUUID(),
+      taskTitle: getTimeBlockTitle(block), area: block.type === 'project' ? 'Vibe Coding' : block.type === 'admin' ? 'Admin' : 'Study',
+      mode: block.type === 'admin' ? 'Admin' : block.type === 'recovery' ? 'Recovery' : block.type === 'light' ? 'Light' : 'Focus',
+      energy: duration >= 60 ? 'High' : duration >= 25 ? 'Medium' : 'Low',
+      firstTinyAction: block.items[0] ?? `Begin ${getTimeBlockTitle(block)}`,
+      status: 'Doing', notes: block.notes ?? '', createdAt: start.toISOString(), updatedAt: start.toISOString(),
+    })
+    setBlockActionMessage(`Focus block started: ${getTimeBlockTitle(block)}`)
+  }
+
+  function updatePriority(index: number, patch: Partial<GeneratedPlan['top3'][number]>) {
+    if (!plan) return
+    persistPlan({
+      ...plan,
+      top3: plan.top3.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item),
+      prioritiesManualEdited: true,
+    })
+  }
+
+  function movePriority(index: number, direction: -1 | 1) {
+    if (!plan) return
+    const target = index + direction
+    if (target < 0 || target >= plan.top3.length) return
+    const top3 = [...plan.top3]
+    ;[top3[index], top3[target]] = [top3[target], top3[index]]
+    persistPlan({ ...plan, top3, prioritiesManualEdited: true })
+  }
+
+  function fixObviousTimes() {
+    if (!plan || !window.confirm('Move non-sleep blocks between 00:00 and 05:00 forward by 12 hours?')) return
+    const now = new Date().toISOString()
+    persistPlan({
+      ...plan,
+      timeBlocks: plan.timeBlocks.map(block => {
+        const start = minutesFromTime(block.startTime)
+        const end = minutesFromTime(block.endTime)
+        if (start === null || start >= 300 || block.type === 'recovery') return block
+        return { ...block, startTime: formatMinutes(start + 720), endTime: end === null ? block.endTime : formatMinutes(end + 720), period: periodFromTime(formatMinutes(start + 720)), manualEdited: true, updatedAt: now }
+      }),
+    })
   }
 
   function handleRegenerate() {
@@ -520,16 +715,35 @@ export default function DailyPlanView({
       {/* Top 3 Priorities */}
       {plan.top3.length > 0 && (
         <div className="plan-section">
-          <div className="plan-section-title">
-            <Shield size={12} />
-            Top {plan.top3.length} Priorities
+          <div className="plan-section-heading-row">
+            <div className="plan-section-title">
+              <Shield size={12} />
+              Top {plan.top3.length} Priorities
+            </div>
+            <button className="plan-text-action" onClick={() => setEditingPriorities(value => !value)}>
+              <Pencil size={13} /> {editingPriorities ? 'Done' : 'Edit'}
+            </button>
           </div>
           <div className="top3-list">
             {plan.top3.map((item, i) => (
               <div key={i} className="top3-item">
                 <div className="top3-num">priority {i + 1}</div>
-                <div className="top3-task">{item.task}</div>
-                <div className="top3-action">{item.nextAction}</div>
+                {editingPriorities ? (
+                  <div className="priority-edit-form">
+                    <input aria-label={`Priority ${i + 1} title`} value={item.task} onChange={event => updatePriority(i, { task: event.target.value })} />
+                    <textarea aria-label={`Priority ${i + 1} next action`} value={item.nextAction} onChange={event => updatePriority(i, { nextAction: event.target.value })} />
+                    <div className="plan-inline-actions">
+                      <button onClick={() => movePriority(i, -1)} disabled={i === 0} aria-label="Move priority up"><ArrowUp size={14} /></button>
+                      <button onClick={() => movePriority(i, 1)} disabled={i === plan.top3.length - 1} aria-label="Move priority down"><ArrowDown size={14} /></button>
+                      <button onClick={() => persistPlan({ ...plan, top3: plan.top3.filter((_, index) => index !== i), prioritiesManualEdited: true })}><Trash2 size={14} /> Remove</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="top3-task">{item.task}</div>
+                    <div className="top3-action">{item.nextAction}</div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -538,12 +752,23 @@ export default function DailyPlanView({
 
       {/* Time Blocks */}
       <div className="plan-section">
-        <div className="plan-section-title">
-          <Sun size={12} />
-          Time Blocks
+        <div className="plan-section-heading-row">
+          <div className="plan-section-title">
+            <Sun size={12} />
+            Time Blocks
+          </div>
+          {plan.timeBlocks.some(block => {
+            const start = minutesFromTime(block.startTime)
+            return start !== null && start < 300 && block.type !== 'recovery'
+          }) && (
+            <button className="plan-text-action" onClick={fixObviousTimes}><Wrench size={13} /> Fix obvious times</button>
+          )}
         </div>
+        {blockActionMessage && <div className="plan-action-message">{blockActionMessage}</div>}
         {plan.timeBlocks.map((block, i) => {
           const blockKey = getTimeBlockKey(block, i)
+          const isEditing = editingBlockId === block.id
+          const warnings = blockWarnings(block, plan.timeBlocks)
           const outputHeavyEvening =
             block.outputLevel === 'high' &&
             Boolean(block.startTime && block.startTime >= '17:00')
@@ -555,7 +780,7 @@ export default function DailyPlanView({
             updatedAt: '',
           }
           return (
-          <div key={i} className={`time-block time-block-${block.type ?? 'default'}`}>
+          <div key={block.id ?? i} className={`time-block time-block-${block.type ?? 'default'}`}>
             <div className="time-block-header">
               <span className="time-block-icon">{PERIOD_ICONS[block.period]}</span>
               {getTimeBlockRange(block) && (
@@ -569,11 +794,33 @@ export default function DailyPlanView({
               )}
             </div>
             <div className="time-block-body">
-              <ul>
-                {block.items.map((item, j) => (
-                  <li key={j}>{item}</li>
-                ))}
-              </ul>
+              <div className="time-block-actions" aria-label={`Actions for ${getTimeBlockTitle(block)}`}>
+                <button onClick={() => setEditingBlockId(isEditing ? null : block.id ?? null)}><Pencil size={13} /> {isEditing ? 'Done' : 'Edit'}</button>
+                <button onClick={() => duplicateBlock(i)}><CopyPlus size={13} /> Duplicate</button>
+                <button onClick={() => deleteBlock(i)}><Trash2 size={13} /> Delete</button>
+                <button onClick={() => moveBlock(i, -1)} disabled={i === 0} aria-label="Move block up"><ArrowUp size={13} /></button>
+                <button onClick={() => moveBlock(i, 1)} disabled={i === plan.timeBlocks.length - 1} aria-label="Move block down"><ArrowDown size={13} /></button>
+                <button onClick={() => addBlockAfter(i)}><Plus size={13} /> Add after</button>
+                <button onClick={() => startBlockAsFocus(block)}><Play size={13} /> Start focus</button>
+              </div>
+              {isEditing ? (
+                <div className="time-block-edit-form">
+                  <label>Start time<input type="time" value={block.startTime ?? ''} onChange={event => updateBlock(block.id!, { startTime: event.target.value })} /></label>
+                  <label>End time<input type="time" value={block.endTime ?? ''} onChange={event => updateBlock(block.id!, { endTime: event.target.value })} /></label>
+                  <label className="edit-field-wide">Title<input value={getTimeBlockTitle(block)} onChange={event => updateBlock(block.id!, { title: event.target.value })} /></label>
+                  <label>Type<select value={block.type ?? 'focus'} onChange={event => updateBlock(block.id!, { type: event.target.value as TimeBlock['type'] })}>{BLOCK_TYPES.map(type => <option key={type} value={type}>{type.toUpperCase()}</option>)}</select></label>
+                  <label className="edit-field-wide">Bullets / details<textarea value={block.items.join('\n')} onChange={event => updateBlock(block.id!, { items: event.target.value.split('\n') })} placeholder="One detail per line" /></label>
+                  <label className="edit-field-wide">Location or link<input value={block.location ?? ''} onChange={event => updateBlock(block.id!, { location: event.target.value })} /></label>
+                  <label className="edit-field-wide">Plan notes<textarea value={block.notes ?? ''} onChange={event => updateBlock(block.id!, { notes: event.target.value })} /></label>
+                </div>
+              ) : (
+                <>
+                  <ul>{block.items.map((item, j) => item.trim() && <li key={j}>{item}</li>)}</ul>
+                  {block.location && <a className="time-block-location" href={/^https?:\/\//.test(block.location) ? block.location : undefined} target="_blank" rel="noreferrer">{block.location}</a>}
+                  {block.notes && <p className="time-block-plan-note">{block.notes}</p>}
+                </>
+              )}
+              {warnings.map(warning => <div className="time-block-warning" key={warning}>{warning}</div>)}
               {outputHeavyEvening && (
                 <div className="evening-output-warning">
                   This is an output-heavy task. Evening mode is usually quieter.
