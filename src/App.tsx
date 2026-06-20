@@ -494,13 +494,14 @@ export default function App() {
         ? `Plan generated with local fallback. ${fallbackReason}`
         : 'Plan generated successfully.'
       savePlan(finalPlan)
-      setPlan(finalPlan)
+      const savedPlan = loadPlan(finalPlan.date) ?? finalPlan
+      setPlan(savedPlan)
       setGenerationMessage(message)
       if (!options.stayOnTab) setTab('plan')
       return {
         success: true,
         message,
-        plan: finalPlan,
+        plan: savedPlan,
         fallbackReason,
       }
     } catch (error) {
@@ -724,7 +725,7 @@ export default function App() {
                   },
                 )
                 savePlan(scaffold)
-                setPlan(scaffold)
+                setPlan(loadPlan(scaffold.date) ?? scaffold)
                 steps.push(
                   activeTasks.length > 0
                     ? 'Built the English + AI/Cyber scaffold and placed active tasks into suitable blocks.'
@@ -745,7 +746,7 @@ export default function App() {
             onReducePlan={handleLowEnergyMode}
             onPlanChange={updatedPlan => {
               savePlan(updatedPlan)
-              setPlan(updatedPlan)
+              setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
             }}
           />
         )}

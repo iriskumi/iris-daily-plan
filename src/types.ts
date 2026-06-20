@@ -367,6 +367,7 @@ export interface TimeBlock {
     | 'planning'
   items: string[]
   bullets?: string[]
+  details?: string
   location?: string
   source?: 'generated' | 'calendar' | 'task' | 'manual' | 'template'
   taskId?: string

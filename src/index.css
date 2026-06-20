@@ -1554,6 +1554,15 @@ textarea {
 .time-block-edit-form textarea { min-height: 76px; resize: vertical; }
 .time-block-edit-form .edit-field-wide { grid-column: 1 / -1; }
 
+.block-edit-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.15rem;
+}
+
+.block-edit-buttons .btn { min-width: 86px; }
+
 .time-block-warning,
 .plan-action-message {
   margin-top: 0.65rem;
@@ -1813,6 +1822,8 @@ textarea {
   .time-block-edit-form { grid-template-columns: 1fr; }
   .time-block-edit-form .edit-field-wide { grid-column: auto; }
   .time-block-actions button { flex: 1 1 auto; }
+  .block-edit-buttons { justify-content: stretch; }
+  .block-edit-buttons .btn { flex: 1; }
 }
 
 .plan-list li {

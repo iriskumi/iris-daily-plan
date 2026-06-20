@@ -269,6 +269,7 @@ export default function DailyPlanView({
   const [pushingNotion, setPushingNotion] = useState(false)
   const [finishingDay, setFinishingDay] = useState(false)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
+  const [blockDraft, setBlockDraft] = useState<{ index: number; block: TimeBlock } | null>(null)
   const [editingPriorities, setEditingPriorities] = useState(false)
   const [blockActionMessage, setBlockActionMessage] = useState<string | null>(null)
   const [followUps, setFollowUps] = useState(() =>
@@ -357,26 +358,54 @@ export default function DailyPlanView({
     onPlanChange(next)
   }
 
-  function updateBlock(id: string, patch: Partial<TimeBlock>) {
-    if (!plan) return
-    const now = new Date().toISOString()
+  function beginBlockEdit(block: TimeBlock, index: number) {
+    const identity = block.id ?? getTimeBlockKey(block, index)
+    const details = block.bullets ?? block.items ?? (block.details ? block.details.split('\n') : [])
+    setEditingBlockId(identity)
+    setBlockDraft({
+      index,
+      block: { ...block, id: identity, items: [...details], bullets: [...details] },
+    })
+  }
+
+  function updateBlockDraft(patch: Partial<TimeBlock>) {
+    setBlockDraft(current => current ? { ...current, block: { ...current.block, ...patch } } : current)
+  }
+
+  function cancelBlockEdit() {
+    setEditingBlockId(null)
+    setBlockDraft(null)
+  }
+
+  function saveBlockEdit() {
+    if (!plan || !blockDraft) return
+    const items = (blockDraft.block.bullets ?? blockDraft.block.items ?? [])
+      .map(item => item.trim())
+      .filter(Boolean)
+    const original = plan.timeBlocks[blockDraft.index]
+    if (!original) return
+    const savedBlock: TimeBlock = {
+      ...original,
+      ...blockDraft.block,
+      id: original.id ?? blockDraft.block.id ?? crypto.randomUUID(),
+      date: plan.date,
+      period: periodFromTime(blockDraft.block.startTime),
+      label: blockDraft.block.startTime && blockDraft.block.endTime
+        ? `${blockDraft.block.startTime}-${blockDraft.block.endTime}`
+        : blockDraft.block.label,
+      items,
+      bullets: items,
+      details: blockDraft.block.details === undefined ? undefined : items.join('\n'),
+      manualEdited: true,
+      updatedAt: new Date().toISOString(),
+    }
     persistPlan({
       ...plan,
-      timeBlocks: plan.timeBlocks.map(block => {
-        if (block.id !== id) return block
-        const next = { ...block, ...patch }
-        const items = patch.items ?? patch.bullets ?? next.items
-        return {
-          ...next,
-          period: patch.startTime ? periodFromTime(patch.startTime) : next.period,
-          label: next.startTime && next.endTime ? `${next.startTime}-${next.endTime}` : next.label,
-          items,
-          bullets: items,
-          manualEdited: true,
-          updatedAt: now,
-        }
-      }),
+      timeBlocks: plan.timeBlocks.map((block, index) => index === blockDraft.index ? savedBlock : block),
     })
+    setEditingBlockId(null)
+    setBlockDraft(null)
+    setBlockActionMessage(`Saved changes to ${getTimeBlockTitle(savedBlock)}`)
   }
 
   function insertBlock(index: number, block: TimeBlock) {
@@ -415,12 +444,13 @@ export default function DailyPlanView({
       manualEdited: true, createdAt: now, updatedAt: now,
     }
     insertBlock(index + 1, block)
-    setEditingBlockId(block.id ?? null)
+    beginBlockEdit(block, index + 1)
   }
 
   function deleteBlock(index: number) {
     if (!plan || !window.confirm('Delete this time block?')) return
     persistPlan({ ...plan, timeBlocks: plan.timeBlocks.filter((_, itemIndex) => itemIndex !== index) })
+    if (blockDraft?.index === index) cancelBlockEdit()
   }
 
   function moveBlock(index: number, direction: -1 | 1) {
@@ -767,8 +797,12 @@ export default function DailyPlanView({
         {blockActionMessage && <div className="plan-action-message">{blockActionMessage}</div>}
         {plan.timeBlocks.map((block, i) => {
           const blockKey = getTimeBlockKey(block, i)
-          const isEditing = editingBlockId === block.id
-          const warnings = blockWarnings(block, plan.timeBlocks)
+          const isEditing = editingBlockId === (block.id ?? blockKey)
+          const draftBlock = isEditing && blockDraft?.index === i ? blockDraft.block : null
+          const blocksForValidation = draftBlock
+            ? plan.timeBlocks.map((item, index) => index === i ? draftBlock : item)
+            : plan.timeBlocks
+          const warnings = blockWarnings(draftBlock ?? block, blocksForValidation)
           const outputHeavyEvening =
             block.outputLevel === 'high' &&
             Boolean(block.startTime && block.startTime >= '17:00')
@@ -795,23 +829,27 @@ export default function DailyPlanView({
             </div>
             <div className="time-block-body">
               <div className="time-block-actions" aria-label={`Actions for ${getTimeBlockTitle(block)}`}>
-                <button onClick={() => setEditingBlockId(isEditing ? null : block.id ?? null)}><Pencil size={13} /> {isEditing ? 'Done' : 'Edit'}</button>
-                <button onClick={() => duplicateBlock(i)}><CopyPlus size={13} /> Duplicate</button>
-                <button onClick={() => deleteBlock(i)}><Trash2 size={13} /> Delete</button>
-                <button onClick={() => moveBlock(i, -1)} disabled={i === 0} aria-label="Move block up"><ArrowUp size={13} /></button>
-                <button onClick={() => moveBlock(i, 1)} disabled={i === plan.timeBlocks.length - 1} aria-label="Move block down"><ArrowDown size={13} /></button>
-                <button onClick={() => addBlockAfter(i)}><Plus size={13} /> Add after</button>
-                <button onClick={() => startBlockAsFocus(block)}><Play size={13} /> Start focus</button>
+                <button type="button" disabled={isEditing} onClick={event => { event.stopPropagation(); beginBlockEdit(block, i) }}><Pencil size={13} /> Edit</button>
+                <button type="button" onClick={() => duplicateBlock(i)}><CopyPlus size={13} /> Duplicate</button>
+                <button type="button" onClick={() => deleteBlock(i)}><Trash2 size={13} /> Delete</button>
+                <button type="button" onClick={() => moveBlock(i, -1)} disabled={i === 0} aria-label="Move block up"><ArrowUp size={13} /></button>
+                <button type="button" onClick={() => moveBlock(i, 1)} disabled={i === plan.timeBlocks.length - 1} aria-label="Move block down"><ArrowDown size={13} /></button>
+                <button type="button" onClick={() => addBlockAfter(i)}><Plus size={13} /> Add after</button>
+                <button type="button" onClick={() => startBlockAsFocus(block)}><Play size={13} /> Start focus</button>
               </div>
-              {isEditing ? (
+              {draftBlock ? (
                 <div className="time-block-edit-form">
-                  <label>Start time<input type="time" value={block.startTime ?? ''} onChange={event => updateBlock(block.id!, { startTime: event.target.value })} /></label>
-                  <label>End time<input type="time" value={block.endTime ?? ''} onChange={event => updateBlock(block.id!, { endTime: event.target.value })} /></label>
-                  <label className="edit-field-wide">Title<input value={getTimeBlockTitle(block)} onChange={event => updateBlock(block.id!, { title: event.target.value })} /></label>
-                  <label>Type<select value={block.type ?? 'focus'} onChange={event => updateBlock(block.id!, { type: event.target.value as TimeBlock['type'] })}>{BLOCK_TYPES.map(type => <option key={type} value={type}>{type.toUpperCase()}</option>)}</select></label>
-                  <label className="edit-field-wide">Bullets / details<textarea value={block.items.join('\n')} onChange={event => updateBlock(block.id!, { items: event.target.value.split('\n') })} placeholder="One detail per line" /></label>
-                  <label className="edit-field-wide">Location or link<input value={block.location ?? ''} onChange={event => updateBlock(block.id!, { location: event.target.value })} /></label>
-                  <label className="edit-field-wide">Plan notes<textarea value={block.notes ?? ''} onChange={event => updateBlock(block.id!, { notes: event.target.value })} /></label>
+                  <label>Start time<input type="time" value={draftBlock.startTime ?? ''} onChange={event => updateBlockDraft({ startTime: event.target.value })} /></label>
+                  <label>End time<input type="time" value={draftBlock.endTime ?? ''} onChange={event => updateBlockDraft({ endTime: event.target.value })} /></label>
+                  <label className="edit-field-wide">Title<input value={draftBlock.title ?? draftBlock.label} onChange={event => updateBlockDraft({ title: event.target.value })} /></label>
+                  <label>Type<select value={draftBlock.type ?? 'focus'} onChange={event => updateBlockDraft({ type: event.target.value as TimeBlock['type'] })}>{BLOCK_TYPES.map(type => <option key={type} value={type}>{type.toUpperCase()}</option>)}</select></label>
+                  <label className="edit-field-wide">Bullets / details<textarea value={(draftBlock.bullets ?? draftBlock.items ?? []).join('\n')} onChange={event => updateBlockDraft({ bullets: event.target.value.split('\n') })} placeholder="One detail per line" /></label>
+                  <label className="edit-field-wide">Location or link<input value={draftBlock.location ?? ''} onChange={event => updateBlockDraft({ location: event.target.value })} /></label>
+                  <label className="edit-field-wide">Plan notes<textarea value={draftBlock.notes ?? ''} onChange={event => updateBlockDraft({ notes: event.target.value })} /></label>
+                  <div className="edit-field-wide block-edit-buttons">
+                    <button type="button" className="btn btn-primary" onClick={saveBlockEdit}>Save</button>
+                    <button type="button" className="btn btn-secondary" onClick={cancelBlockEdit}>Cancel</button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -830,6 +868,7 @@ export default function DailyPlanView({
                 <div className="follow-up-options" role="group" aria-label={`Follow-up for ${getTimeBlockTitle(block)}`}>
                   {FOLLOW_UP_OPTIONS.map(option => (
                     <button
+                      type="button"
                       key={option.value}
                       className={`follow-up-option-${option.value} ${followUp.status === option.value ? 'active' : ''}`}
                       onClick={() => updateFollowUp(block, i, { status: option.value })}
