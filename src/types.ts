@@ -1,6 +1,14 @@
 export type EnergyLevel = 'low' | 'medium' | 'high'
 
-export type DayMode = 'full-day' | 'normal-day' | 'late-start-day' | 'rescue-day'
+export type DayMode =
+  | 'full-day'
+  | 'normal-day'
+  | 'late-start-day'
+  | 'rescue-day'
+  | 'evening-class'
+  | 'saturday-class'
+  | 'work-shift'
+  | 'admin-catchup'
 
 export interface DayModeConfig {
   id: DayMode
@@ -64,6 +72,7 @@ export type BlockTaskArea =
   | 'cyber'
   | 'ai_project'
   | 'english'
+  | 'japanese'
   | 'sql_data'
   | 'work_admin'
   | 'life_admin'
@@ -108,6 +117,8 @@ export interface DayBlockQueue {
   date: string
   mode: DayMode
   suggestedMode?: DayMode
+  currentEnergy?: EnergyLevel
+  mainFocus?: BlockTaskArea
   targetBlocks: number
   blocks: DayBlock[]
   createdAt: string

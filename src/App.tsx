@@ -39,7 +39,6 @@ import type {
   CarryOverSuggestion,
   RankedCheckinTask,
   DailyCheckin as DailyCheckinType,
-  TaskTemplate,
 } from './types'
 import {
   loadBills,
@@ -84,6 +83,8 @@ import TaskInbox from './components/TaskInbox'
 import WorkCollection from './components/WorkCollection'
 import BillsFinance from './components/BillsFinance'
 import DailyPlanView from './components/DailyPlanView'
+import BlockQueueView from './components/BlockQueueView'
+import HomeCommandCentre from './components/HomeCommandCentre'
 import AIAssistant from './components/AIAssistant'
 import RecurringTemplates from './components/RecurringTemplates'
 import Settings from './components/Settings'
@@ -101,10 +102,8 @@ import {
   tinyActionForTask,
   tinyActionForArea,
   normalizeArea,
-  normalizeTask,
 } from './focusBlocks'
 import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
-import { DEFAULT_TASK_TEMPLATES, QUICK_TEMPLATE_IDS } from './taskTemplates'
 import './index.css'
 
 type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
@@ -181,7 +180,53 @@ const START_NOW_AREAS: StartNowArea[] = [
   'Life reset',
 ]
 
-const IRIS_GROUNDING_LINE = '不要把今天和理想中的自己比较，只要把今天和半年前的自己比较。'
+const DAILY_NOTES = [
+  {
+    lines: ['今天不用追上理想中的自己。', '只要比半年前更靠近一点。'],
+    caption: 'Quiet progress still counts.',
+  },
+  {
+    lines: ['先把今天过顺。'],
+    caption: 'Progress can stay quiet.',
+  },
+  {
+    lines: ['不用一下子变很好。', '今天只要往前一点点。'],
+    caption: 'Small steps still count.',
+  },
+  {
+    lines: ['先保护能量，', '再做下一步。'],
+    caption: 'Protect your energy. Then take the next useful step.',
+  },
+  {
+    lines: ['不和理想化的自己较劲。', '今天只看微小进步。'],
+    caption: 'Small progress is enough.',
+  },
+  {
+    lines: ['今天不求完美，', '只求启动。'],
+    caption: 'Start softer.',
+  },
+  {
+    lines: ['今天先把节奏找回来。'],
+    caption: 'One useful step is enough.',
+  },
+  {
+    lines: ['Less pressure.', 'More momentum.'],
+    caption: '',
+  },
+  {
+    lines: ['Start softer.', 'Move closer.'],
+    caption: '',
+  },
+  {
+    lines: ['今天只做下一件对的事。'],
+    caption: 'One next step is enough.',
+  },
+]
+
+function dailyNoteForDate(date = getLocalDateKey()) {
+  const seed = [...date].reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return DAILY_NOTES[seed % DAILY_NOTES.length]
+}
 
 function makeStartPlan(input: {
   state: StartNowState
@@ -290,59 +335,6 @@ function defaultGrowthCheckin(date: string): DailyCheckinType {
     fixedCommitments: '',
     planningInstructions: 'Use the English + AI/Cyber growth-day scaffold. Keep high-output work before 17:00 and quiet input after 17:00.',
     notes: '',
-  }
-}
-
-function rankedEstimate(minutes: number): RankedCheckinTask['estimatedMinutes'] {
-  return minutes
-}
-
-function taskFromTemplate(template: TaskTemplate): Task {
-  const now = new Date().toISOString()
-  return normalizeTask({
-    id: crypto.randomUUID(),
-    title: template.title,
-    area: template.area,
-    energy: template.energy,
-    mode: template.mode,
-    status: 'Inbox',
-    category: categoryFromArea(template.area),
-    estimatedMinutes: template.estimatedMinutes,
-    difficulty: template.energy === 'High' ? 'hard' : template.energy === 'Medium' ? 'medium' : 'easy',
-    urgency: 'medium',
-    importance: template.outputLevel === 'high' ? 'high' : 'medium',
-    nextTinyAction: template.firstTinyAction,
-    nextAction: template.firstTinyAction,
-    checklist: [template.firstTinyAction, template.description],
-    pomodoroEnabled: template.mode === 'Focus',
-    pomodoroLength: template.estimatedMinutes,
-    breakLength: template.estimatedMinutes >= 45 ? 10 : 5,
-    pomodoroSessions: 1,
-    done: false,
-    createdAt: now,
-    updatedAt: now,
-  })
-}
-
-function focusBlockFromTemplate(template: TaskTemplate, task: Task): FocusBlock {
-  const now = new Date()
-  const plannedEnd = new Date(now.getTime() + template.estimatedMinutes * 60 * 1000)
-  return {
-    id: crypto.randomUUID(),
-    date: getLocalDateKey(now),
-    startTime: now.toISOString(),
-    plannedEndTime: plannedEnd.toISOString(),
-    minutes: template.estimatedMinutes,
-    taskId: task.id,
-    taskTitle: template.title,
-    area: template.area,
-    mode: template.mode,
-    energy: template.energy,
-    firstTinyAction: template.firstTinyAction,
-    status: 'Doing',
-    notes: `Started from template: ${template.defaultBlockType}`,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
   }
 }
 
@@ -738,17 +730,22 @@ export default function App() {
           />
         )}
         {tab === 'plan' && (
-          <DailyPlanView
-            plan={plan}
-            onGenerate={handleGeneratePlan}
-            onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
-            onGoToCheckin={() => goToTab('today')}
-            onReducePlan={handleLowEnergyMode}
-            onPlanChange={updatedPlan => {
-              savePlan(updatedPlan)
-              setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
-            }}
-          />
+          <>
+            <div className="page plan-page">
+              <BlockQueueView />
+            </div>
+            <DailyPlanView
+              plan={plan}
+              onGenerate={handleGeneratePlan}
+              onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
+              onGoToCheckin={() => goToTab('today')}
+              onReducePlan={handleLowEnergyMode}
+              onPlanChange={updatedPlan => {
+                savePlan(updatedPlan)
+                setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
+              }}
+            />
+          </>
         )}
         {tab === 'tasks' && (
           <>
@@ -824,54 +821,14 @@ function TodayCommandCentre({
   const [startNowTimer, setStartNowTimer] = useState<5 | 15 | null>(null)
   const [startNowMessage, setStartNowMessage] = useState<string | null>(null)
   const [startNowCopied, setStartNowCopied] = useState(false)
-  const [selectedQuickTemplate, setSelectedQuickTemplate] = useState<TaskTemplate | null>(null)
-  const [quickTemplateMessage, setQuickTemplateMessage] = useState<string | null>(null)
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const workReminders = getTodayWorkReminders(activeWorkLeads)
   const billReminders = getTodayBillReminders(urgentBills)
   const nextAction = getNextAction(currentPlan)
   const nowContext = getNowContext(currentPlan)
-  const quickTemplates = QUICK_TEMPLATE_IDS
-    .map(id => DEFAULT_TASK_TEMPLATES.find(template => template.id === id))
-    .filter((template): template is TaskTemplate => Boolean(template))
-
-  function saveTemplateTask(template: TaskTemplate): Task {
-    const task = taskFromTemplate(template)
-    saveTasks([task, ...loadTasks()])
-    return task
-  }
-
-  function addTemplateToToday(template: TaskTemplate) {
-    const task = saveTemplateTask(template)
-    const todayKey = getLocalDateKey()
-    const todayCheckin = loadCheckin(todayKey) ?? defaultGrowthCheckin(todayKey)
-    const rankedTasks = todayCheckin.rankedTasks ?? []
-    saveCheckin({
-      ...todayCheckin,
-      rankedTasks: [
-        ...rankedTasks,
-        {
-          id: crypto.randomUUID(),
-          taskId: task.id,
-          title: template.title,
-          area: template.area,
-          estimatedMinutes: rankedEstimate(template.estimatedMinutes),
-          orderIndex: rankedTasks.length,
-        },
-      ],
-    })
-    setSelectedQuickTemplate(null)
-    setQuickTemplateMessage(`Added "${template.title}" to Today’s to-do.`)
-  }
-
-  function startTemplateNow(template: TaskTemplate) {
-    const task = saveTemplateTask(template)
-    saveFocusBlock(focusBlockFromTemplate(template, task))
-    onFocusBlocksChange()
-    setSelectedQuickTemplate(null)
-    setQuickTemplateMessage(`Started "${template.title}" as a Focus Block.`)
-  }
+  const dailyNote = dailyNoteForDate()
+  const isEvening = new Date().getHours() >= 17
 
   async function handleStartToday() {
     setStarting(true)
@@ -997,56 +954,34 @@ function TodayCommandCentre({
           <p className="page-subtitle">Start the day, check the next action, then protect your energy.</p>
         </div>
 
-        <div className="grounding-banner">
-          <p lang="zh-Hans">{IRIS_GROUNDING_LINE}</p>
-          {new Date().getHours() >= 17 && (
-            <span>Evening mode: quiet input and light review.</span>
+        <div className="grounding-banner" aria-label="Today note">
+          <div className="grounding-label">Today Note</div>
+          <p lang="zh-Hans">
+            {dailyNote.lines.map(line => (
+              <span key={line}>{line}</span>
+            ))}
+          </p>
+          {(dailyNote.caption || isEvening) && (
+            <small>
+              {dailyNote.caption}
+              {dailyNote.caption && isEvening ? ' · ' : ''}
+              {isEvening ? 'Evening mode: quiet input and light review.' : ''}
+            </small>
           )}
         </div>
 
-        <section className="dashboard-template-panel">
-          <div>
-            <div className="section-label">Task Templates</div>
-            <h3>Quick add</h3>
-          </div>
-          <div className="quick-template-row">
-            {quickTemplates.map(template => (
-              <button
-                key={template.id}
-                className="quick-template-chip"
-                type="button"
-                onClick={() => setSelectedQuickTemplate(template)}
-              >
-                {template.title
-                  .replace('Shadowing: 2-3 min clip', 'Shadowing')
-                  .replace('AI / IT / Cyber course block', 'Course block')
-                  .replace('Project / Coding block', 'Vibe Coding')
-                  .replace('Quiet English reading', 'Quiet Reading')
-                  .replace('Expression Review 5', 'Review 5')
-                  .replace('Tomorrow planning', 'Tomorrow Plan')
-                  .replace('10-minute reset', '10-min Reset')}
-              </button>
-            ))}
-          </div>
-          {selectedQuickTemplate && (
-            <div className="quick-template-confirm">
-              <span>{selectedQuickTemplate.firstTinyAction}</span>
-              <button className="btn btn-primary" type="button" onClick={() => addTemplateToToday(selectedQuickTemplate)}>
-                Add to Today
-              </button>
-              <button className="btn btn-secondary" type="button" onClick={() => startTemplateNow(selectedQuickTemplate)}>
-                Start now
-              </button>
-            </div>
-          )}
-          {quickTemplateMessage && <div className="start-now-status">{quickTemplateMessage}</div>}
-        </section>
+        <HomeCommandCentre currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel} />
 
-        <section className="start-now-card" aria-label="Start Now">
+        <details className="home-secondary-panel">
+          <summary>
+            <span>Low-energy mode</span>
+            <small>Smallest useful step</small>
+          </summary>
+        <section className="start-now-card" aria-label="Low-energy mode">
           <div className="start-now-header">
             <div>
-              <div className="section-label">Gentle rescue button</div>
-              <h3>Start Now</h3>
+              <div className="section-label">Low-energy mode</div>
+              <h3>Smallest useful step</h3>
               <p>Give me the smallest next step.</p>
             </div>
             <span className="start-now-charm" aria-hidden="true">
@@ -1124,7 +1059,7 @@ function TodayCommandCentre({
           <div className="start-now-main-action">
             <button className="btn btn-primary" type="button" onClick={handleGenerateStartPlan}>
               <Sparkles size={14} />
-              Give me my smallest step
+              Give me the smallest useful step
             </button>
             {startNowMessage && <span className="start-now-message">{startNowMessage}</span>}
           </div>
@@ -1193,89 +1128,69 @@ function TodayCommandCentre({
             </div>
           )}
         </section>
+        </details>
 
-        <FocusBlockWorkflow onFocusBlocksChange={onFocusBlocksChange} />
+        <details className="home-secondary-panel">
+          <summary>
+            <span>Focus tools</span>
+            <small>Pomodoro, Focus Garden, legacy next action</small>
+          </summary>
 
-        <section className="today-focus-section">
-          <div className="today-focus-section-header">
-            <div>
-              <div className="section-label">Focus</div>
-              <h3>Focus Garden</h3>
+          <FocusBlockWorkflow onFocusBlocksChange={onFocusBlocksChange} />
+
+          <section className="today-focus-section">
+            <div className="today-focus-section-header">
+              <div>
+                <div className="section-label">Focus</div>
+                <h3>Focus Garden</h3>
+              </div>
             </div>
-          </div>
-          <FocusGarden stats={focusStats} />
-        </section>
+            <FocusGarden stats={focusStats} />
+          </section>
 
-        <div className="start-today-card">
-          <div>
-            <div className="plan-section-title">Daily command centre</div>
-            <h3>Start Today</h3>
-            <p>Sync commitments, check carry-over, refresh the plan, and surface the first useful action.</p>
-          </div>
-          <button className="btn btn-primary" onClick={handleStartToday} disabled={starting}>
-            <Play size={14} />
-            {starting ? 'Starting...' : 'Start Today'}
-          </button>
-        </div>
-
-        {startSteps.length > 0 && (
-          <div className="start-flow-steps">
-            {startSteps.map(step => (
-              <div key={step} className="start-flow-step">{step}</div>
-            ))}
-            {carryOverSuggestions.length > 0 && (
-              <div className="start-plan-actions carry-over-actions">
-                <button className="btn btn-secondary" type="button" onClick={handleReviewCarryOver}>
-                  Review carry-over
-                </button>
-                <button className="btn btn-primary" type="button" onClick={handleAddCarryOverToToday}>
-                  Add selected to today
-                </button>
-                <button className="btn btn-secondary" type="button" onClick={() => setCarryOverSuggestions([])}>
-                  Skip for now
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="next-action-card">
-          <div className="next-action-main">
-            <div className="plan-section-title">Next Action</div>
-            <h3>{nextAction.title}</h3>
-            <p>{nextAction.detail}</p>
-            {(nextAction.startTime || nextAction.endTime) && (
-              <div className="next-action-time">
-                {nextAction.startTime ?? '--'}-{nextAction.endTime ?? '--'}
-              </div>
-            )}
-            <div className="next-action-now">{nowContext}</div>
-          </div>
-          {nextAction.canStartFocus && (
-            <div className="next-action-focus">
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowNextFocus(value => !value)}
-              >
-                {showNextFocus ? 'Hide Focus' : 'Start Focus'}
-              </button>
-              <button className="btn btn-secondary" onClick={onViewPlan}>
-                Skip →
-              </button>
-              {showNextFocus && (
-                <PomodoroTimer
-                  pomodoroLength={nextAction.focusMinutes ?? 25}
-                  breakLength={5}
-                  sessions={1}
-                  taskId={nextAction.taskId}
-                  taskTitle={nextAction.taskTitle ?? nextAction.title}
-                  category={nextAction.category ?? 'cyber-study'}
-                />
+          <div className="next-action-card">
+            <div className="next-action-main">
+              <div className="plan-section-title">Legacy plan next action</div>
+              <h3>{nextAction.title}</h3>
+              <p>{nextAction.detail}</p>
+              {(nextAction.startTime || nextAction.endTime) && (
+                <div className="next-action-time">
+                  {nextAction.startTime ?? '--'}-{nextAction.endTime ?? '--'}
+                </div>
               )}
+              <div className="next-action-now">{nowContext}</div>
             </div>
-          )}
-        </div>
+            {nextAction.canStartFocus && (
+              <div className="next-action-focus">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowNextFocus(value => !value)}
+                >
+                  {showNextFocus ? 'Hide focus' : 'Open timeline focus'}
+                </button>
+                <button className="btn btn-secondary" onClick={onViewPlan}>
+                  View plan
+                </button>
+                {showNextFocus && (
+                  <PomodoroTimer
+                    pomodoroLength={nextAction.focusMinutes ?? 25}
+                    breakLength={5}
+                    sessions={1}
+                    taskId={nextAction.taskId}
+                    taskTitle={nextAction.taskTitle ?? nextAction.title}
+                    category={nextAction.category ?? 'cyber-study'}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        </details>
 
+        <details className="home-secondary-panel">
+          <summary>
+            <span>Admin reminders</span>
+            <small>Bills and work reminders</small>
+          </summary>
         <div className="command-grid">
           <button
             className={`command-card ${urgentBills.length > 0 ? 'attention' : ''}`}
@@ -1345,15 +1260,61 @@ function TodayCommandCentre({
             <WorkCollection onOpportunitiesChange={onRemindersChange} />
           </div>
         )}
+        </details>
+
+        <details className="home-secondary-panel">
+          <summary>
+            <span>Sync & refresh</span>
+            <small>Calendar, carry-over, plan refresh</small>
+          </summary>
+          <div className="start-today-card">
+            <div>
+              <div className="plan-section-title">Daily command centre</div>
+              <h3>Refresh today</h3>
+              <p>Sync commitments, check carry-over, refresh the plan, and surface the first useful action.</p>
+            </div>
+            <button className="btn btn-secondary" onClick={handleStartToday} disabled={starting}>
+              <Play size={14} />
+              {starting ? 'Refreshing...' : 'Sync & refresh'}
+            </button>
+          </div>
+
+          {startSteps.length > 0 && (
+            <div className="start-flow-steps">
+              {startSteps.map(step => (
+                <div key={step} className="start-flow-step">{step}</div>
+              ))}
+              {carryOverSuggestions.length > 0 && (
+                <div className="start-plan-actions carry-over-actions">
+                  <button className="btn btn-secondary" type="button" onClick={handleReviewCarryOver}>
+                    Review carry-over
+                  </button>
+                  <button className="btn btn-secondary" type="button" onClick={handleAddCarryOverToToday}>
+                    Add selected to today
+                  </button>
+                  <button className="btn btn-secondary" type="button" onClick={() => setCarryOverSuggestions([])}>
+                    Skip for now
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </details>
       </div>
 
-      <DailyCheckin
-        onGenerate={onGenerate}
-        isGenerating={generatingPlan}
-        generationMessage={generationMessage}
-        hasPlan={Boolean(currentPlan)}
-        onViewPlan={onViewPlan}
-      />
+      <details className="home-secondary-panel home-checkin-panel">
+        <summary>
+          <span>Full check-in</span>
+          <small>Morning setup and plan generation</small>
+        </summary>
+        <DailyCheckin
+          onGenerate={onGenerate}
+          isGenerating={generatingPlan}
+          generationMessage={generationMessage}
+          hasPlan={Boolean(currentPlan)}
+          onViewPlan={onViewPlan}
+        />
+      </details>
     </>
   )
 }
@@ -1583,9 +1544,9 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
     <section className="focus-block-card" aria-label="Focus Block workflow">
       <div className="focus-block-header">
         <div>
-          <div className="section-label">Primary workflow</div>
-          <h3>Start a Focus Block</h3>
-          <p>Choose one inbox task, define the first tiny action, and start.</p>
+          <div className="section-label">Focus tools</div>
+          <h3>Focus block</h3>
+          <p>Choose one inbox task and start a timer when you need it.</p>
         </div>
         <span className="focus-block-soft-pill">{pendingTasks.length} active</span>
       </div>

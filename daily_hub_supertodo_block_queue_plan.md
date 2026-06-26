@@ -16,7 +16,9 @@ The new default planning model is a Block Queue View: a ranked list of useful bl
 
 ## Phase 1 - Data Foundation
 
-Status: in progress
+Status: completed
+
+Note: Phase 1 passed `npm run build`.
 
 - Add day modes: Full Day, Normal Day, Late Start Day, Rescue Day.
 - Add block queue data types for task-oriented planning.
@@ -27,16 +29,20 @@ Status: in progress
 
 ## Phase 2 - Block Queue View
 
-Status: pending
+Status: completed
+
+Note: Phase 2 passed `npm run build`. The implemented scope covers the main queue surface, Today Overview, block cards, and basic block actions. Filters, compact editing, subtask editing, grouping, and sorting remain deferred to later phases.
 
 - Add a Block Queue section/view as the main task-oriented planning surface.
 - Show Today Overview: selected mode, target blocks, completed blocks, remaining blocks, completed focus minutes, must-do progress, and suggested next block.
 - Render block cards with title, priority, type, area/project, estimate, due date, subtask progress, status, and energy.
-- Add actions: Start, Complete, Skip, Convert to 25-min version, Edit, Add subtask, Move up/down.
+- Add actions: Start, Complete, Skip, Convert to 25-min version, Move up/down.
 
 ## Phase 3 - Filters, Subtasks, Compact Editing
 
-Status: pending
+Status: completed
+
+Note: Phase 3 passed `npm run build`. The implemented scope covers filters, subtasks, compact inline editing, and basic due-date display/filtering. Grouping and sorting remain deferred to Phase 4.
 
 - Add priority filters: All, Must, Should, Could.
 - Add status filters: Not started, In progress, Done, Skipped.

@@ -43,6 +43,32 @@ export const DAY_MODE_CONFIGS: Record<DayMode, DayModeConfig> = {
     targetRange: '1-2',
     description: 'A minimum viable day for low energy or disrupted starts.',
   },
+  'evening-class': {
+    id: 'evening-class',
+    label: 'Evening Class',
+    targetBlocks: 3,
+    description: 'Protect class energy and keep the queue lighter.',
+  },
+  'saturday-class': {
+    id: 'saturday-class',
+    label: 'Saturday Class',
+    targetBlocks: 3,
+    targetRange: '2-3',
+    description: 'A class-day queue with fewer extra blocks.',
+  },
+  'work-shift': {
+    id: 'work-shift',
+    label: 'Work Shift',
+    targetBlocks: 3,
+    targetRange: '2-3',
+    description: 'A realistic queue around work energy and time.',
+  },
+  'admin-catchup': {
+    id: 'admin-catchup',
+    label: 'Admin Catch-Up',
+    targetBlocks: 3,
+    description: 'A practical queue for admin, life reset, and loose ends.',
+  },
 }
 
 export const DAY_MODES = Object.values(DAY_MODE_CONFIGS)
@@ -185,6 +211,8 @@ export function createDayBlockQueue(input: {
     date: input.date,
     mode,
     suggestedMode,
+    currentEnergy: 'medium',
+    mainFocus: undefined,
     targetBlocks: targetBlocksForMode(mode),
     blocks,
     createdAt,
@@ -199,12 +227,14 @@ export function mergeQueueWithTasks(queue: DayBlockQueue, tasks: Task[]): DayBlo
       .map(block => [block.sourceTaskId as string, block]),
   )
   const now = new Date().toISOString()
+  const highestOrder = queue.blocks.reduce((max, block) => Math.max(max, block.order), -1)
+  let nextOrder = highestOrder + 1
   const migratedBlocks = tasks
     .map(normalizeTask)
     .filter(isActiveTask)
     .map((task, index) => {
       const existing = existingByTaskId.get(task.id)
-      const migrated = dayBlockFromTask(task, queue.date, index)
+      const migrated = dayBlockFromTask(task, queue.date, existing ? existing.order : nextOrder + index)
       return existing
         ? {
             ...migrated,
@@ -218,32 +248,77 @@ export function mergeQueueWithTasks(queue: DayBlockQueue, tasks: Task[]): DayBlo
   const manualBlocks = queue.blocks.filter(block => !block.sourceTaskId)
   return {
     ...queue,
-    blocks: sortBlocksForQueue([...migratedBlocks, ...manualBlocks]),
+    blocks: [...migratedBlocks, ...manualBlocks].sort((a, b) => a.order - b.order),
     updatedAt: now,
   }
 }
 
-export function suggestNextBlock(queue: DayBlockQueue, now = new Date()): DayBlock | null {
+export function suggestNextBlock(
+  queue: DayBlockQueue,
+  now = new Date(),
+  options: { currentEnergy?: DayBlockQueue['currentEnergy']; mainFocus?: BlockTaskArea } = {},
+): DayBlock | null {
   const afterFive = now.getHours() >= 17
   const candidates = sortBlocksForQueue(
     queue.blocks.filter(block => block.status === 'not_started' || block.status === 'in_progress'),
   )
   if (candidates.length === 0) return null
 
-  if (queue.mode === 'rescue-day') {
-    return candidates.find(block => block.priority !== 'could' && block.energyLevel !== 'high') ?? candidates[0]
+  const currentEnergy = options.currentEnergy ?? queue.currentEnergy
+  const mainFocus = options.mainFocus ?? queue.mainFocus
+  const priorityScore: Record<BlockTaskPriority, number> = { must: 90, should: 55, could: 25 }
+  const preferredLightTypes: BlockTaskType[] = ['low_input', 'admin', 'recovery']
+  const highOutputTypes: BlockTaskType[] = ['deep_work', 'output']
+
+  function score(block: DayBlock): number {
+    let value = priorityScore[block.priority] - block.order
+    if (block.status === 'in_progress') value += 45
+    if (mainFocus && block.area === mainFocus) value += 42
+    if (block.dueDate) {
+      const days = getDaysUntil(block.dueDate, now)
+      if (days < 0) value += 45
+      else if (days === 0) value += 35
+      else if (days <= 3) value += 18
+    }
+
+    if (currentEnergy === 'low') {
+      if (preferredLightTypes.includes(block.type)) value += 36
+      if (block.energyLevel === 'low') value += 24
+      if (block.energyLevel === 'high' || highOutputTypes.includes(block.type)) value -= 35
+    }
+
+    if (currentEnergy === 'medium' && block.energyLevel === 'medium') value += 12
+
+    if (currentEnergy === 'high') {
+      if (highOutputTypes.includes(block.type)) value += 20
+      if (block.energyLevel === 'high') value += 10
+    }
+
+    if (queue.mode === 'rescue-day') {
+      if (block.priority === 'could') value -= 25
+      if (preferredLightTypes.includes(block.type) || block.energyLevel === 'low') value += 40
+      if (block.energyLevel === 'high') value -= 40
+    }
+
+    if (queue.mode === 'admin-catchup') {
+      if (block.type === 'admin' || block.area === 'life_admin' || block.area === 'work_admin') value += 45
+      if (highOutputTypes.includes(block.type)) value -= 18
+    }
+
+    if (queue.mode === 'evening-class' || queue.mode === 'saturday-class' || queue.mode === 'work-shift') {
+      if (preferredLightTypes.includes(block.type)) value += 18
+      if (block.energyLevel === 'high' && block.priority !== 'must') value -= 16
+    }
+
+    if (afterFive) {
+      if (preferredLightTypes.includes(block.type) || block.area === 'reading') value += 30
+      if (highOutputTypes.includes(block.type) && block.priority !== 'must') value -= 22
+    }
+
+    return value
   }
 
-  if (afterFive) {
-    return candidates.find(block =>
-      block.type === 'low_input' ||
-      block.type === 'admin' ||
-      block.type === 'recovery' ||
-      block.area === 'reading',
-    ) ?? candidates[0]
-  }
-
-  return candidates[0]
+  return [...candidates].sort((a, b) => score(b) - score(a))[0]
 }
 
 export function minimumViableBlock(block: DayBlock): DayBlock {
