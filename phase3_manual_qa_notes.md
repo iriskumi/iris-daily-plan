@@ -16,26 +16,28 @@
 
 ## Manual QA Checklist
 
-- Existing blocks still appear.
-- Priority filter works.
-- Status filter works.
-- Area filter works.
-- Due-date filter works.
-- Reset filters works.
-- Can add a subtask.
-- Can complete/uncomplete a subtask.
-- Can edit a subtask title.
-- Can delete a subtask.
-- Subtask progress updates.
-- Completing all subtasks suggests parent completion but does not force it.
-- Can edit block title.
-- Can edit priority.
-- Can edit due date.
-- Can edit estimate.
-- Can edit project.
-- Can edit notes.
-- Changes persist after refresh.
-- Start/Complete/Skip/25-min/Move up/down still work.
+- [ ] Filter by Must - only Must blocks show.
+- [ ] Filter by In Progress - only In Progress blocks show.
+- [ ] Filter by Low energy - only Low energy blocks show.
+- [ ] Filter by Today due date - only blocks due today show.
+- [ ] Two filters active together - AND logic works.
+- [ ] No matching blocks - calm empty state shows.
+- [ ] Clear filter - all blocks return.
+- [ ] Click pencil on a block - card expands into edit mode in place.
+- [ ] Edit title and save - new title shows on card and persists after reload.
+- [ ] Edit priority and save - badge updates.
+- [ ] Cancel edit - original values unchanged.
+- [ ] Open edit on block B while block A is in edit mode - block A closes without saving.
+- [ ] Add a subtask - appears at bottom of list.
+- [ ] Check a subtask - strike-through and count updates.
+- [ ] Edit a subtask label inline - saves on Enter.
+- [ ] Delete a subtask - removed immediately, count updates.
+- [ ] Check last subtask - completion suggestion appears inline.
+- [ ] Click "Yes, complete it" - block marked Done, suggestion disappears.
+- [ ] Click "Not yet" - suggestion dismisses, block stays In Progress.
+- [ ] All existing Phase 2 actions still work: Start, Complete, Skip, Move, 25-min.
+- [ ] Reload page - filter state resets, subtask states and edits persist.
+- [ ] npm run build passes with no errors.
 
 ## What Still Needs Review
 

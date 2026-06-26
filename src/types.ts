@@ -67,7 +67,7 @@ export type TaskArea =
 export type TaskEnergy = 'Low' | 'Medium' | 'High'
 export type TaskMode = 'Focus' | 'Light' | 'Admin' | 'Recovery'
 export type TaskStatus = 'Inbox' | 'Planned' | 'Doing' | 'Done' | 'Skipped' | 'Archived'
-export type BlockTaskType = 'deep_work' | 'output' | 'low_input' | 'admin' | 'recovery'
+export type BlockTaskType = 'deep_work' | 'output' | 'low_input' | 'study' | 'review' | 'admin' | 'recovery'
 export type BlockTaskArea =
   | 'cyber'
   | 'ai_project'

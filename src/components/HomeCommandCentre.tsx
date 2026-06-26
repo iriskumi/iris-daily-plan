@@ -241,34 +241,31 @@ const MAIN_FOCUS_OPTIONS: Array<{ value: BlockTaskArea; label: string }> = [
 
 const PRIORITY_FILTERS = ['all', 'must', 'should', 'could'] as const
 const STATUS_FILTERS = ['all', 'not_started', 'in_progress', 'done', 'skipped'] as const
-const AREA_FILTERS: Array<'all' | BlockTaskArea> = [
-  'all',
-  'cyber',
-  'ai_project',
-  'english',
-  'japanese',
-  'sql_data',
-  'work_admin',
-  'life_admin',
-  'health',
-  'reading',
-  'other',
+const ENERGY_FILTERS = ['all', 'high', 'medium', 'low'] as const
+const DUE_FILTERS = ['all', 'today', 'this_week', 'none'] as const
+const BLOCK_TYPE_EDIT_OPTIONS: Array<{ value: BlockTaskType; label: string }> = [
+  { value: 'deep_work', label: 'Deep Work' },
+  { value: 'study', label: 'Study' },
+  { value: 'review', label: 'Review' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'recovery', label: 'Recovery' },
 ]
-const DUE_FILTERS = ['all', 'overdue', 'today', 'upcoming', 'none'] as const
 
 type PriorityFilter = typeof PRIORITY_FILTERS[number]
 type StatusFilter = typeof STATUS_FILTERS[number]
-type AreaFilter = typeof AREA_FILTERS[number]
+type EnergyFilter = typeof ENERGY_FILTERS[number]
+type AreaFilter = 'all' | BlockTaskArea
 type DueFilter = typeof DUE_FILTERS[number]
 
 interface QueueFilters {
   priority: PriorityFilter
   status: StatusFilter
+  energy: EnergyFilter
   area: AreaFilter
   due: DueFilter
 }
 
-type EditDraft = Pick<DayBlock, 'title' | 'priority' | 'dueDate' | 'estimatedMinutes' | 'project' | 'notes' | 'area' | 'energyLevel' | 'type'>
+type EditDraft = Pick<DayBlock, 'title' | 'priority' | 'dueDate' | 'estimatedMinutes' | 'notes' | 'energyLevel' | 'type'>
 
 function labelFromToken(value: string): string {
   return value
@@ -294,7 +291,7 @@ function subtaskProgress(block: DayBlock): string {
   return `${done}/${block.subtasks.length}`
 }
 
-function dueBucket(block: DayBlock, today = new Date()): DueFilter {
+function dueBucket(block: DayBlock, today = new Date()): 'overdue' | 'today' | 'upcoming' | 'none' {
   if (!block.dueDate) return 'none'
   const due = new Date(`${block.dueDate}T12:00:00`)
   if (Number.isNaN(due.getTime())) return 'none'
@@ -305,6 +302,20 @@ function dueBucket(block: DayBlock, today = new Date()): DueFilter {
   if (diff < 0) return 'overdue'
   if (diff === 0) return 'today'
   return 'upcoming'
+}
+
+function matchesDueFilter(block: DayBlock, due: DueFilter, today = new Date()): boolean {
+  if (due === 'all') return true
+  if (due === 'none') return !block.dueDate
+  if (!block.dueDate) return false
+  const dueDate = new Date(`${block.dueDate}T12:00:00`)
+  if (Number.isNaN(dueDate.getTime())) return false
+  const current = new Date(today)
+  current.setHours(0, 0, 0, 0)
+  dueDate.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((dueDate.getTime() - current.getTime()) / 86_400_000)
+  if (due === 'today') return diffDays === 0
+  return diffDays >= 0 && diffDays <= 6
 }
 
 function dueLabel(block: DayBlock): string {
@@ -321,20 +332,26 @@ function filterBlocks(blocks: DayBlock[], filters: QueueFilters): DayBlock[] {
   return blocks.filter(block => {
     if (filters.priority !== 'all' && block.priority !== filters.priority) return false
     if (filters.status !== 'all' && block.status !== filters.status) return false
+    if (filters.energy !== 'all' && block.energyLevel !== filters.energy) return false
     if (filters.area !== 'all' && block.area !== filters.area) return false
-    if (filters.due !== 'all' && dueBucket(block) !== filters.due) return false
+    if (!matchesDueFilter(block, filters.due)) return false
     return true
   })
 }
 
 function hasActiveFilters(filters: QueueFilters): boolean {
-  return filters.priority !== 'all' || filters.status !== 'all' || filters.area !== 'all' || filters.due !== 'all'
+  return filters.priority !== 'all'
+    || filters.status !== 'all'
+    || filters.energy !== 'all'
+    || filters.area !== 'all'
+    || filters.due !== 'all'
 }
 
 function activeFilterCount(filters: QueueFilters): number {
   return [
     filters.priority !== 'all',
     filters.status !== 'all',
+    filters.energy !== 'all',
     filters.area !== 'all',
     filters.due !== 'all',
   ].filter(Boolean).length
@@ -416,6 +433,7 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
   const [filters, setFilters] = useState<QueueFilters>({
     priority: 'all',
     status: 'all',
+    energy: 'all',
     area: 'all',
     due: 'all',
   })
@@ -423,11 +441,17 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null)
   const [newSubtaskTitles, setNewSubtaskTitles] = useState<Record<string, string>>({})
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [editingSubtask, setEditingSubtask] = useState<{ blockId: string; subtaskId: string } | null>(null)
+  const [subtaskDrafts, setSubtaskDrafts] = useState<Record<string, string>>({})
+  const [dismissedCompletionPrompts, setDismissedCompletionPrompts] = useState<Record<string, boolean>>({})
 
   const blocks = useMemo(
     () => [...queue.blocks].sort((a, b) => a.order - b.order),
     [queue.blocks],
+  )
+  const dynamicAreaFilters = useMemo<Array<BlockTaskArea>>(
+    () => [...new Set(blocks.map(block => block.area))].sort((a, b) => labelFromToken(a).localeCompare(labelFromToken(b))),
+    [blocks],
   )
   const queueForDisplay = { ...queue, blocks }
   const visibleBlocks = filterBlocks(blocks, filters)
@@ -520,9 +544,7 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
       priority: block.priority,
       dueDate: block.dueDate ?? '',
       estimatedMinutes: block.estimatedMinutes,
-      project: block.project ?? '',
       notes: block.notes ?? '',
-      area: block.area,
       energyLevel: block.energyLevel,
       type: block.type,
     })
@@ -535,7 +557,6 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
       title: editDraft.title.trim() || 'Untitled block',
       estimatedMinutes: Math.max(5, Math.min(180, Number(editDraft.estimatedMinutes) || 25)),
       dueDate: editDraft.dueDate || undefined,
-      project: editDraft.project?.trim() || undefined,
       notes: editDraft.notes?.trim() || undefined,
     }, 'Block updated.')
     setEditingBlockId(null)
@@ -559,6 +580,9 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
 
   function updateSubtask(blockId: string, subtaskId: string, patch: Partial<BlockSubtask>) {
     const now = new Date().toISOString()
+    if (patch.done === false) {
+      setDismissedCompletionPrompts(prev => ({ ...prev, [blockId]: false }))
+    }
     patchBlock(blockId, block => ({
       ...block,
       subtasks: block.subtasks.map(subtask =>
@@ -566,6 +590,21 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
       ),
       updatedAt: now,
     }), 'Subtask updated.')
+  }
+
+  function beginSubtaskEdit(blockId: string, subtask: BlockSubtask) {
+    setEditingSubtask({ blockId, subtaskId: subtask.id })
+    setSubtaskDrafts(prev => ({ ...prev, [subtask.id]: subtask.title }))
+  }
+
+  function commitSubtaskEdit(blockId: string, subtaskId: string) {
+    const title = subtaskDrafts[subtaskId]?.trim()
+    if (!title) {
+      setEditingSubtask(null)
+      return
+    }
+    updateSubtask(blockId, subtaskId, { title })
+    setEditingSubtask(null)
   }
 
   function deleteSubtask(blockId: string, subtaskId: string) {
@@ -578,7 +617,7 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
   }
 
   function resetFilters() {
-    setFilters({ priority: 'all', status: 'all', area: 'all', due: 'all' })
+    setFilters({ priority: 'all', status: 'all', energy: 'all', area: 'all', due: 'all' })
   }
 
   return (
@@ -687,9 +726,7 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
             <h3>Today’s queue</h3>
           </div>
           <div className="queue-filter-actions">
-            <button className="home-filter-toggle" type="button" onClick={() => setFiltersOpen(value => !value)}>
-              Filters{filterCount > 0 ? ` · ${filterCount} active` : ''}
-            </button>
+            <span>{filterCount > 0 ? `${filterCount} active` : 'All blocks'}</span>
             {hasActiveFilters(filters) && (
               <button className="home-reset-filters" type="button" onClick={resetFilters}>
                 Reset
@@ -697,42 +734,88 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
             )}
           </div>
         </div>
-        {filtersOpen && <div className="queue-filter-panel" aria-label="Block queue filters">
-          <label>
-            Priority
-            <select value={filters.priority} onChange={event => setFilters(prev => ({ ...prev, priority: event.target.value as PriorityFilter }))}>
-              {PRIORITY_FILTERS.map(value => <option key={value} value={value}>{value === 'all' ? 'All' : labelFromToken(value)}</option>)}
-            </select>
-          </label>
-          <label>
-            Status
-            <select value={filters.status} onChange={event => setFilters(prev => ({ ...prev, status: event.target.value as StatusFilter }))}>
-              {STATUS_FILTERS.map(value => <option key={value} value={value}>{value === 'all' ? 'All' : statusLabel(value)}</option>)}
-            </select>
-          </label>
-          <label>
-            Area
+        <div className="queue-filter-bar" aria-label="Block queue filters">
+          <div className="queue-filter-group">
+            <span>Priority</span>
+            <div className="queue-filter-pills">
+              {PRIORITY_FILTERS.map(value => (
+                <button
+                  key={value}
+                  type="button"
+                  className={filters.priority === value ? 'active' : ''}
+                  onClick={() => setFilters(prev => ({ ...prev, priority: value }))}
+                >
+                  {value === 'all' ? 'All' : labelFromToken(value)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="queue-filter-group">
+            <span>Status</span>
+            <div className="queue-filter-pills">
+              {STATUS_FILTERS.map(value => (
+                <button
+                  key={value}
+                  type="button"
+                  className={filters.status === value ? 'active' : ''}
+                  onClick={() => setFilters(prev => ({ ...prev, status: value }))}
+                >
+                  {value === 'all' ? 'All' : statusLabel(value)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="queue-filter-group">
+            <span>Energy</span>
+            <div className="queue-filter-pills">
+              {ENERGY_FILTERS.map(value => (
+                <button
+                  key={value}
+                  type="button"
+                  className={filters.energy === value ? 'active' : ''}
+                  onClick={() => setFilters(prev => ({ ...prev, energy: value }))}
+                >
+                  {value === 'all' ? 'All' : labelFromToken(value)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="queue-filter-group">
+            <span>Due</span>
+            <div className="queue-filter-pills">
+              {DUE_FILTERS.map(value => (
+                <button
+                  key={value}
+                  type="button"
+                  className={filters.due === value ? 'active' : ''}
+                  onClick={() => setFilters(prev => ({ ...prev, due: value }))}
+                >
+                  {value === 'all' ? 'All' : value === 'none' ? 'No Date' : value === 'this_week' ? 'This Week' : 'Today'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="queue-filter-group queue-area-filter">
+            <span>Area</span>
             <select value={filters.area} onChange={event => setFilters(prev => ({ ...prev, area: event.target.value as AreaFilter }))}>
-              {AREA_FILTERS.map(value => <option key={value} value={value}>{value === 'all' ? 'All' : labelFromToken(value)}</option>)}
+              <option value="all">All</option>
+              {dynamicAreaFilters.map(value => (
+                <option key={value} value={value}>{labelFromToken(value)}</option>
+              ))}
             </select>
           </label>
-          <label>
-            Due
-            <select value={filters.due} onChange={event => setFilters(prev => ({ ...prev, due: event.target.value as DueFilter }))}>
-              {DUE_FILTERS.map(value => <option key={value} value={value}>{value === 'none' ? 'No due date' : value === 'all' ? 'All' : labelFromToken(value)}</option>)}
-            </select>
-          </label>
-        </div>}
+        </div>
         <div className="home-block-list">
           {blocks.length === 0 ? (
             <div className="home-block-empty">No blocks yet. Add one below.</div>
           ) : visibleBlocks.length === 0 ? (
-            <div className="home-block-empty">No blocks match these filters.</div>
+            <div className="home-block-empty">No blocks match these filters. Try clearing a filter.</div>
           ) : visibleBlocks.map(block => {
             const index = blocks.findIndex(item => item.id === block.id)
             const isExpanded = expandedBlockId === block.id
             const isEditing = editingBlockId === block.id && editDraft
             const allSubtasksDone = block.subtasks.length > 0 && block.subtasks.every(subtask => subtask.done)
+            const showCompletionPrompt = allSubtasksDone && block.status !== 'done' && !dismissedCompletionPrompts[block.id]
             return (
             <article key={block.id} className={`home-block-card home-block-card-${block.status}`}>
               <div className="home-block-main">
@@ -749,16 +832,12 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
                   {subtaskProgress(block) && <span>{subtaskProgress(block)} subtasks</span>}
                 </div>
                 {block.notes && <p className="home-block-note">{block.notes}</p>}
-                {allSubtasksDone && block.status !== 'done' && (
-                  <div className="home-subtask-complete-hint">
-                    All subtasks are done. Ready to complete the parent block?
-                  </div>
-                )}
               </div>
               <div className="home-block-actions">
                 <button type="button" onClick={() => updateBlock(block.id, { status: 'in_progress' }, 'Block started.')}><Play size={13} />Start</button>
                 <button type="button" onClick={() => updateBlock(block.id, { status: 'done', completedAt: new Date().toISOString() }, 'Block completed.')}><Check size={13} />Done</button>
                 <button type="button" onClick={() => updateBlock(block.id, { status: 'skipped' }, 'Block skipped.')}>Skip</button>
+                <button type="button" className="home-icon-action" onClick={() => beginEdit(block)} aria-label={`Edit ${block.title}`}><Pencil size={13} /></button>
                 <button type="button" className="home-more-action" onClick={() => setExpandedBlockId(isExpanded ? null : block.id)}>
                   {isExpanded ? 'Less' : 'More'}
                 </button>
@@ -766,7 +845,6 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
               {isExpanded && (
                 <div className="home-block-details">
                   <div className="home-tertiary-actions" aria-label={`More actions for ${block.title}`}>
-                    <button type="button" onClick={() => beginEdit(block)}><Pencil size={13} />Edit</button>
                     <button type="button" onClick={() => convertBlock(block)}>25 min</button>
                     <button type="button" onClick={() => moveBlock(index, -1)} disabled={index === 0} aria-label={`Move ${block.title} up`}><ArrowUp size={13} /></button>
                     <button type="button" onClick={() => moveBlock(index, 1)} disabled={index === blocks.length - 1} aria-label={`Move ${block.title} down`}><ArrowDown size={13} /></button>
@@ -781,16 +859,13 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
                       </select></label>
                       <label>Due date<input type="date" value={editDraft.dueDate ?? ''} onChange={event => setEditDraft({ ...editDraft, dueDate: event.target.value })} /></label>
                       <label>Estimate<input type="number" min="5" max="180" step="5" value={editDraft.estimatedMinutes} onChange={event => setEditDraft({ ...editDraft, estimatedMinutes: Number(event.target.value) })} /></label>
-                      <label>Project<input value={editDraft.project ?? ''} onChange={event => setEditDraft({ ...editDraft, project: event.target.value })} /></label>
-                      <label>Area<select value={editDraft.area} onChange={event => setEditDraft({ ...editDraft, area: event.target.value as DayBlock['area'] })}>
-                        {AREA_FILTERS.filter(value => value !== 'all').map(value => <option key={value} value={value}>{labelFromToken(value)}</option>)}
-                      </select></label>
                       <label>Type<select value={editDraft.type} onChange={event => setEditDraft({ ...editDraft, type: event.target.value as DayBlock['type'] })}>
-                        <option value="deep_work">Deep work</option>
-                        <option value="output">Output</option>
-                        <option value="low_input">Low input</option>
-                        <option value="admin">Admin</option>
-                        <option value="recovery">Recovery</option>
+                        {!BLOCK_TYPE_EDIT_OPTIONS.some(option => option.value === editDraft.type) && (
+                          <option value={editDraft.type}>Current: {labelFromToken(editDraft.type)}</option>
+                        )}
+                        {BLOCK_TYPE_EDIT_OPTIONS.map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </select></label>
                       <label>Energy<select value={editDraft.energyLevel} onChange={event => setEditDraft({ ...editDraft, energyLevel: event.target.value as DayBlock['energyLevel'] })}>
                         <option value="low">Low</option>
@@ -805,23 +880,64 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
                     </div>
                   ) : (
                     <div className="home-subtask-panel">
+                      <div className="home-subtask-header">
+                        <span>Subtasks</span>
+                        <span>{block.subtasks.filter(subtask => subtask.done).length} / {block.subtasks.length} done</span>
+                      </div>
                       <div className="home-subtask-list">
                         {block.subtasks.length === 0 ? (
                           <p>No subtasks yet.</p>
-                        ) : block.subtasks.map(subtask => (
-                          <div key={subtask.id} className="home-subtask-row">
-                            <input type="checkbox" checked={subtask.done} onChange={event => updateSubtask(block.id, subtask.id, { done: event.target.checked })} />
-                            <input value={subtask.title} onChange={event => updateSubtask(block.id, subtask.id, { title: event.target.value })} />
-                            <button type="button" onClick={() => deleteSubtask(block.id, subtask.id)} aria-label={`Delete ${subtask.title}`}>
-                              <Trash2 size={13} />
+                        ) : block.subtasks.map(subtask => {
+                          const isSubtaskEditing = editingSubtask?.blockId === block.id && editingSubtask.subtaskId === subtask.id
+                          return (
+                            <div key={subtask.id} className="home-subtask-row">
+                              <input type="checkbox" checked={subtask.done} onChange={event => updateSubtask(block.id, subtask.id, { done: event.target.checked })} />
+                              {isSubtaskEditing ? (
+                                <input
+                                  value={subtaskDrafts[subtask.id] ?? subtask.title}
+                                  onChange={event => setSubtaskDrafts(prev => ({ ...prev, [subtask.id]: event.target.value }))}
+                                  onBlur={() => commitSubtaskEdit(block.id, subtask.id)}
+                                  onKeyDown={event => {
+                                    if (event.key === 'Enter') commitSubtaskEdit(block.id, subtask.id)
+                                  }}
+                                  autoFocus
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  className={`home-subtask-label ${subtask.done ? 'done' : ''}`}
+                                  onClick={() => beginSubtaskEdit(block.id, subtask)}
+                                >
+                                  {subtask.title}
+                                </button>
+                              )}
+                              <button type="button" onClick={() => deleteSubtask(block.id, subtask.id)} aria-label={`Delete ${subtask.title}`}>
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {showCompletionPrompt && (
+                        <div className="home-subtask-complete-hint">
+                          <span>All subtasks done — mark this block complete?</span>
+                          <div>
+                            <button type="button" onClick={() => updateBlock(block.id, { status: 'done', completedAt: new Date().toISOString() }, 'Block completed.')}>
+                              Yes, complete it
+                            </button>
+                            <button type="button" onClick={() => setDismissedCompletionPrompts(prev => ({ ...prev, [block.id]: true }))}>
+                              Not yet
                             </button>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                       <div className="home-subtask-add">
                         <input
                           value={newSubtaskTitles[block.id] ?? ''}
                           onChange={event => setNewSubtaskTitles(prev => ({ ...prev, [block.id]: event.target.value }))}
+                          onKeyDown={event => {
+                            if (event.key === 'Enter') addSubtask(block.id)
+                          }}
                           placeholder="Add a subtask"
                         />
                         <button type="button" onClick={() => addSubtask(block.id)}><Plus size={13} />Add</button>

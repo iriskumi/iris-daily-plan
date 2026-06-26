@@ -2295,6 +2295,11 @@ textarea {
   flex-wrap: wrap;
 }
 
+.queue-filter-actions span {
+  color: var(--text-3);
+  font-size: 0.76rem;
+}
+
 .home-reset-filters,
 .home-filter-toggle {
   border: 1px solid var(--border-strong);
@@ -2309,6 +2314,64 @@ textarea {
 
 .home-filter-toggle {
   background: var(--surface-2);
+}
+
+.queue-filter-bar {
+  display: grid;
+  gap: 0.68rem;
+  background: #FFFCF9;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 0.78rem;
+}
+
+.queue-filter-group {
+  display: grid;
+  gap: 0.36rem;
+  min-width: 0;
+}
+
+.queue-filter-group > span,
+.queue-area-filter > span {
+  color: var(--section-label);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.queue-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+.queue-filter-pills button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  border-radius: 999px;
+  min-height: 30px;
+  padding: 0.28rem 0.68rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.queue-filter-pills button.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.queue-area-filter select {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 9px;
+  color: var(--text);
+  font-family: var(--font-cjk);
+  font-size: 0.84rem;
+  min-height: 34px;
+  padding: 0 0.55rem;
 }
 
 .queue-filter-panel {
@@ -2456,6 +2519,12 @@ textarea {
   color: var(--text-hint);
 }
 
+.home-block-actions .home-icon-action {
+  width: 32px;
+  justify-content: center;
+  padding: 0.34rem;
+}
+
 .home-block-details {
   grid-column: 1 / -1;
   border-top: 1px solid var(--border);
@@ -2525,6 +2594,19 @@ textarea {
   gap: 0.62rem;
 }
 
+.home-subtask-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--text-3);
+  font-size: 0.78rem;
+}
+
+.home-subtask-header span:first-child {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
 .home-subtask-list {
   display: grid;
   gap: 0.42rem;
@@ -2565,6 +2647,46 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  cursor: pointer;
+}
+
+.home-subtask-row .home-subtask-label {
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  justify-content: flex-start;
+  min-height: 30px;
+  padding: 0;
+  text-align: left;
+}
+
+.home-subtask-row .home-subtask-label.done {
+  color: var(--text-hint);
+  text-decoration: line-through;
+}
+
+.home-subtask-complete-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.home-subtask-complete-hint div {
+  display: flex;
+  gap: 0.38rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.home-subtask-complete-hint button {
+  border: 1px solid var(--amber-border);
+  background: #FFFCF9;
+  color: var(--accent);
+  border-radius: 999px;
+  min-height: 28px;
+  padding: 0.2rem 0.56rem;
+  font-size: 0.72rem;
   cursor: pointer;
 }
 
@@ -6530,13 +6652,20 @@ body,
     grid-template-columns: 1fr;
   }
 
+  .queue-filter-bar,
   .queue-filter-panel,
   .compact-edit-grid {
     grid-template-columns: 1fr;
   }
 
-  .home-subtask-add {
+  .home-subtask-add,
+  .home-subtask-complete-hint {
     grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .home-subtask-complete-hint {
+    flex-direction: column;
   }
 
   .home-secondary-panel summary {

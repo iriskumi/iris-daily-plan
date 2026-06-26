@@ -235,3 +235,15 @@
 ## Queue Calm Pass Verification
 
 - Passed: npm run build.
+
+## Phase 3 - Filters, Subtasks, Compact Editing
+
+- Added filter bar with Priority, Status, Energy, Due Date, and Area filters above the Block Queue.
+- Filters combine with AND logic; active filter pills show a filled selected style.
+- Empty filter state shows a calm inline message.
+- Added compact inline editing on block cards (no modals): title, priority, energy, estimate, due date, type, notes.
+- Only one card editable at a time; opening a second closes the first without saving.
+- Added subtask view, add, inline edit, and delete on each block card.
+- Subtask completion state persists to localStorage immediately.
+- Added non-blocking parent completion suggestion when all subtasks are done.
+- App passes npm run build.

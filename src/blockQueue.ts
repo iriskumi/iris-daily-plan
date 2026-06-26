@@ -267,7 +267,7 @@ export function suggestNextBlock(
   const currentEnergy = options.currentEnergy ?? queue.currentEnergy
   const mainFocus = options.mainFocus ?? queue.mainFocus
   const priorityScore: Record<BlockTaskPriority, number> = { must: 90, should: 55, could: 25 }
-  const preferredLightTypes: BlockTaskType[] = ['low_input', 'admin', 'recovery']
+  const preferredLightTypes: BlockTaskType[] = ['low_input', 'study', 'review', 'admin', 'recovery']
   const highOutputTypes: BlockTaskType[] = ['deep_work', 'output']
 
   function score(block: DayBlock): number {
