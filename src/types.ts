@@ -1,5 +1,15 @@
 export type EnergyLevel = 'low' | 'medium' | 'high'
 
+export type DayMode = 'full-day' | 'normal-day' | 'late-start-day' | 'rescue-day'
+
+export interface DayModeConfig {
+  id: DayMode
+  label: string
+  targetBlocks: number
+  targetRange?: string
+  description: string
+}
+
 export type DayType =
   | 'normal'
   | 'evening-class'
@@ -49,6 +59,60 @@ export type TaskArea =
 export type TaskEnergy = 'Low' | 'Medium' | 'High'
 export type TaskMode = 'Focus' | 'Light' | 'Admin' | 'Recovery'
 export type TaskStatus = 'Inbox' | 'Planned' | 'Doing' | 'Done' | 'Skipped' | 'Archived'
+export type BlockTaskType = 'deep_work' | 'output' | 'low_input' | 'admin' | 'recovery'
+export type BlockTaskArea =
+  | 'cyber'
+  | 'ai_project'
+  | 'english'
+  | 'sql_data'
+  | 'work_admin'
+  | 'life_admin'
+  | 'health'
+  | 'reading'
+  | 'other'
+export type BlockTaskPriority = 'must' | 'should' | 'could'
+export type BlockTaskEnergyLevel = 'high' | 'medium' | 'low'
+export type BlockTaskStatus = 'not_started' | 'in_progress' | 'done' | 'skipped'
+
+export interface BlockSubtask {
+  id: string
+  title: string
+  done: boolean
+}
+
+export interface DayBlock {
+  id: string
+  sourceTaskId?: string
+  date: string
+  title: string
+  description?: string
+  notes?: string
+  type: BlockTaskType
+  area: BlockTaskArea
+  project?: string
+  priority: BlockTaskPriority
+  energyLevel: BlockTaskEnergyLevel
+  estimatedMinutes: number
+  dueDate?: string
+  status: BlockTaskStatus
+  subtasks: BlockSubtask[]
+  tags: string[]
+  order: number
+  createdAt: string
+  updatedAt: string
+  completedAt?: string
+  skippedReason?: string
+}
+
+export interface DayBlockQueue {
+  date: string
+  mode: DayMode
+  suggestedMode?: DayMode
+  targetBlocks: number
+  blocks: DayBlock[]
+  createdAt: string
+  updatedAt: string
+}
 export type FocusBlockStatus = 'Doing' | 'Done' | 'Partial' | 'Skipped' | 'Changed'
 export type MealAnchorStatus = 'Followed' | 'Partial' | 'Skipped' | 'Changed' | ''
 export type RecommendedWindow = 'daytime' | 'evening' | 'any'
@@ -205,6 +269,15 @@ export interface StartPlan {
 export interface Task {
   id: string
   title: string
+  description?: string
+  notes?: string
+  project?: string
+  priority?: BlockTaskPriority
+  dueDate?: string
+  subtasks?: BlockSubtask[]
+  tags?: string[]
+  completedAt?: string
+  skippedReason?: string
   area?: TaskArea
   energy?: TaskEnergy
   mode?: TaskMode
@@ -505,6 +578,7 @@ export interface IntegrationResult<T> {
 export interface AppBackupData {
   checkin: DailyCheckin | null
   checkInsByDate?: Record<string, DailyCheckin>
+  blockQueuesByDate?: Record<string, DayBlockQueue>
   dailyLogs: DailyLog[]
   timeBlockFollowUps?: Record<string, Record<string, TimeBlockFollowUp>>
   focusSessions: FocusSession[]

@@ -4,6 +4,8 @@ import type {
   AppSettings,
   DailyCheckin,
   DailyLog,
+  DayBlockQueue,
+  DayMode,
   FocusBlock,
   FocusSession,
   MealAnchor,
@@ -22,6 +24,7 @@ import type {
   TimeBlock,
 } from './types'
 import { getLocalDateKey } from './focus'
+import { createDayBlockQueue, mergeQueueWithTasks, targetBlocksForMode } from './blockQueue'
 import {
   archiveCompletedOldTasks,
   defaultMealAnchors,
@@ -56,6 +59,7 @@ const KEYS = {
   focusBlocksByDate: 'focusBlocksByDate',
   mealAnchors: 'iris_meal_anchors',
   mealStatusByDate: 'mealStatusByDate',
+  blockQueuesByDate: 'iris-block-queues-by-date',
 }
 
 interface VersionedValue<T> {
@@ -215,6 +219,53 @@ export const loadActiveTasks = (): Task[] => loadTasks().filter(isActiveTask)
 export const archiveOldTasks = (): Task[] => {
   const next = archiveCompletedOldTasks(loadTasks())
   saveTasks(next)
+  return next
+}
+
+export const loadBlockQueuesByDate = (): Record<string, DayBlockQueue> =>
+  load<Record<string, DayBlockQueue>>(KEYS.blockQueuesByDate) ?? {}
+
+export const saveBlockQueuesByDate = (queues: Record<string, DayBlockQueue>): void =>
+  save(KEYS.blockQueuesByDate, queues)
+
+export const loadDayBlockQueue = (date = getLocalDateKey()): DayBlockQueue => {
+  const queues = loadBlockQueuesByDate()
+  const existing = queues[date]
+  const tasks = loadActiveTasks()
+  const queue = existing
+    ? mergeQueueWithTasks(existing, tasks)
+    : createDayBlockQueue({ date, tasks })
+
+  if (JSON.stringify(existing) !== JSON.stringify(queue)) {
+    saveBlockQueuesByDate({
+      ...queues,
+      [date]: queue,
+    })
+  }
+
+  return queue
+}
+
+export const saveDayBlockQueue = (queue: DayBlockQueue): void => {
+  saveBlockQueuesByDate({
+    ...loadBlockQueuesByDate(),
+    [queue.date]: {
+      ...queue,
+      targetBlocks: targetBlocksForMode(queue.mode),
+      updatedAt: new Date().toISOString(),
+    },
+  })
+}
+
+export const setDayBlockQueueMode = (date: string, mode: DayMode): DayBlockQueue => {
+  const queue = loadDayBlockQueue(date)
+  const next = {
+    ...queue,
+    mode,
+    targetBlocks: targetBlocksForMode(mode),
+    updatedAt: new Date().toISOString(),
+  }
+  saveDayBlockQueue(next)
   return next
 }
 
@@ -516,6 +567,7 @@ export function exportBackupData(): AppBackup {
     data: {
       checkin: loadCheckin(),
       checkInsByDate: loadCheckinsByDate(),
+      blockQueuesByDate: loadBlockQueuesByDate(),
       dailyLogs: Object.values(loadDailyLogs()),
       timeBlockFollowUps: loadAllTimeBlockFollowUps(),
       focusSessions: loadFocusSessions(),
@@ -555,6 +607,7 @@ export function validateBackup(input: unknown): AppBackupData | null {
   return {
     checkin: candidate.checkin ?? null,
     checkInsByDate: candidate.checkInsByDate ?? {},
+    blockQueuesByDate: candidate.blockQueuesByDate ?? {},
     dailyLogs: isArray(candidate.dailyLogs)
       ? (candidate.dailyLogs as DailyLog[])
       : [],
@@ -592,6 +645,7 @@ export function importBackupData(data: AppBackupData): void {
   if (data.checkin) saveCheckin(data.checkin)
   else localStorage.removeItem(KEYS.checkin)
   save(KEYS.checkInsByDate, checkInsByDate)
+  saveBlockQueuesByDate(data.blockQueuesByDate ?? {})
   saveDailyLogs(
     Object.fromEntries(data.dailyLogs.map(log => [log.date, log])),
   )
