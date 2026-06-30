@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import type { TaskCategory, FocusStats } from '../types'
+import type { TaskCategory, FocusSession, FocusStats } from '../types'
 import { addFocusSession, loadFocusSessions } from '../storage'
 import { getFocusStats, localDateString } from '../focus'
 import FocusGarden from './FocusGarden'
 import { longBlockHint } from '../durations'
+import * as timerEngine from '../timerEngine'
+import { writePomodoroSessionToTaskStore } from '../taskStore'
+import type { TimerSession } from '../timerEngineTypes'
 
 type Phase = 'idle' | 'focus' | 'break' | 'session-done' | 'all-done'
 type CompanionState = 'idle' | 'focus' | 'break' | 'completed' | 'distracted'
@@ -20,6 +23,57 @@ interface Props {
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
+}
+
+const POMODORO_TIMER_STORAGE_KEY = 'iris-pomodoro-timer-engine-active'
+
+interface StoredPomodoroTimer {
+  phase: Phase
+  running: boolean
+  sessionsCompleted: number
+  distractionCount: number
+  distractionMsg: string | null
+  taskId?: string
+  taskTitle: string
+  category: TaskCategory
+  pomodoroLength: number
+  breakLength: number
+  sessions: number
+  timerSession: TimerSession
+}
+
+function loadStoredPomodoroTimer(input: {
+  taskId?: string
+  taskTitle: string
+  category: TaskCategory
+  pomodoroLength: number
+  breakLength: number
+  sessions: number
+}): StoredPomodoroTimer | null {
+  try {
+    const raw = localStorage.getItem(POMODORO_TIMER_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as StoredPomodoroTimer
+    if (parsed.taskId !== input.taskId) return null
+    if (!input.taskId && parsed.taskTitle !== input.taskTitle) return null
+    if (parsed.category !== input.category) return null
+    return {
+      ...parsed,
+      pomodoroLength: input.pomodoroLength,
+      breakLength: input.breakLength,
+      sessions: input.sessions,
+    }
+  } catch {
+    return null
+  }
+}
+
+function saveStoredPomodoroTimer(data: StoredPomodoroTimer): void {
+  localStorage.setItem(POMODORO_TIMER_STORAGE_KEY, JSON.stringify(data))
+}
+
+function clearStoredPomodoroTimer(): void {
+  localStorage.removeItem(POMODORO_TIMER_STORAGE_KEY)
 }
 
 function companionCopy(state: CompanionState): string {
@@ -117,12 +171,21 @@ export default function PomodoroTimer({
   category = 'cyber-study',
   onMarkDone,
 }: Props) {
-  const [phase, setPhase] = useState<Phase>('idle')
-  const [timeLeft, setTimeLeft] = useState(pomodoroLength * 60)
-  const [running, setRunning] = useState(false)
-  const [sessionsCompleted, setSessionsCompleted] = useState(0)
-  const [distractionCount, setDistractionCount] = useState(0)
-  const [distractionMsg, setDistractionMsg] = useState<string | null>(null)
+  const restored = loadStoredPomodoroTimer({
+    taskId,
+    taskTitle,
+    category,
+    pomodoroLength,
+    breakLength,
+    sessions,
+  })
+  const [phase, setPhase] = useState<Phase>(restored?.phase ?? 'idle')
+  const [running, setRunning] = useState(restored?.running ?? false)
+  const [sessionsCompleted, setSessionsCompleted] = useState(restored?.sessionsCompleted ?? 0)
+  const [distractionCount, setDistractionCount] = useState(restored?.distractionCount ?? 0)
+  const [distractionMsg, setDistractionMsg] = useState<string | null>(restored?.distractionMsg ?? null)
+  const [activeTimer, setActiveTimer] = useState<TimerSession | null>(restored?.timerSession ?? null)
+  const [tick, setTick] = useState(Date.now())
   const [focusView, setFocusView] = useState(false)
   const [focusStats, setFocusStats] = useState<FocusStats>(() =>
     getFocusStats(loadFocusSessions()),
@@ -132,15 +195,68 @@ export default function PomodoroTimer({
   const sessionsRef = useRef(sessionsCompleted)
   const sessionsTargetRef = useRef(sessions)
   const distractionRef = useRef(distractionCount)
+  const activeTimerRef = useRef<TimerSession | null>(activeTimer)
+  const runningRef = useRef(running)
 
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { sessionsRef.current = sessionsCompleted }, [sessionsCompleted])
   useEffect(() => { sessionsTargetRef.current = sessions }, [sessions])
   useEffect(() => { distractionRef.current = distractionCount }, [distractionCount])
+  useEffect(() => { activeTimerRef.current = activeTimer }, [activeTimer])
+  useEffect(() => { runningRef.current = running }, [running])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setTick(Date.now()), 1000)
+    const handleVisibilityTick = () => setTick(Date.now())
+    document.addEventListener('visibilitychange', handleVisibilityTick)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityTick)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (phase === 'idle' || phase === 'all-done' || !activeTimer) {
+      if (phase === 'idle' || phase === 'all-done') clearStoredPomodoroTimer()
+      return
+    }
+    saveStoredPomodoroTimer({
+      phase,
+      running,
+      sessionsCompleted,
+      distractionCount,
+      distractionMsg,
+      taskId,
+      taskTitle,
+      category,
+      pomodoroLength,
+      breakLength,
+      sessions,
+      timerSession: activeTimer,
+    })
+  }, [
+    activeTimer,
+    breakLength,
+    category,
+    distractionCount,
+    distractionMsg,
+    phase,
+    pomodoroLength,
+    running,
+    sessions,
+    sessionsCompleted,
+    taskId,
+    taskTitle,
+  ])
 
   useEffect(() => {
     function handleVisibilityChange() {
-      if (document.hidden && running && phaseRef.current === 'focus') {
+      if (document.hidden && runningRef.current && phaseRef.current === 'focus') {
+        const timer = activeTimerRef.current
+        if (timer) {
+          const paused = timerEngine.pause(timer)
+          setActiveTimer(paused)
+        }
         setRunning(false)
         setDistractionCount(count => count + 1)
         setDistractionMsg('Focus paused after leaving the page. You can resume once; repeated distractions will not count for the garden.')
@@ -150,51 +266,50 @@ export default function PomodoroTimer({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [running])
 
-  function recordFocusSession() {
+  function recordFocusSession(completedTimer: TimerSession) {
     if (distractionRef.current > 1) {
       setDistractionMsg('Session completed, but repeated distractions mean it will not count toward Focus Garden.')
       return
     }
-    const completedAt = new Date()
-    const next = addFocusSession({
-      id: crypto.randomUUID(),
+    const completedAt = completedTimer.endedAt ? new Date(completedTimer.endedAt) : new Date()
+    const focusSession: FocusSession = {
+      id: completedTimer.id,
       date: localDateString(completedAt),
       taskId,
       taskTitle,
       category,
       focusMinutes: pomodoroLength,
       completedAt: completedAt.toISOString(),
-    })
+    }
+    const next = addFocusSession(focusSession)
+    writePomodoroSessionToTaskStore(focusSession)
     setFocusStats(getFocusStats(next))
   }
 
   useEffect(() => {
-    if (!running) return
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          setRunning(false)
-          if (phaseRef.current === 'focus') {
-            recordFocusSession()
-            setPhase('session-done')
-          } else if (phaseRef.current === 'break') {
-            const next = sessionsRef.current + 1
-            setSessionsCompleted(next)
-            if (next >= sessionsTargetRef.current) {
-              setPhase('all-done')
-            } else {
-              setPhase('idle')
-              return pomodoroLength * 60
-            }
-          }
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [running, pomodoroLength])
+    if (!running || !activeTimer) return
+    if (timerEngine.remainingMs(activeTimer, tick) > 0) return
+    const completedTimer = timerEngine.complete(activeTimer, tick)
+    setActiveTimer(completedTimer)
+    setRunning(false)
+    if (phaseRef.current === 'focus') {
+      recordFocusSession(completedTimer)
+      setPhase('session-done')
+    } else if (phaseRef.current === 'break') {
+      const next = sessionsRef.current + 1
+      setSessionsCompleted(next)
+      if (next >= sessionsTargetRef.current) {
+        setPhase('all-done')
+      } else {
+        setPhase('idle')
+        setActiveTimer(null)
+      }
+    }
+  }, [activeTimer, running, tick])
 
+  const timeLeft = activeTimer && phase !== 'idle'
+    ? Math.ceil(timerEngine.remainingMs(activeTimer, tick) / 1000)
+    : pomodoroLength * 60
   const minutes = Math.floor(timeLeft / 60)
   const seconds = timeLeft % 60
   const timeStr = `${pad(minutes)}:${pad(seconds)}`
@@ -218,26 +333,51 @@ export default function PomodoroTimer({
             : 'idle'
 
   function startFocus() {
+    const timerSession = timerEngine.start(
+      taskId ?? `pomodoro:${taskTitle}`,
+      pomodoroLength,
+      'pomodoro',
+    )
+    setActiveTimer(timerSession)
     setPhase('focus')
-    setTimeLeft(pomodoroLength * 60)
     setDistractionCount(0)
     setDistractionMsg(null)
     setRunning(true)
   }
 
   function startBreak() {
+    const timerSession = timerEngine.start(
+      taskId ? `${taskId}:break` : `pomodoro-break:${taskTitle}`,
+      breakLength,
+      'pomodoro',
+    )
+    setActiveTimer(timerSession)
     setPhase('break')
-    setTimeLeft(breakLength * 60)
     setRunning(true)
   }
 
   function reset() {
+    if (activeTimer) {
+      setActiveTimer(timerEngine.abandon(activeTimer))
+    }
+    clearStoredPomodoroTimer()
     setRunning(false)
     setPhase('idle')
-    setTimeLeft(pomodoroLength * 60)
+    setActiveTimer(null)
     setSessionsCompleted(0)
     setDistractionCount(0)
     setDistractionMsg(null)
+  }
+
+  function toggleRunning() {
+    if (!activeTimer) return
+    if (running) {
+      setActiveTimer(timerEngine.pause(activeTimer))
+      setRunning(false)
+      return
+    }
+    setActiveTimer(timerEngine.resume(activeTimer))
+    setRunning(true)
   }
 
   if (phase === 'all-done') {
@@ -338,7 +478,7 @@ export default function PomodoroTimer({
           </button>
         ) : (
           <>
-            <button className="pomo-btn pomo-btn-primary" onClick={() => setRunning(r => !r)}>
+            <button className="pomo-btn pomo-btn-primary" onClick={toggleRunning}>
               {running ? '⏸ Pause' : '▶ Resume'}
             </button>
             <button className="pomo-btn pomo-btn-ghost" onClick={reset}>

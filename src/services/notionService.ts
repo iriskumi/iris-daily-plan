@@ -3,6 +3,7 @@ import type {
   FocusStats,
   GeneratedPlan,
   IntegrationResult,
+  NotionBillsSyncResult,
   NotionDailyLogPayload,
   NotionExportResult,
 } from '../types'
@@ -63,6 +64,19 @@ async function requestNotionSchema(method: 'GET' | 'POST'): Promise<IntegrationR
 
 export const checkNotionSchema = () => requestNotionSchema('GET')
 export const createMissingNotionProperties = () => requestNotionSchema('POST')
+
+export async function syncPaidBillsToNotionTransactions(): Promise<IntegrationResult<NotionBillsSyncResult>> {
+  try {
+    const response = await fetch('/api/notion/sync-paid-bills', { method: 'POST' })
+    return (await response.json()) as IntegrationResult<NotionBillsSyncResult>
+  } catch {
+    return {
+      success: false,
+      message: 'Could not reach the Notion paid bills sync.',
+      data: null,
+    }
+  }
+}
 
 export interface NotionStudyDailyLogPayload {
   date: string

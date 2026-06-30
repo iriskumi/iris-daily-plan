@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, X, Check, AlertCircle } from 'lucide-react'
-import type { Bill, BillStatus, BillPriority } from '../types'
+import { Plus, Pencil, Trash2, X, Check, AlertCircle, RefreshCw } from 'lucide-react'
+import type { Bill, BillStatus, BillPriority, NotionBillsSyncResult } from '../types'
 import { loadBills, saveBills } from '../storage'
 import { getDaysUntil } from '../planner'
+import { syncPaidBillsToNotionTransactions } from '../services/notionService'
 
 function billDueLabel(bill: Bill): { text: string; cls: string } {
   const days = getDaysUntil(bill.dueDate)
@@ -175,6 +176,9 @@ export default function BillsFinance({ onBillsChange }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all')
+  const [syncingPaidBills, setSyncingPaidBills] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const [syncResult, setSyncResult] = useState<NotionBillsSyncResult | null>(null)
 
   function persist(updated: Bill[]) {
     setBills(updated)
@@ -198,6 +202,16 @@ export default function BillsFinance({ onBillsChange }: Props) {
 
   function deleteBill(id: string) {
     if (confirm('Remove this bill?')) persist(bills.filter(b => b.id !== id))
+  }
+
+  async function handleSyncPaidBills() {
+    setSyncingPaidBills(true)
+    setSyncMessage(null)
+    setSyncResult(null)
+    const result = await syncPaidBillsToNotionTransactions()
+    setSyncingPaidBills(false)
+    setSyncMessage(result.message)
+    setSyncResult(result.data)
   }
 
   const overdue = bills.filter(b => b.status !== 'paid' && getDaysUntil(b.dueDate) < 0)
@@ -225,15 +239,48 @@ export default function BillsFinance({ onBillsChange }: Props) {
               {upcoming7.length > 0 ? `${upcoming7.length} due this week` : 'All clear this week'}
             </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => { setShowForm(!showForm); setEditingId(null) }}
-          >
-            <Plus size={14} />
-            Add Bill
-          </button>
+          <div className="flex gap-xs" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={handleSyncPaidBills}
+              disabled={syncingPaidBills}
+            >
+              <RefreshCw size={14} />
+              {syncingPaidBills ? 'Syncing...' : 'Sync Paid Bills'}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => { setShowForm(!showForm); setEditingId(null) }}
+            >
+              <Plus size={14} />
+              Add Bill
+            </button>
+          </div>
         </div>
       </div>
+
+      {syncMessage && (
+        <div className="notion-status">
+          <span>{syncMessage}</span>
+          {syncResult && (
+            <span>
+              Scanned {syncResult.scanned} · Created {syncResult.created} · Skipped {syncResult.skipped} · Errors {syncResult.errors.length}
+            </span>
+          )}
+          {syncResult?.errors.length ? (
+            <details>
+              <summary>View sync errors</summary>
+              <ul>
+                {syncResult.errors.map((error, index) => (
+                  <li key={`${error.billId || 'sync-error'}-${index}`}>
+                    {error.billName ? `${error.billName}: ` : ''}{error.message}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </div>
+      )}
 
       {showForm && !editingId && (
         <BillForm onSave={addBill} onCancel={() => setShowForm(false)} />

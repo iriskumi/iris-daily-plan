@@ -5,6 +5,7 @@ export type StudyCategory =
   | 'English Input'
   | 'Japanese'
   | 'AI Coding'
+  | 'Coursera AI Pathway'
   | 'SQL / Excel'
   | 'Job / Career'
   | 'Review / NotebookLM'
@@ -17,6 +18,7 @@ export type StudyEnergy = 'low' | 'medium' | 'high'
 export type StudyTaskType =
   | 'output'
   | 'input'
+  | 'deep_work'
   | 'coding'
   | 'data'
   | 'career'
@@ -33,7 +35,7 @@ export interface StudyTaskTemplate {
   title: string
   category: StudyCategory
   defaultDuration: 25 | 50
-  alternativeDurations: [25, 50]
+  alternativeDurations: number[]
   energy: StudyEnergy
   type: StudyTaskType
   resourceSuggestion: string

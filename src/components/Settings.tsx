@@ -29,7 +29,11 @@ function downloadJson(filename: string, data: AppBackup) {
   URL.revokeObjectURL(url)
 }
 
-export default function Settings() {
+interface SettingsProps {
+  onSettingsChange?: (settings: AppSettings) => void
+}
+
+export default function Settings({ onSettingsChange }: SettingsProps) {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   const [calendarMeta, setCalendarMeta] = useState<GoogleCalendarImportMeta>(() =>
     loadGoogleCalendarMeta(),
@@ -59,6 +63,7 @@ export default function Settings() {
   function persist(next: AppSettings) {
     setSettings(next)
     saveSettings(next)
+    onSettingsChange?.(next)
     setMessage('Settings saved')
   }
 
@@ -192,6 +197,21 @@ export default function Settings() {
               onChange={e => set('defaultRecoveryBlockEnabled', e.target.checked)}
             />
             <span>Default recovery block enabled</span>
+          </label>
+        </div>
+
+        <div className="settings-section-label mt-1">Display mode</div>
+        <div className="settings-toggle-list">
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={settings.fullCommandHubMode}
+              onChange={e => set('fullCommandHubMode', e.target.checked)}
+            />
+            <span>
+              Full Command Hub mode
+              <small>Show Plan as a top-level tab for work/structured days.</small>
+            </span>
           </label>
         </div>
       </div>

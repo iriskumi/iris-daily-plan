@@ -3,12 +3,20 @@ import { BookOpen, Check, Clipboard, Clock, Copy, Pause, Play, Square, Target, X
 import { getLocalDateKey } from '../focus'
 import { STUDY_CATEGORIES, STUDY_TASK_LIBRARY } from '../studyTaskLibrary'
 import { pushStudyDailyLogToNotion } from '../services/notionService'
+import * as timerEngine from '../timerEngine'
+import {
+  ensureCustomStudyTaskInTaskStore,
+  ensureStudyTemplateTaskInTaskStore,
+  mirrorActiveStudySessionInTaskStore,
+  writeStudySessionToTaskStore,
+} from '../taskStore'
 import {
   addStudySessionRecord,
   clearActiveStudySession,
   loadActiveStudySession,
   loadDailyStudyTarget,
   loadStudyDailyReview,
+  loadStudySessionRecords,
   loadStudySessionRecordsForDate,
   saveActiveStudySession,
   saveDailyStudyTarget,
@@ -21,8 +29,12 @@ import type {
   StudyDailyReview,
   StudySessionRecord,
 } from '../studyTypes'
+import type { TimerSession } from '../timerEngineTypes'
 
 const QUICK_TARGETS = [3, 5, 6, 8]
+const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
+const COURSERA_EXPIRY_DATE = '2026-09-23'
+const COURSERA_CATEGORY: StudyCategory = 'Coursera AI Pathway'
 
 function formatHours(minutes: number): string {
   const hours = Math.floor(minutes / 60)
@@ -30,6 +42,73 @@ function formatHours(minutes: number): string {
   if (mins === 0) return `${hours}h`
   if (hours === 0) return `${mins}m`
   return `${hours}h ${mins}m`
+}
+
+function daysUntilDate(date: string): number {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(`${date}T00:00:00`)
+  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000)
+}
+
+function daysSince(value?: string): number | null {
+  if (!value) return null
+  const current = new Date()
+  current.setHours(0, 0, 0, 0)
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.floor((current.getTime() - date.getTime()) / 86_400_000))
+}
+
+function courseraActivityStatus(records: StudySessionRecord[]): {
+  label: string
+  detail: string
+  severity: 'ok' | 'warning' | 'strong' | 'critical'
+  daysInactive: number | null
+} {
+  const latest = records
+    .filter(record => record.status === 'completed' && record.category === COURSERA_CATEGORY)
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0]
+  const inactiveDays = daysSince(latest?.completedAt)
+  if (inactiveDays === null) {
+    return {
+      label: 'No Coursera session logged yet',
+      detail: 'Log one Coursera AI Pathway session this week to establish activity.',
+      severity: 'warning',
+      daysInactive: null,
+    }
+  }
+  if (inactiveDays >= 13) {
+    return {
+      label: `${inactiveDays} days since last Coursera session`,
+      detail: 'Critical: approaching the 14-day inactivity removal risk.',
+      severity: 'critical',
+      daysInactive: inactiveDays,
+    }
+  }
+  if (inactiveDays >= 10) {
+    return {
+      label: `${inactiveDays} days since last Coursera session`,
+      detail: 'Strong warning: do a Coursera session now to protect scholarship access.',
+      severity: 'strong',
+      daysInactive: inactiveDays,
+    }
+  }
+  if (inactiveDays >= 7) {
+    return {
+      label: `${inactiveDays} days since last Coursera session`,
+      detail: 'Warning: no Coursera session logged in the last 7 days.',
+      severity: 'warning',
+      daysInactive: inactiveDays,
+    }
+  }
+  return {
+    label: 'Active this week',
+    detail: `Last Coursera session was ${inactiveDays === 0 ? 'today' : `${inactiveDays} day${inactiveDays === 1 ? '' : 's'} ago`}.`,
+    severity: 'ok',
+    daysInactive: inactiveDays,
+  }
 }
 
 function todayStudySummary(records: ReturnType<typeof loadStudySessionRecordsForDate>) {
@@ -64,19 +143,78 @@ function formatTimer(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-function remainingMsForSession(session: StudyActiveSession | null, now = Date.now()): number {
-  if (!session) return 0
-  const referenceTime = session.status === 'paused' && session.pauseStartedAt
-    ? session.pauseStartedAt
-    : now
-  return Math.max(0, session.expectedEndTime - referenceTime)
+function activePauseStartedAt(session: TimerSession): number | undefined {
+  const latest = session.pausedIntervals[session.pausedIntervals.length - 1]
+  if (!latest || latest.resumedAt) return undefined
+  const time = new Date(latest.pausedAt).getTime()
+  return Number.isFinite(time) ? time : undefined
 }
 
-function elapsedFocusMs(session: StudyActiveSession, now = Date.now()): number {
-  const activePauseMs = session.status === 'paused' && session.pauseStartedAt
-    ? now - session.pauseStartedAt
-    : 0
-  return Math.max(0, now - session.sessionStartTime - session.pausedAccumulatedMs - activePauseMs)
+function completedPauseMs(session: TimerSession): number {
+  return session.pausedIntervals.reduce((total, interval) => {
+    if (!interval.resumedAt) return total
+    const pausedAt = new Date(interval.pausedAt).getTime()
+    const resumedAt = new Date(interval.resumedAt).getTime()
+    if (!Number.isFinite(pausedAt) || !Number.isFinite(resumedAt)) return total
+    return total + Math.max(0, resumedAt - pausedAt)
+  }, 0)
+}
+
+function studyTimerTaskId(session: StudyActiveSession): string {
+  if (session.taskTemplateId) return `study-template-instance:${session.taskTemplateId}`
+  if (session.customTaskId) return `manual-study:${session.customTaskId}`
+  return `active-study:${session.id}`
+}
+
+function timerFromStudySession(session: StudyActiveSession): TimerSession {
+  if (session.timerSession) return session.timerSession
+  const pausedIntervals: TimerSession['pausedIntervals'] = []
+  if (session.pausedAccumulatedMs > 0) {
+    pausedIntervals.push({
+      pausedAt: new Date(session.sessionStartTime).toISOString(),
+      resumedAt: new Date(session.sessionStartTime + session.pausedAccumulatedMs).toISOString(),
+    })
+  }
+  if (session.status === 'paused' && session.pauseStartedAt) {
+    pausedIntervals.push({
+      pausedAt: new Date(session.pauseStartedAt).toISOString(),
+    })
+  }
+  return {
+    id: session.id,
+    taskId: studyTimerTaskId(session),
+    engine: 'study',
+    durationPlannedMin: session.durationMinutes,
+    startedAt: new Date(session.sessionStartTime).toISOString(),
+    pausedIntervals,
+    outcome: 'in-progress',
+  }
+}
+
+function studySessionWithTimer(session: StudyActiveSession, timerSession: TimerSession): StudyActiveSession {
+  const sessionStartTime = new Date(timerSession.startedAt).getTime()
+  const pauseStartedAt = activePauseStartedAt(timerSession)
+  return {
+    ...session,
+    id: timerSession.id,
+    sessionStartTime: Number.isFinite(sessionStartTime) ? sessionStartTime : session.sessionStartTime,
+    durationMinutes: timerSession.durationPlannedMin,
+    expectedEndTime: timerEngine.expectedEndTime(timerSession),
+    pausedAccumulatedMs: completedPauseMs(timerSession),
+    pauseStartedAt,
+    status: timerEngine.isPaused(timerSession) ? 'paused' : 'running',
+    timerSession,
+  }
+}
+
+function restoreActiveStudySession(): StudyActiveSession | null {
+  const session = loadActiveStudySession()
+  if (!session) return null
+  const restoredTimer = timerEngine.restore(STUDY_TIMER_ENGINE_KEY)
+  const timerSession = restoredTimer?.id === session.id
+    ? restoredTimer
+    : timerFromStudySession(session)
+  return studySessionWithTimer(session, timerSession)
 }
 
 export default function StudyDashboard() {
@@ -98,10 +236,11 @@ export default function StudyDashboard() {
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
   const [pushingNotion, setPushingNotion] = useState(false)
   const [activeSession, setActiveSession] = useState<StudyActiveSession | null>(() =>
-    loadActiveStudySession(),
+    restoreActiveStudySession(),
   )
   const [nowMs, setNowMs] = useState(Date.now())
   const [sessions, setSessions] = useState(() => loadStudySessionRecordsForDate(today))
+  const [allStudySessions, setAllStudySessions] = useState(() => loadStudySessionRecords())
   const [review, setReview] = useState<StudyDailyReview>(() => loadStudyDailyReview(today))
   const summary = todayStudySummary(sessions)
   const completedSessions = sessions.filter(record => record.status === 'completed')
@@ -122,10 +261,13 @@ export default function StudyDashboard() {
     STUDY_TASK_LIBRARY.find(template => template.id === selectedTemplateId) ??
     visibleTemplates[0] ??
     STUDY_TASK_LIBRARY[0]
-  const activeRemainingMs = remainingMsForSession(activeSession, nowMs)
+  const activeTimer = activeSession ? timerFromStudySession(activeSession) : null
+  const activeRemainingMs = activeTimer ? timerEngine.remainingMs(activeTimer, nowMs) : 0
   const activeProgress = activeSession
     ? Math.min(100, Math.round(((activeSession.durationMinutes * 60_000 - activeRemainingMs) / (activeSession.durationMinutes * 60_000)) * 100))
     : 0
+  const courseraDaysRemaining = daysUntilDate(COURSERA_EXPIRY_DATE)
+  const courseraStatus = courseraActivityStatus(allStudySessions)
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowMs(Date.now()), 1000)
@@ -138,9 +280,9 @@ export default function StudyDashboard() {
   }, [])
 
   useEffect(() => {
-    if (!activeSession || activeSession.status !== 'running') return
-    if (remainingMsForSession(activeSession, nowMs) > 0) return
-    completeSession('completed', activeSession.expectedEndTime)
+    if (!activeSession || !activeTimer || activeSession.status !== 'running') return
+    if (!timerEngine.isFinished(activeTimer, nowMs)) return
+    completeSession('completed', timerEngine.expectedEndTime(activeTimer, nowMs))
   }, [activeSession, nowMs])
 
   function updateTargetMinutes(targetMinutes: number) {
@@ -206,18 +348,28 @@ export default function StudyDashboard() {
   function persistActiveSession(session: StudyActiveSession | null) {
     setActiveSession(session)
     setNowMs(Date.now())
+    mirrorActiveStudySessionInTaskStore(session)
     if (session) {
       saveActiveStudySession(session)
+      timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerFromStudySession(session))
     } else {
       clearActiveStudySession()
+      timerEngine.clear(STUDY_TIMER_ENGINE_KEY)
     }
   }
 
   function startTemplateSession(durationMinutes: number) {
     if (!selectedTemplate) return
     const start = Date.now()
-    persistActiveSession({
-      id: crypto.randomUUID(),
+    const sessionId = crypto.randomUUID()
+    const timerSession = timerEngine.start(
+      `study-template-instance:${selectedTemplate.id}`,
+      durationMinutes,
+      'study',
+      { id: sessionId, startedAt: new Date(start).toISOString() },
+    )
+    const session = studySessionWithTimer({
+      id: sessionId,
       taskTemplateId: selectedTemplate.id,
       title: selectedTemplate.title,
       category: selectedTemplate.category,
@@ -229,7 +381,9 @@ export default function StudyDashboard() {
       noteDestination: selectedTemplate.noteDestination,
       notes: selectedTemplate.studyMethod,
       resourceUsed: selectedTemplate.resourceSuggestion,
-    })
+    }, timerSession)
+    ensureStudyTemplateTaskInTaskStore(selectedTemplate, durationMinutes, session)
+    persistActiveSession(session)
   }
 
   function startCustomSession() {
@@ -237,9 +391,17 @@ export default function StudyDashboard() {
     const durationMinutes = Number.isFinite(duration) && duration > 0 ? duration : 25
     const title = customTask.title.trim() || 'Custom study task'
     const start = Date.now()
-    persistActiveSession({
-      id: crypto.randomUUID(),
-      customTaskId: crypto.randomUUID(),
+    const customTaskId = crypto.randomUUID()
+    const sessionId = crypto.randomUUID()
+    const timerSession = timerEngine.start(
+      `manual-study:${customTaskId}`,
+      durationMinutes,
+      'study',
+      { id: sessionId, startedAt: new Date(start).toISOString() },
+    )
+    const session = studySessionWithTimer({
+      id: sessionId,
+      customTaskId,
       title,
       category: customTask.category,
       sessionStartTime: start,
@@ -250,7 +412,17 @@ export default function StudyDashboard() {
       noteDestination: customTask.noteDestination || 'Obsidian/Study/Inbox.md',
       notes: customTask.notes,
       resourceUsed: customTask.notes,
+    }, timerSession)
+    ensureCustomStudyTaskInTaskStore({
+      customTaskId,
+      title,
+      category: customTask.category,
+      durationMinutes,
+      noteDestination: session.noteDestination,
+      notes: customTask.notes,
+      activeSession: session,
     })
+    persistActiveSession(session)
   }
 
   function startCustomDurationSession() {
@@ -261,42 +433,34 @@ export default function StudyDashboard() {
 
   function pauseSession() {
     if (!activeSession || activeSession.status === 'paused') return
-    const next = {
-      ...activeSession,
-      status: 'paused' as const,
-      pauseStartedAt: Date.now(),
-    }
-    persistActiveSession(next)
+    const nextTimer = timerEngine.pause(timerFromStudySession(activeSession))
+    persistActiveSession(studySessionWithTimer(activeSession, nextTimer))
   }
 
   function resumeSession() {
-    if (!activeSession || activeSession.status !== 'paused' || !activeSession.pauseStartedAt) return
-    const now = Date.now()
-    const pauseMs = now - activeSession.pauseStartedAt
-    const next = {
-      ...activeSession,
-      status: 'running' as const,
-      pauseStartedAt: undefined,
-      pausedAccumulatedMs: activeSession.pausedAccumulatedMs + pauseMs,
-      expectedEndTime: activeSession.expectedEndTime + pauseMs,
-    }
-    persistActiveSession(next)
+    if (!activeSession || activeSession.status !== 'paused') return
+    const nextTimer = timerEngine.resume(timerFromStudySession(activeSession))
+    persistActiveSession(studySessionWithTimer(activeSession, nextTimer))
   }
 
   function completeSession(status: StudySessionRecord['status'], completedAtMs = Date.now()) {
     if (!activeSession) return
+    const activeTimerSession = timerFromStudySession(activeSession)
+    const endedTimer = status === 'completed'
+      ? timerEngine.complete(activeTimerSession, completedAtMs)
+      : timerEngine.abandon(activeTimerSession, completedAtMs)
     const actualMs = status === 'completed'
-      ? Math.min(activeSession.durationMinutes * 60_000, elapsedFocusMs(activeSession, completedAtMs))
-      : elapsedFocusMs(activeSession, completedAtMs)
+      ? Math.min(activeSession.durationMinutes * 60_000, timerEngine.elapsedMs(endedTimer, completedAtMs))
+      : timerEngine.elapsedMs(endedTimer, completedAtMs)
     const record: StudySessionRecord = {
-      id: crypto.randomUUID(),
+      id: activeSession.id,
       taskTemplateId: activeSession.taskTemplateId,
       customTaskId: activeSession.customTaskId,
       title: activeSession.title,
       category: activeSession.category,
-      startedAt: new Date(activeSession.sessionStartTime).toISOString(),
-      completedAt: new Date(completedAtMs).toISOString(),
-      plannedMinutes: activeSession.durationMinutes,
+      startedAt: endedTimer.startedAt,
+      completedAt: endedTimer.endedAt ?? new Date(completedAtMs).toISOString(),
+      plannedMinutes: endedTimer.durationPlannedMin,
       actualMinutes: status === 'completed'
         ? Math.max(1, Math.round(actualMs / 60_000))
         : Math.max(0, Math.round(actualMs / 60_000)),
@@ -306,7 +470,9 @@ export default function StudyDashboard() {
       resourceUsed: activeSession.resourceUsed,
     }
     addStudySessionRecord(record)
+    writeStudySessionToTaskStore(record)
     setSessions(loadStudySessionRecordsForDate(today))
+    setAllStudySessions(loadStudySessionRecords())
     persistActiveSession(null)
   }
 
@@ -393,6 +559,43 @@ export default function StudyDashboard() {
           A focused place for study targets, session templates, and Obsidian-ready notes.
         </p>
       </div>
+
+      <section className={`coursera-scholarship-card ${courseraStatus.severity}`}>
+        <div className="coursera-scholarship-main">
+          <div className="section-label">High priority study project</div>
+          <h3>She Plus Tech x Coursera AI Scholarship</h3>
+          <p>Access until Sep 23, 2026 · Stay active every week</p>
+          <strong>Do at least one Coursera session each week to stay active.</strong>
+        </div>
+        <div className="coursera-scholarship-stats">
+          <div>
+            <span>{Math.max(0, courseraDaysRemaining)}</span>
+            <small>days remaining</small>
+          </div>
+          <div>
+            <span>{courseraStatus.daysInactive === null ? '—' : courseraStatus.daysInactive}</span>
+            <small>days inactive</small>
+          </div>
+        </div>
+        <div className="coursera-activity-status">
+          <span>{courseraStatus.label}</span>
+          <p>{courseraStatus.detail}</p>
+        </div>
+      </section>
+
+      <section className="coursera-course-plan-card">
+        <div>
+          <div className="section-label">Suggested course plan</div>
+          <h3>Priority courses</h3>
+          <p>Guidance only, not a forced plan.</p>
+        </div>
+        <ol>
+          <li>Google AI Essentials</li>
+          <li>Vanderbilt Generative AI Automation</li>
+          <li>Build Powerful AI Agents with OpenAI Tools</li>
+          <li>Google Cloud Generative AI Leader</li>
+        </ol>
+      </section>
 
       <section className="study-hero-card">
         <div className="study-hero-main">

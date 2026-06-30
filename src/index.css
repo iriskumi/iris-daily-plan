@@ -3431,6 +3431,13 @@ textarea {
   flex-shrink: 0;
 }
 
+.settings-toggle small {
+  display: block;
+  color: var(--text-3);
+  font-size: 0.76rem;
+  margin-top: 0.12rem;
+}
+
 /* ── Empty States ─────────────────────────────────────────── */
 
 .empty-state {
@@ -5092,6 +5099,96 @@ textarea {
 
 .study-page {
   max-width: 920px;
+}
+
+.coursera-scholarship-card,
+.coursera-course-plan-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.coursera-scholarship-card {
+  border-left: 4px solid var(--accent);
+}
+
+.coursera-scholarship-card.warning {
+  border-left-color: #d08b2f;
+}
+
+.coursera-scholarship-card.strong {
+  border-left-color: #c15f2f;
+}
+
+.coursera-scholarship-card.critical {
+  border-left-color: #b33a3a;
+  background: color-mix(in srgb, var(--surface) 88%, #b33a3a 12%);
+}
+
+.coursera-scholarship-main h3,
+.coursera-course-plan-card h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.coursera-scholarship-main p,
+.coursera-course-plan-card p,
+.coursera-activity-status p {
+  margin-top: 0.25rem;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.coursera-scholarship-main strong {
+  display: block;
+  margin-top: 0.55rem;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.coursera-scholarship-stats {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.coursera-scholarship-stats div,
+.coursera-activity-status {
+  min-width: 96px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.coursera-scholarship-stats span,
+.coursera-activity-status span {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.coursera-scholarship-stats small {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.coursera-activity-status {
+  grid-column: 1 / -1;
+}
+
+.coursera-course-plan-card ol {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .study-hero-card {

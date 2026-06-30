@@ -60,6 +60,7 @@ const STUDY_CATEGORIES: StudyCategory[] = [
   'English Input',
   'Japanese',
   'AI Coding',
+  'Coursera AI Pathway',
   'SQL / Excel',
   'Job / Career',
   'Review / NotebookLM',
@@ -199,6 +200,7 @@ function buildPageProperties(
   add('Focus Minutes', ['number'], () => ({ number: payload.completedMinutes }))
   add('Study Minutes', ['number'], () => ({ number: payload.completedMinutes }))
   add('AI Minutes', ['number'], () => ({ number: minutes(payload, 'AI Coding') }))
+  add('Coursera Minutes', ['number'], () => ({ number: minutes(payload, 'Coursera AI Pathway') }))
   add('Admin Minutes', ['number'], () => ({ number: minutes(payload, 'Admin / Life') }))
   add('Carry Over', ['rich_text'], () => ({ rich_text: text(payload.review.carryOver || '-') }))
   add('Summary', ['rich_text'], () => ({ rich_text: text(payload.markdown || payload.review.actualDone || '-') }))

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import {
   ClipboardList,
   BookOpen,
@@ -31,6 +31,7 @@ import type {
   StartNowTimeAvailable,
   FocusBlock,
   FocusBlockStatus,
+  FocusSession,
   MealAnchor,
   MealAnchorStatus,
   Task,
@@ -106,6 +107,9 @@ import {
   normalizeArea,
 } from './focusBlocks'
 import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
+import * as timerEngine from './timerEngine'
+import { writeFocusBlockSessionToTaskStore, writeInboxTaskToTaskStore } from './taskStore'
+import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
 type Tab = 'today' | 'study' | 'plan' | 'tasks' | 'integrations' | 'settings'
@@ -116,7 +120,7 @@ interface StartTodayResult {
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'tasks'>; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'tasks'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
   { id: 'study', label: 'Study', icon: <BookOpen /> },
   { id: 'plan', label: 'Plan', icon: <Zap /> },
@@ -395,6 +399,7 @@ function mergeProtectedPlan(existing: GeneratedPlan, generated: GeneratedPlan): 
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [taskView, setTaskView] = useState<TaskView>('tasks')
+  const [appSettings, setAppSettings] = useState(() => loadSettings())
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan(getLocalDateKey()))
   const [urgentBills, setUrgentBills] = useState<Bill[]>([])
@@ -408,6 +413,12 @@ export default function App() {
     setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
     setFocusStats(getFocusStats(loadFocusSessions()))
   }, [tab])
+
+  useEffect(() => {
+    if (!appSettings.fullCommandHubMode && tab === 'plan') {
+      setTab('today')
+    }
+  }, [appSettings.fullCommandHubMode, tab])
 
   function refreshReminders() {
     setUrgentBills(getUrgentBills(loadBills()))
@@ -549,6 +560,9 @@ export default function App() {
 
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
+  const visibleTabs = appSettings.fullCommandHubMode
+    ? TABS
+    : TABS.filter(item => item.id !== 'plan')
 
   function goToTab(nextTab: Tab) {
     setTab(nextTab)
@@ -576,7 +590,7 @@ export default function App() {
       </header>
 
       <nav className="nav-tabs">
-        {TABS.map(t => (
+        {visibleTabs.map(t => (
           <button
             key={t.id}
             className={`nav-tab ${tab === t.id ? 'active' : ''}`}
@@ -650,9 +664,25 @@ export default function App() {
             currentPlan={plan}
             generatingPlan={generatingPlan}
             generationMessage={generationMessage}
-            onViewPlan={() => goToTab('plan')}
+            onViewPlan={() => {
+              if (appSettings.fullCommandHubMode) goToTab('plan')
+            }}
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
             onFocusBlocksChange={refreshReminders}
+            showEmbeddedPlan={!appSettings.fullCommandHubMode}
+            planSection={
+              <PlanWorkspace
+                plan={plan}
+                onGenerate={handleGeneratePlan}
+                onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
+                onGoToCheckin={() => goToTab('today')}
+                onReducePlan={handleLowEnergyMode}
+                onPlanChange={updatedPlan => {
+                  savePlan(updatedPlan)
+                  setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
+                }}
+              />
+            }
             onStartToday={async () => {
               const todayKey = getLocalDateKey()
               const steps: string[] = []
@@ -734,22 +764,17 @@ export default function App() {
         )}
         {tab === 'study' && <StudyDashboard />}
         {tab === 'plan' && (
-          <>
-            <div className="page plan-page">
-              <BlockQueueView />
-            </div>
-            <DailyPlanView
-              plan={plan}
-              onGenerate={handleGeneratePlan}
-              onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
-              onGoToCheckin={() => goToTab('today')}
-              onReducePlan={handleLowEnergyMode}
-              onPlanChange={updatedPlan => {
-                savePlan(updatedPlan)
-                setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
-              }}
-            />
-          </>
+          <PlanWorkspace
+            plan={plan}
+            onGenerate={handleGeneratePlan}
+            onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
+            onGoToCheckin={() => goToTab('today')}
+            onReducePlan={handleLowEnergyMode}
+            onPlanChange={updatedPlan => {
+              savePlan(updatedPlan)
+              setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
+            }}
+          />
         )}
         {tab === 'tasks' && (
           <>
@@ -775,9 +800,43 @@ export default function App() {
           </>
         )}
         {tab === 'integrations' && <AIAssistant onGeneratePlan={handleGeneratePlan} />}
-        {tab === 'settings' && <Settings />}
+        {tab === 'settings' && <Settings onSettingsChange={setAppSettings} />}
       </main>
     </div>
+  )
+}
+
+interface PlanWorkspaceProps {
+  plan: GeneratedPlan | null
+  onGenerate: () => Promise<GeneratePlanOutcome>
+  onRegenerate: (feedback: string) => Promise<GeneratePlanOutcome>
+  onGoToCheckin: () => void
+  onReducePlan: () => void
+  onPlanChange: (plan: GeneratedPlan) => void
+}
+
+function PlanWorkspace({
+  plan,
+  onGenerate,
+  onRegenerate,
+  onGoToCheckin,
+  onReducePlan,
+  onPlanChange,
+}: PlanWorkspaceProps) {
+  return (
+    <>
+      <div className="page plan-page">
+        <BlockQueueView />
+      </div>
+      <DailyPlanView
+        plan={plan}
+        onGenerate={onGenerate}
+        onRegenerate={onRegenerate}
+        onGoToCheckin={onGoToCheckin}
+        onReducePlan={onReducePlan}
+        onPlanChange={onPlanChange}
+      />
+    </>
   )
 }
 
@@ -793,6 +852,8 @@ interface TodayCommandCentreProps {
   onViewPlan: () => void
   onSendStartPlanToTodayPlan: (startPlan: StartPlan) => string
   onFocusBlocksChange: () => void
+  showEmbeddedPlan: boolean
+  planSection: ReactNode
   onStartToday: () => Promise<StartTodayResult>
 }
 
@@ -808,6 +869,8 @@ function TodayCommandCentre({
   onViewPlan,
   onSendStartPlanToTodayPlan,
   onFocusBlocksChange,
+  showEmbeddedPlan,
+  planSection,
   onStartToday,
 }: TodayCommandCentreProps) {
   const [expanded, setExpanded] = useState<'bills' | 'work' | null>(null)
@@ -825,6 +888,7 @@ function TodayCommandCentre({
   const [startNowTimer, setStartNowTimer] = useState<5 | 15 | null>(null)
   const [startNowMessage, setStartNowMessage] = useState<string | null>(null)
   const [startNowCopied, setStartNowCopied] = useState(false)
+  const [planSectionOpen, setPlanSectionOpen] = useState(false)
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const workReminders = getTodayWorkReminders(activeWorkLeads)
@@ -862,6 +926,11 @@ function TodayCommandCentre({
     console.log('[StartToday] nextActionSource', nextActionSource)
     setStartSteps([...result.steps, `Next action: ${nextActionTitle}`])
     setStarting(false)
+  }
+
+  function handleViewPlan() {
+    if (showEmbeddedPlan) setPlanSectionOpen(true)
+    onViewPlan()
   }
 
   function handleReviewCarryOver() {
@@ -975,6 +1044,21 @@ function TodayCommandCentre({
         </div>
 
         <HomeCommandCentre currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel} />
+
+        {showEmbeddedPlan && (
+          <details
+            className="home-secondary-panel"
+            open={planSectionOpen}
+            onToggle={event => setPlanSectionOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <span>Generate today's plan</span>
+              <small>Optional schedule view for structured days</small>
+            </summary>
+            {/* TODO: Plan-generated blocks should eventually write to taskStore with source: 'plan-generated'. */}
+            {planSection}
+          </details>
+        )}
 
         <details className="home-secondary-panel">
           <summary>
@@ -1172,7 +1256,7 @@ function TodayCommandCentre({
                 >
                   {showNextFocus ? 'Hide focus' : 'Open timeline focus'}
                 </button>
-                <button className="btn btn-secondary" onClick={onViewPlan}>
+                <button className="btn btn-secondary" onClick={handleViewPlan}>
                   View plan
                 </button>
                 {showNextFocus && (
@@ -1316,7 +1400,7 @@ function TodayCommandCentre({
           isGenerating={generatingPlan}
           generationMessage={generationMessage}
           hasPlan={Boolean(currentPlan)}
-          onViewPlan={onViewPlan}
+          onViewPlan={handleViewPlan}
         />
       </details>
     </>
@@ -1335,6 +1419,19 @@ function formatCountdown(seconds: number): string {
   const minutes = Math.floor(safe / 60)
   const rest = safe % 60
   return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
+}
+
+const FOCUS_BLOCK_TIMER_ENGINE_KEY = 'iris-focus-block-timer-engine-active'
+
+function timerFromFocusBlock(block: FocusBlock): TimerSession {
+  const restored = timerEngine.restore(FOCUS_BLOCK_TIMER_ENGINE_KEY)
+  if (restored?.id === block.id && restored.engine === 'focus-block') {
+    return restored
+  }
+  return timerEngine.start(block.taskId, block.minutes, 'focus-block', {
+    id: block.id,
+    startedAt: block.startTime,
+  })
 }
 
 function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () => void }) {
@@ -1375,6 +1472,7 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
   const filteredTasks = orderedTasks.filter(task => areaFilter === 'Any' || task.area === areaFilter)
 
   const activeBlock = blocks.find(block => block.status === 'Doing')
+  const activeBlockTimer = activeBlock ? timerFromFocusBlock(activeBlock) : null
   const selectedTask = filteredTasks.find(task => task.id === selectedTaskId) ?? filteredTasks[0] ?? null
   const recommendations = recommendNextBlocks({
     tasks: rankedTasks.length > 0 ? orderedTasks : tasks,
@@ -1385,8 +1483,22 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
 
   useEffect(() => {
     const interval = window.setInterval(() => setTick(Date.now()), 1000)
-    return () => window.clearInterval(interval)
+    const handleVisibilityChange = () => setTick(Date.now())
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
+
+  useEffect(() => {
+    if (activeBlock && activeBlockTimer) {
+      timerEngine.save(FOCUS_BLOCK_TIMER_ENGINE_KEY, activeBlockTimer)
+    }
+    if (!activeBlock) {
+      timerEngine.clear(FOCUS_BLOCK_TIMER_ENGINE_KEY)
+    }
+  }, [activeBlock?.id])
 
   useEffect(() => {
     if (!selectedTaskId && filteredTasks[0]) setSelectedTaskId(filteredTasks[0].id)
@@ -1428,6 +1540,11 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
     })
     const nextTasks = [task, ...tasks]
     saveTasks(nextTasks)
+    try {
+      writeInboxTaskToTaskStore(task)
+    } catch (error) {
+      console.warn('Could not mirror quick task to taskStore', error)
+    }
     const normalized = loadTasks()
     setTasks(normalized)
     setSelectedTaskId(task.id)
@@ -1459,7 +1576,12 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
       task: selectedTask,
       energy,
     })
+    const focusTimer = timerEngine.start(selectedTask.id, block.minutes, 'focus-block', {
+      id: block.id,
+      startedAt: block.startTime,
+    })
     saveFocusBlock(block)
+    timerEngine.save(FOCUS_BLOCK_TIMER_ENGINE_KEY, focusTimer)
     markTaskStatus(selectedTask.id, 'Doing')
     setBlocks(loadFocusBlocksForDate(today))
     setBlockMessage('Focus block started.')
@@ -1467,24 +1589,44 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
 
   function finishBlock(status: FocusBlockStatus) {
     if (!activeBlock) return
-    const actualEndTime = new Date().toISOString()
+    const timerSession = activeBlockTimer ?? timerFromFocusBlock(activeBlock)
+    const endedTimer = status === 'Done'
+      ? timerEngine.complete(timerSession)
+      : timerEngine.abandon(timerSession)
+    const actualEndTime = endedTimer.endedAt ?? new Date().toISOString()
     updateFocusBlock(activeBlock.id, { status, actualEndTime })
+    const actualMinutes = Math.max(0, Math.round(timerEngine.elapsedMs(endedTimer) / 60_000))
+    let focusSession: FocusSession | undefined
     if (status === 'Done') {
       markTaskStatus(activeBlock.taskId, 'Done')
-      addFocusSession({
-        id: crypto.randomUUID(),
+      focusSession = {
+        id: `focus-session:${activeBlock.id}`,
         date: activeBlock.date,
         taskId: activeBlock.taskId,
         taskTitle: activeBlock.taskTitle,
         category: categoryFromArea(activeBlock.area),
         focusMinutes: activeBlock.minutes,
         completedAt: actualEndTime,
-      })
+      }
+      addFocusSession(focusSession)
     } else if (status === 'Partial') {
       markTaskStatus(activeBlock.taskId, 'Planned')
     } else if (status === 'Skipped') {
       markTaskStatus(activeBlock.taskId, 'Skipped')
     }
+    try {
+      writeFocusBlockSessionToTaskStore({
+        block: activeBlock,
+        focusSession,
+        status,
+        startedAt: endedTimer.startedAt,
+        endedAt: actualEndTime,
+        actualMinutes,
+      })
+    } catch (error) {
+      console.warn('Could not mirror focus block session to taskStore', error)
+    }
+    timerEngine.clear(FOCUS_BLOCK_TIMER_ENGINE_KEY)
     refresh()
     setBlockMessage(`Block marked ${status}.`)
   }
@@ -1492,20 +1634,41 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
   function addFiveMinutes() {
     if (!activeBlock) return
     const nextEnd = new Date(new Date(activeBlock.plannedEndTime).getTime() + 5 * 60 * 1000)
+    const nextMinutes = activeBlock.minutes + 5
     updateFocusBlock(activeBlock.id, {
-      minutes: activeBlock.minutes + 5,
+      minutes: nextMinutes,
       plannedEndTime: nextEnd.toISOString(),
+    })
+    const timerSession = activeBlockTimer ?? timerFromFocusBlock(activeBlock)
+    timerEngine.save(FOCUS_BLOCK_TIMER_ENGINE_KEY, {
+      ...timerSession,
+      durationPlannedMin: nextMinutes,
     })
     refresh()
   }
 
   function changeTask() {
     if (!activeBlock) return
+    const timerSession = activeBlockTimer ?? timerFromFocusBlock(activeBlock)
+    const endedTimer = timerEngine.abandon(timerSession)
+    const actualEndTime = endedTimer.endedAt ?? new Date().toISOString()
     updateFocusBlock(activeBlock.id, {
       status: 'Changed',
-      actualEndTime: new Date().toISOString(),
+      actualEndTime,
     })
     markTaskStatus(activeBlock.taskId, 'Planned')
+    try {
+      writeFocusBlockSessionToTaskStore({
+        block: activeBlock,
+        status: 'Changed',
+        startedAt: endedTimer.startedAt,
+        endedAt: actualEndTime,
+        actualMinutes: Math.max(0, Math.round(timerEngine.elapsedMs(endedTimer) / 60_000)),
+      })
+    } catch (error) {
+      console.warn('Could not mirror changed focus block to taskStore', error)
+    }
+    timerEngine.clear(FOCUS_BLOCK_TIMER_ENGINE_KEY)
     refresh()
   }
 
@@ -1540,8 +1703,8 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
     setMealAnchors(next)
   }
 
-  const remainingSeconds = activeBlock
-    ? Math.ceil((new Date(activeBlock.plannedEndTime).getTime() - tick) / 1000)
+  const remainingSeconds = activeBlockTimer
+    ? Math.ceil(timerEngine.remainingMs(activeBlockTimer, tick) / 1000)
     : 0
 
   return (

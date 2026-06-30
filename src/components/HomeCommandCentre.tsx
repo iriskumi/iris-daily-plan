@@ -14,6 +14,7 @@ import type {
 import { DAY_MODE_CONFIGS, minimumViableBlock, queueOverview, suggestNextBlock, targetBlocksForMode } from '../blockQueue'
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
+import { writeQuickAddBlockToTaskStore } from '../taskStore'
 
 interface QuickAddTemplate {
   title: string
@@ -525,11 +526,18 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
 
   function addTemplate(template: QuickAddTemplate) {
     const block = templateToBlock(template, { ...queue, blocks })
+    const unifiedTaskId = `quick-add-block:${block.id}`
+    const queuedBlock = { ...block, unifiedTaskId }
     persist({
       ...queue,
-      blocks: [...blocks, block],
+      blocks: [...blocks, queuedBlock],
       updatedAt: new Date().toISOString(),
     }, `Added "${template.title}" to the queue.`)
+    try {
+      writeQuickAddBlockToTaskStore(queuedBlock)
+    } catch (error) {
+      console.warn('Could not mirror quick-add block to taskStore', error)
+    }
   }
 
   function convertBlock(block: DayBlock) {
