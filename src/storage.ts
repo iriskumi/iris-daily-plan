@@ -73,6 +73,7 @@ export const defaultSettings = (): AppSettings => ({
   tuesdayThursdayEveningClassEnabled: true,
   saturdayClassEnabled: true,
   defaultRecoveryBlockEnabled: true,
+  fullCommandHubMode: false,
 })
 
 function isVersionedValue<T>(value: unknown): value is VersionedValue<T> {
@@ -292,7 +293,10 @@ export const loadFocusSessions = (): FocusSession[] =>
 export const saveFocusSessions = (sessions: FocusSession[]): void =>
   save(KEYS.focusSessions, sessions)
 export const addFocusSession = (session: FocusSession): FocusSession[] => {
-  const next = [session, ...loadFocusSessions()]
+  const next = [
+    session,
+    ...loadFocusSessions().filter(item => item.id !== session.id),
+  ]
   saveFocusSessions(next)
   return next
 }

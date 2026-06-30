@@ -1,3 +1,5 @@
+import type { TimerSession } from './timerEngineTypes'
+
 export type StudyCategory =
   | 'English Output'
   | 'English Input'
@@ -79,6 +81,7 @@ export interface StudyActiveSession {
   noteDestination: string
   notes: string
   resourceUsed: string
+  timerSession?: TimerSession
 }
 
 export interface StudyDailyReview {

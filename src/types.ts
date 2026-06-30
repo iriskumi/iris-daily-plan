@@ -92,6 +92,7 @@ export interface BlockSubtask {
 export interface DayBlock {
   id: string
   sourceTaskId?: string
+  unifiedTaskId?: string
   date: string
   title: string
   description?: string
@@ -503,6 +504,7 @@ export interface AppSettings {
   tuesdayThursdayEveningClassEnabled: boolean
   saturdayClassEnabled: boolean
   defaultRecoveryBlockEnabled: boolean
+  fullCommandHubMode: boolean
 }
 
 export interface CalendarEvent {
@@ -564,6 +566,20 @@ export interface NotionExportResult {
   pageId?: string
   pageUrl?: string
   exportedAt?: string
+}
+
+export interface NotionBillsSyncError {
+  billId?: string
+  billName?: string
+  message: string
+}
+
+export interface NotionBillsSyncResult {
+  scanned: number
+  created: number
+  skipped: number
+  errors: NotionBillsSyncError[]
+  syncedAt: string
 }
 
 export interface NotionDailyLogPayload {

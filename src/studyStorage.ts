@@ -93,7 +93,11 @@ export function loadStudySessionRecordsForDate(date = getLocalDateKey()): StudyS
 }
 
 export function addStudySessionRecord(record: StudySessionRecord): StudySessionRecord[] {
-  const next = [record, ...loadStudySessionRecords()]
+  const existing = loadStudySessionRecords()
+  const next = [
+    record,
+    ...existing.filter(item => item.id !== record.id),
+  ]
   saveStudySessionRecords(next)
   return next
 }
