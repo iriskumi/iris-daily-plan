@@ -247,3 +247,152 @@
 - Subtask completion state persists to localStorage immediately.
 - Added non-blocking parent completion suggestion when all subtasks are done.
 - App passes npm run build.
+
+## Study Dashboard Phase S1
+
+- Added a separate Study tab between Today and Plan while keeping the existing Today / Plan / Tasks workflow intact.
+- Added Study Dashboard shell focused on study targets, study task templates, and future session review.
+- Added daily study target state with default 8 hours, quick targets for 3h / 5h / 6h / 8h, custom target input, progress bar, completed focus minutes, remaining focus minutes, and completed session count.
+- Added typed Study task library with the requested categories:
+  - English Output
+  - English Input
+  - Japanese
+  - AI Coding
+  - SQL / Excel
+  - Job / Career
+  - Review / NotebookLM
+  - Admin / Life
+  - Cyber
+  - Reset
+- Added study template fields for default duration, alternative durations, energy, type, resource suggestion, study method, note destination, subtasks, evening-friendly flag, and rescue-friendly flag.
+- Added typed study session records for future completed / abandoned focus sessions.
+- Added localStorage persistence for daily study targets and future session records without changing existing Daily Hub storage keys.
+- Left the focus timer, active-session persistence, Obsidian copy helpers, and full Study review for later phases.
+
+## Study Dashboard Phase S1 Verification
+
+- Passed: npm run build.
+
+## Study Dashboard Phase S2
+
+- Expanded the preloaded Study Task Library across all requested categories with multiple realistic templates.
+- Kept the existing `StudyTaskTemplate` shape and included id, title, category, duration options, energy, type, resource suggestion, study method, note destination, subtasks, evening-friendly flag, and rescue-friendly flag for every template.
+- Upgraded the Study Task Picker with:
+  - Category selector.
+  - Selectable template cards.
+  - Selected task preview.
+  - Resource suggestion, study method, Obsidian note destination, subtasks, default duration, and alternative durations.
+- Added custom task entry for one-off study tasks with title, category, duration, note destination, and notes.
+- Added Obsidian helper copy buttons for note path and task summary.
+- Kept Obsidian as manual clipboard-only support with no API integration.
+- Left the focus timer, active session persistence, and Study Review page out of scope for this phase.
+
+## Study Dashboard Phase S2 Verification
+
+- Passed: npm run build.
+- Passed: git diff --check.
+
+## Study Dashboard Phase S3
+
+- Added a robust Study Focus Timer to the Study tab only.
+- Timer starts from the selected Study task with:
+  - Start 25.
+  - Start 50.
+  - Custom duration.
+- Added custom task timer start from the Custom Task section.
+- Added pause, resume, complete, and abandon controls.
+- Added active Study session localStorage persistence under a separate Study key.
+- Active sessions store:
+  - sessionStartTime.
+  - durationMinutes.
+  - expectedEndTime.
+  - pausedAccumulatedMs.
+  - pauseStartedAt when paused.
+- Remaining time is recalculated from `Date.now()` rather than relying only on `setInterval`.
+- Timer recalculates on browser tab visibility changes.
+- Timer restores active sessions after refresh and completes expired running sessions from timestamps.
+- Completing or abandoning a session creates a Study session record with:
+  - id.
+  - taskTemplateId or customTaskId.
+  - title.
+  - category.
+  - startedAt.
+  - completedAt.
+  - plannedMinutes.
+  - actualMinutes.
+  - status.
+  - noteDestination.
+  - notes.
+  - resourceUsed.
+- Completed sessions update the Daily Study Target progress and completed session count.
+- Did not implement the separate Study Review page.
+
+## Study Dashboard Phase S3 Verification
+
+- Passed: npm run build.
+- Passed: git diff --check.
+
+## Study Dashboard Phase S4
+
+- Added Study Review using completed Study session records from Phase S3.
+- Review shows:
+  - Sessions completed today.
+  - Total focus time.
+  - Focus time by category.
+  - Note destinations used.
+  - Actual done summary field.
+  - Carry-over field.
+  - Tomorrow’s smallest next step field.
+- Added date-keyed Study Review localStorage persistence without touching existing Daily Hub logs.
+- Added editable fields:
+  - Actual Done.
+  - Carry Over.
+  - Tomorrow’s Smallest Next Step.
+- Added Copy daily study summary as Markdown.
+- Markdown export includes target, completed focus time, session count, per-session records, category breakdown, actual done, carry-over, and tomorrow’s smallest next step.
+- Did not add Notion push.
+- Did not change Today / Plan / Tasks.
+
+## Study Dashboard Phase S4 Verification
+
+- Passed: npm run build.
+- Passed: git diff --check.
+
+## Study Dashboard Phase S5
+
+- Added Study Daily Log push to Notion from the Study Review section.
+- Added a dedicated Vercel route: `/api/notion/push-study-daily-log`.
+- Reused the existing Notion connection environment variables and Daily Logs database target.
+- Study push maps:
+  - Date.
+  - Planner Source = `study-dashboard`.
+  - Focus Minutes.
+  - Study Minutes when present.
+  - AI Minutes.
+  - Admin Minutes.
+  - Carry Over.
+  - Summary.
+- Optional fields are filled only when compatible properties exist:
+  - English Minutes.
+  - Japanese Minutes.
+  - Cyber Minutes.
+  - SQL/Data Minutes.
+  - Job/Career Minutes.
+  - Review Minutes.
+  - Session Count.
+  - Top Category.
+  - Obsidian Notes.
+  - Actual Done.
+  - Tomorrow Next Step.
+- Missing optional Notion properties are skipped safely and details remain in the page content / Summary.
+- Study push queries the Daily Logs database by Date and updates an existing page when found.
+- If the database lacks a usable Date property or cannot be queried by date, the push fails safely instead of creating a possible duplicate.
+- Page content includes Study Sessions, Category Breakdown, Actual Done, Carry Over, Tomorrow’s Smallest Next Step, and Markdown Summary.
+- UI now shows Push to Notion, success/failure status, Notion page link when available, and last pushed time.
+- Abandoned sessions are excluded from completed minutes and pushed session totals.
+- Existing Daily Hub Notion export remains unchanged.
+
+## Study Dashboard Phase S5 Verification
+
+- Passed: npm run build.
+- Passed: git diff --check.

@@ -7,6 +7,7 @@ import type {
   NotionExportResult,
 } from '../types'
 import type { NotionSchemaCheckResult } from '../notionSchema'
+import type { StudyCategory, StudyDailyReview, StudySessionRecord } from '../studyTypes'
 
 const notConnected = <T>(): IntegrationResult<T> => ({
   success: false,
@@ -62,3 +63,34 @@ async function requestNotionSchema(method: 'GET' | 'POST'): Promise<IntegrationR
 
 export const checkNotionSchema = () => requestNotionSchema('GET')
 export const createMissingNotionProperties = () => requestNotionSchema('POST')
+
+export interface NotionStudyDailyLogPayload {
+  date: string
+  targetMinutes: number
+  completedMinutes: number
+  sessionCount: number
+  categoryBreakdown: Record<StudyCategory, number>
+  noteDestinations: string[]
+  sessions: StudySessionRecord[]
+  review: StudyDailyReview
+  markdown: string
+}
+
+export async function pushStudyDailyLogToNotion(
+  payload: NotionStudyDailyLogPayload,
+): Promise<IntegrationResult<NotionExportResult>> {
+  try {
+    const response = await fetch('/api/notion/push-study-daily-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    return (await response.json()) as IntegrationResult<NotionExportResult>
+  } catch {
+    return {
+      success: false,
+      message: 'Study Daily Log push failed before reaching the API route.',
+      data: null,
+    }
+  }
+}

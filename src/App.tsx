@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   ClipboardList,
+  BookOpen,
   CheckSquare,
   Briefcase,
   CreditCard,
@@ -90,6 +91,7 @@ import RecurringTemplates from './components/RecurringTemplates'
 import Settings from './components/Settings'
 import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
+import StudyDashboard from './components/StudyDashboard'
 import {
   TASK_AREAS,
   TASK_ENERGIES,
@@ -106,7 +108,7 @@ import {
 import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
 import './index.css'
 
-type Tab = 'today' | 'plan' | 'tasks' | 'integrations' | 'settings'
+type Tab = 'today' | 'study' | 'plan' | 'tasks' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
 
 interface StartTodayResult {
@@ -114,8 +116,9 @@ interface StartTodayResult {
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'plan' | 'tasks'>; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'tasks'>; label: string; icon: React.ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
+  { id: 'study', label: 'Study', icon: <BookOpen /> },
   { id: 'plan', label: 'Plan', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
 ]
@@ -729,6 +732,7 @@ export default function App() {
             }}
           />
         )}
+        {tab === 'study' && <StudyDashboard />}
         {tab === 'plan' && (
           <>
             <div className="page plan-page">
