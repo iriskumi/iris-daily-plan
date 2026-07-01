@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap');
 
 @font-face {
   font-family: 'Iris Handwriting Accent';
@@ -66,6 +66,7 @@
 
   --font-cjk: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-quote-zh: 'Noto Serif SC', 'Songti SC', 'STSong', 'PingFang SC', 'Noto Sans SC', serif;
   --font-accent-hand: 'Iris Handwriting Accent', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', cursive;
   --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
 }
@@ -123,7 +124,14 @@ body {
 .app-header-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.62rem;
+}
+
+.app-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  flex: 0 0 auto;
 }
 
 .app-header h1 {
@@ -263,13 +271,14 @@ body {
 
 .grounding-banner p {
   margin: 0.32rem 0 0;
-  font-family: var(--font-cjk);
-  font-size: clamp(17px, 2.2vw, 22px);
-  line-height: 1.55;
+  font-family: var(--font-quote-zh);
+  font-size: clamp(18px, 2.35vw, 24px);
+  line-height: 1.72;
   font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--text);
+  letter-spacing: 0.045em;
+  color: #34251B;
   max-width: 620px;
+  text-wrap: balance;
 }
 
 .grounding-banner span {
@@ -278,7 +287,7 @@ body {
 
 .grounding-banner small {
   display: block;
-  margin-top: 0.58rem;
+  margin-top: 0.68rem;
   color: var(--text-hint);
   font-size: 0.78rem;
   font-weight: 400;

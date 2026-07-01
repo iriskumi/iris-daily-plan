@@ -93,6 +93,7 @@ import Settings from './components/Settings'
 import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
+import irisBearIcon from './assets/iris-bear-icon.svg'
 import {
   TASK_AREAS,
   TASK_ENERGIES,
@@ -573,6 +574,7 @@ export default function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header-brand">
+          <img className="app-brand-icon" src={irisBearIcon} alt="" aria-hidden="true" />
           <h1>Iris Daily Plan Hub</h1>
         </div>
         <div className="app-header-actions">
