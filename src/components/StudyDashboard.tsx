@@ -688,7 +688,11 @@ export default function StudyDashboard() {
           <div className="section-label">English Output Journey</div>
           <h3>English Output Journey</h3>
           <p>Track active output, not vague input time.</p>
+          <p>Auto-counts completed English Output sessions. Manual +1 is for outside-app practice.</p>
           <strong>Every rep is one vote for fluent English.</strong>
+          <div className="english-output-rule-summary">
+            25 min output ≈ 1 rep · 50 min output ≈ 2 reps
+          </div>
         </div>
         <div className="english-output-journey-stats">
           <div>
@@ -728,10 +732,10 @@ export default function StudyDashboard() {
             aria-label="Manual English output rep note"
             value={manualRepNote}
             onChange={event => setManualRepNote(event.target.value)}
-            placeholder="Optional note, e.g. Interview answer practice"
+            placeholder="Outside-app practice note, e.g. Interview answer practice"
           />
           <button type="button" className="btn btn-secondary" onClick={handleManualOutputRep}>
-            +1 Output Rep
+            +1 Manual Output Rep
           </button>
           <button
             type="button"
@@ -741,6 +745,7 @@ export default function StudyDashboard() {
           >
             Undo last rep
           </button>
+          <small>Use this only for English output done outside the timer.</small>
         </div>
       </section>
 

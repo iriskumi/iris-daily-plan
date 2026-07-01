@@ -23,6 +23,7 @@ export interface EnglishOutputRepHistoryItem {
   id: string
   date: string
   source: 'study-session' | 'manual'
+  reps: number
   sessionId?: string
   title?: string
   note?: string
@@ -60,9 +61,12 @@ function emptyJourney(): EnglishOutputJourney {
 }
 
 function normalizeJourney(value: Partial<EnglishOutputJourney> | null): EnglishOutputJourney {
-  const history = value?.history ?? []
+  const history = (value?.history ?? []).map(item => ({
+    ...item,
+    reps: Math.max(1, Math.min(4, Math.round(item.reps ?? 1))),
+  }))
   return {
-    totalReps: history.length,
+    totalReps: history.reduce((sum, item) => sum + item.reps, 0),
     milestones: ENGLISH_OUTPUT_MILESTONES,
     history,
   }
@@ -105,12 +109,23 @@ export function isEnglishOutputRepSession(record: StudySessionRecord): boolean {
   )
 }
 
+export function englishOutputRepCountForSession(record: StudySessionRecord): number {
+  if (!isEnglishOutputRepSession(record)) return 0
+  const minutes = Math.max(record.actualMinutes, record.plannedMinutes)
+  if (minutes >= 90) return 4
+  if (minutes >= 60) return 3
+  if (minutes >= 30) return 2
+  return 1
+}
+
 export function addStudySessionEnglishOutputRep(
   record: StudySessionRecord,
   current = loadEnglishOutputJourney(),
 ): EnglishOutputJourney {
   if (!isEnglishOutputRepSession(record)) return current
   if (current.history.some(item => item.sessionId === record.id)) return current
+  const reps = englishOutputRepCountForSession(record)
+  if (reps <= 0) return current
   const next: EnglishOutputJourney = {
     ...current,
     history: [
@@ -118,6 +133,7 @@ export function addStudySessionEnglishOutputRep(
         id: `english-output-rep:${record.id}`,
         date: record.completedAt.slice(0, 10),
         source: 'study-session',
+        reps,
         sessionId: record.id,
         title: record.title,
         createdAt: new Date().toISOString(),
@@ -138,6 +154,7 @@ export function addManualEnglishOutputRep(note: string, current = loadEnglishOut
         id: `manual-output-rep:${crypto.randomUUID()}`,
         date: getLocalDateKey(),
         source: 'manual',
+        reps: 1,
         note: note.trim() || undefined,
         createdAt: now,
       },
@@ -158,7 +175,9 @@ export function undoLastEnglishOutputRep(current = loadEnglishOutputJourney()): 
 }
 
 export function englishOutputRepsForDate(journey: EnglishOutputJourney, date = getLocalDateKey()): number {
-  return journey.history.filter(item => item.date === date).length
+  return journey.history
+    .filter(item => item.date === date)
+    .reduce((sum, item) => sum + item.reps, 0)
 }
 
 export function englishOutputRepsForLastSevenDays(journey: EnglishOutputJourney, now = new Date()): number {
@@ -168,7 +187,7 @@ export function englishOutputRepsForLastSevenDays(journey: EnglishOutputJourney,
   return journey.history.filter(item => {
     const date = new Date(`${item.date}T00:00:00`)
     return date >= start && date <= now
-  }).length
+  }).reduce((sum, item) => sum + item.reps, 0)
 }
 
 export function currentEnglishOutputMilestone(totalReps: number): {

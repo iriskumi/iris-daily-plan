@@ -14,18 +14,24 @@
   - today’s reps
   - last 7 days reps
 - Added manual controls:
-  - `+1 Output Rep`
+  - `+1 Manual Output Rep`
   - `Undo last rep`
   - optional manual note field
 
 ## Counting logic
 
-- A completed Study session automatically adds 1 rep when:
+- A completed Study session automatically adds reps when:
   - category is `English Output`, or
   - the source template has `type: 'output'` and the template category includes `English`
 - The Study session must be at least 5 actual minutes.
+- Rep count is based on planned/actual minutes:
+  - 5-29 min = 1 rep
+  - 30-59 min = 2 reps
+  - 60-89 min = 3 reps
+  - 90+ min = 4 reps max
 - English Input sessions do not count unless a future template explicitly has an output type.
 - Duplicate Study session reps are prevented by storing `sessionId` in history.
+- Manual `+1` is intended only for English output done outside the Study timer.
 
 ## Storage
 
@@ -63,10 +69,10 @@
 ## Manual QA
 
 1. Complete an `English Output` Study session of at least 5 minutes.
-2. Confirm total reps increases by 1.
+2. Confirm total reps increases by duration: 25 min = 1 rep, 50 min = 2 reps.
 3. Complete/trigger the same session again and confirm it does not duplicate.
 4. Complete an `English Input` session and confirm it does not count.
-5. Use `+1 Output Rep` with a note.
+5. Use `+1 Manual Output Rep` with a note for outside-app practice.
 6. Use `Undo last rep`.
 7. Confirm Study Review shows today, week, total, and milestone progress.
 8. Copy Markdown and confirm the English Output Journey section appears.

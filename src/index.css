@@ -5287,6 +5287,17 @@ textarea {
   font-size: 13px;
 }
 
+.english-output-rule-summary {
+  display: inline-flex;
+  margin-top: 0.55rem;
+  padding: 0.32rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
 .english-output-journey-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5358,6 +5369,12 @@ textarea {
 
 .english-output-manual-row input {
   min-width: 0;
+}
+
+.english-output-manual-row small {
+  grid-column: 1 / -1;
+  color: var(--text-3);
+  font-size: 11px;
 }
 
 .study-custom-target {
