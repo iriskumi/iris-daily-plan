@@ -3,6 +3,16 @@ import { BookOpen, Check, Clipboard, Clock, Copy, Pause, Play, Square, Target, X
 import { getLocalDateKey } from '../focus'
 import { STUDY_CATEGORIES, STUDY_TASK_LIBRARY } from '../studyTaskLibrary'
 import { pushStudyDailyLogToNotion } from '../services/notionService'
+import {
+  addManualEnglishOutputRep,
+  addStudySessionEnglishOutputRep,
+  currentEnglishOutputMilestone,
+  englishOutputRepsForDate,
+  englishOutputRepsForLastSevenDays,
+  ENGLISH_OUTPUT_LONG_TERM_TARGET,
+  loadEnglishOutputJourney,
+  undoLastEnglishOutputRep,
+} from '../englishOutputJourney'
 import * as timerEngine from '../timerEngine'
 import {
   ensureCustomStudyTaskInTaskStore,
@@ -42,6 +52,10 @@ function formatHours(minutes: number): string {
   if (mins === 0) return `${hours}h`
   if (hours === 0) return `${mins}m`
   return `${hours}h ${mins}m`
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat('en-AU').format(value)
 }
 
 function daysUntilDate(date: string): number {
@@ -235,6 +249,8 @@ export default function StudyDashboard() {
   const [notionStatus, setNotionStatus] = useState<string | null>(null)
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
   const [pushingNotion, setPushingNotion] = useState(false)
+  const [outputJourney, setOutputJourney] = useState(() => loadEnglishOutputJourney())
+  const [manualRepNote, setManualRepNote] = useState('')
   const [activeSession, setActiveSession] = useState<StudyActiveSession | null>(() =>
     restoreActiveStudySession(),
   )
@@ -268,6 +284,12 @@ export default function StudyDashboard() {
     : 0
   const courseraDaysRemaining = daysUntilDate(COURSERA_EXPIRY_DATE)
   const courseraStatus = courseraActivityStatus(allStudySessions)
+  const outputMilestone = currentEnglishOutputMilestone(outputJourney.totalReps)
+  const outputMilestoneTotal = Math.min(outputJourney.totalReps, outputMilestone.next)
+  const outputToday = englishOutputRepsForDate(outputJourney, today)
+  const outputWeek = englishOutputRepsForLastSevenDays(outputJourney)
+  const outputMilestonePercent = Math.min(100, Math.round((outputMilestone.progress / outputMilestone.span) * 100))
+  const outputLongTermPercent = Math.min(100, (outputJourney.totalReps / ENGLISH_OUTPUT_LONG_TERM_TARGET) * 100)
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowMs(Date.now()), 1000)
@@ -471,9 +493,21 @@ export default function StudyDashboard() {
     }
     addStudySessionRecord(record)
     writeStudySessionToTaskStore(record)
+    if (record.status === 'completed') {
+      setOutputJourney(addStudySessionEnglishOutputRep(record))
+    }
     setSessions(loadStudySessionRecordsForDate(today))
     setAllStudySessions(loadStudySessionRecords())
     persistActiveSession(null)
+  }
+
+  function handleManualOutputRep() {
+    setOutputJourney(addManualEnglishOutputRep(manualRepNote))
+    setManualRepNote('')
+  }
+
+  function handleUndoOutputRep() {
+    setOutputJourney(undoLastEnglishOutputRep())
   }
 
   function updateReview(patch: Partial<StudyDailyReview>) {
@@ -513,6 +547,12 @@ export default function StudyDashboard() {
       '',
       '## Category Breakdown',
       ...STUDY_CATEGORIES.map(category => `- ${category}: ${formatHours(breakdown[category])}`),
+      '',
+      '## English Output Journey',
+      `- Today: ${outputToday} reps`,
+      `- This week: ${outputWeek} reps`,
+      `- Total: ${formatNumber(outputJourney.totalReps)} / ${formatNumber(ENGLISH_OUTPUT_LONG_TERM_TARGET)}`,
+      `- Current milestone: ${formatNumber(outputMilestoneTotal)} / ${formatNumber(outputMilestone.next)}`,
       '',
       '## Actual Done',
       review.actualDone || '',
@@ -640,6 +680,67 @@ export default function StudyDashboard() {
               Set custom
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="english-output-journey-card">
+        <div className="english-output-journey-main">
+          <div className="section-label">English Output Journey</div>
+          <h3>English Output Journey</h3>
+          <p>Track active output, not vague input time.</p>
+          <strong>Every rep is one vote for fluent English.</strong>
+        </div>
+        <div className="english-output-journey-stats">
+          <div>
+            <span>{formatNumber(outputJourney.totalReps)}</span>
+            <small>total reps</small>
+          </div>
+          <div>
+            <span>{formatNumber(outputMilestoneTotal)} / {formatNumber(outputMilestone.next)}</span>
+            <small>current milestone</small>
+          </div>
+          <div>
+            <span>{outputToday}</span>
+            <small>today</small>
+          </div>
+          <div>
+            <span>{outputWeek}</span>
+            <small>last 7 days</small>
+          </div>
+        </div>
+        <div className="english-output-progress">
+          <div>
+            <span>Next milestone</span>
+            <strong>{formatNumber(outputMilestone.next)} reps</strong>
+          </div>
+          <div className="study-progress-bar" aria-label={`English output milestone progress ${outputMilestonePercent}%`}>
+            <span style={{ width: `${outputMilestonePercent}%` }} />
+          </div>
+          <div className="english-output-long-term-row">
+            <span>{formatNumber(outputJourney.totalReps)} / {formatNumber(ENGLISH_OUTPUT_LONG_TERM_TARGET)}</span>
+            <div className="english-output-long-term-bar" aria-label={`English output long-term progress ${outputLongTermPercent.toFixed(1)}%`}>
+              <span style={{ width: `${outputLongTermPercent}%` }} />
+            </div>
+          </div>
+        </div>
+        <div className="english-output-manual-row">
+          <input
+            aria-label="Manual English output rep note"
+            value={manualRepNote}
+            onChange={event => setManualRepNote(event.target.value)}
+            placeholder="Optional note, e.g. Interview answer practice"
+          />
+          <button type="button" className="btn btn-secondary" onClick={handleManualOutputRep}>
+            +1 Output Rep
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleUndoOutputRep}
+            disabled={outputJourney.history.length === 0}
+          >
+            Undo last rep
+          </button>
         </div>
       </section>
 
@@ -939,6 +1040,40 @@ export default function StudyDashboard() {
           <div>
             <span>{noteDestinations.length}</span>
             <small>note destinations</small>
+          </div>
+          <div>
+            <span>{outputToday}</span>
+            <small>English reps today</small>
+          </div>
+          <div>
+            <span>{outputWeek}</span>
+            <small>English reps this week</small>
+          </div>
+          <div>
+            <span>{formatNumber(outputJourney.totalReps)}</span>
+            <small>English reps total</small>
+          </div>
+        </div>
+
+        <div className="study-review-panel english-output-review-panel">
+          <h3>English Output Journey</h3>
+          <div className="study-breakdown-list">
+            <div>
+              <span>Today</span>
+              <strong>{outputToday} reps</strong>
+            </div>
+            <div>
+              <span>This week</span>
+              <strong>{outputWeek} reps</strong>
+            </div>
+            <div>
+              <span>Total</span>
+              <strong>{formatNumber(outputJourney.totalReps)} / {formatNumber(ENGLISH_OUTPUT_LONG_TERM_TARGET)}</strong>
+            </div>
+            <div>
+              <span>Current milestone</span>
+              <strong>{formatNumber(outputMilestoneTotal)} / {formatNumber(outputMilestone.next)}</strong>
+            </div>
           </div>
         </div>
 
