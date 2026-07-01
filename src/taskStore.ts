@@ -364,8 +364,8 @@ export function writeStudySessionToTaskStore(record: StudySessionRecord): void {
     studyMethod: record.notes,
     createdAt: existingTask?.createdAt ?? record.startedAt,
     updatedAt: now,
-    oldSource: 'iris-study-session-records',
-    oldSourceId: record.id,
+    oldSource: record.source ?? 'iris-study-session-records',
+    oldSourceId: record.sourceImportId ?? record.id,
   }
   const nextTask: UnifiedTask = {
     ...fallbackTask,
@@ -389,8 +389,8 @@ export function writeStudySessionToTaskStore(record: StudySessionRecord): void {
     noteDestination: record.noteDestination,
     notes: record.notes,
     resourceUsed: record.resourceUsed,
-    oldSource: 'iris-study-session-records',
-    oldSourceId: record.id,
+    oldSource: record.source ?? 'iris-study-session-records',
+    oldSourceId: record.sourceImportId ?? record.id,
   }
   saveTaskStore({
     ...store,

@@ -4,6 +4,10 @@ import { getLocalDateKey } from '../focus'
 import { STUDY_CATEGORIES, STUDY_TASK_LIBRARY } from '../studyTaskLibrary'
 import { pushStudyDailyLogToNotion } from '../services/notionService'
 import {
+  getExpressionHubImportStatus,
+  importExpressionHubQueue,
+} from '../expressionHubImport'
+import {
   addManualEnglishOutputRep,
   addStudySessionEnglishOutputRep,
   currentEnglishOutputMilestone,
@@ -249,6 +253,8 @@ export default function StudyDashboard() {
   const [notionStatus, setNotionStatus] = useState<string | null>(null)
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
   const [pushingNotion, setPushingNotion] = useState(false)
+  const [expressionImportStatus, setExpressionImportStatus] = useState(() => getExpressionHubImportStatus())
+  const [expressionImportMessage, setExpressionImportMessage] = useState<string | null>(null)
   const [outputJourney, setOutputJourney] = useState(() => loadEnglishOutputJourney())
   const [manualRepNote, setManualRepNote] = useState('')
   const [activeSession, setActiveSession] = useState<StudyActiveSession | null>(() =>
@@ -510,6 +516,23 @@ export default function StudyDashboard() {
     setOutputJourney(undoLastEnglishOutputRep())
   }
 
+  function refreshStudyState() {
+    setOutputJourney(loadEnglishOutputJourney())
+    setSessions(loadStudySessionRecordsForDate(today))
+    setAllStudySessions(loadStudySessionRecords())
+    setExpressionImportStatus(getExpressionHubImportStatus())
+  }
+
+  function handleExpressionHubImport() {
+    const result = importExpressionHubQueue()
+    refreshStudyState()
+    if (result.importedCount > 0) {
+      setExpressionImportMessage(`Imported ${result.importedCount} Expression Review Hub item${result.importedCount === 1 ? '' : 's'}.`)
+      return
+    }
+    setExpressionImportMessage('No new Expression Review Hub items to import.')
+  }
+
   function updateReview(patch: Partial<StudyDailyReview>) {
     const next = {
       ...review,
@@ -747,6 +770,29 @@ export default function StudyDashboard() {
           </button>
           <small>Use this only for English output done outside the timer.</small>
         </div>
+      </section>
+
+      <section className="expression-hub-import-card">
+        <div>
+          <div className="section-label">Expression Review Hub</div>
+          <h3>Import from Expression Hub</h3>
+          {expressionImportStatus.pendingCount > 0 ? (
+            <p>
+              Expression Review Hub has {expressionImportStatus.pendingCount} output rep{expressionImportStatus.pendingCount === 1 ? '' : 's'} ready to import.
+            </p>
+          ) : (
+            <p>No pending Expression Review Hub output reps.</p>
+          )}
+          {expressionImportStatus.lastImportedAt && (
+            <small>
+              Last imported {new Date(expressionImportStatus.lastImportedAt).toLocaleString('en-AU')}
+            </small>
+          )}
+          {expressionImportMessage && <small>{expressionImportMessage}</small>}
+        </div>
+        <button type="button" className="btn btn-secondary" onClick={handleExpressionHubImport}>
+          Import now
+        </button>
       </section>
 
       <section className="study-timer-card">

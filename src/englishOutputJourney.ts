@@ -22,9 +22,10 @@ export const ENGLISH_OUTPUT_LONG_TERM_TARGET = 10000
 export interface EnglishOutputRepHistoryItem {
   id: string
   date: string
-  source: 'study-session' | 'manual'
+  source: 'study-session' | 'manual' | 'expression-review-hub'
   reps: number
   sessionId?: string
+  importItemId?: string
   title?: string
   note?: string
   createdAt: string
@@ -63,13 +64,47 @@ function emptyJourney(): EnglishOutputJourney {
 function normalizeJourney(value: Partial<EnglishOutputJourney> | null): EnglishOutputJourney {
   const history = (value?.history ?? []).map(item => ({
     ...item,
-    reps: Math.max(1, Math.min(4, Math.round(item.reps ?? 1))),
+    reps: Math.max(1, Math.round(item.reps ?? 1)),
   }))
   return {
     totalReps: history.reduce((sum, item) => sum + item.reps, 0),
     milestones: ENGLISH_OUTPUT_MILESTONES,
     history,
   }
+}
+
+export function hasImportedEnglishOutputRep(importItemId: string, current = loadEnglishOutputJourney()): boolean {
+  return current.history.some(item => item.importItemId === importItemId || item.id === `expression-hub-rep:${importItemId}`)
+}
+
+export function addImportedEnglishOutputReps(input: {
+  importItemId: string
+  title: string
+  date: string
+  reps: number
+  note?: string
+  createdAt?: string
+}, current = loadEnglishOutputJourney()): EnglishOutputJourney {
+  if (hasImportedEnglishOutputRep(input.importItemId, current)) return current
+  const reps = Math.max(1, Math.round(input.reps || 1))
+  const next: EnglishOutputJourney = {
+    ...current,
+    history: [
+      {
+        id: `expression-hub-rep:${input.importItemId}`,
+        date: input.date,
+        source: 'expression-review-hub',
+        reps,
+        importItemId: input.importItemId,
+        title: input.title,
+        note: input.note,
+        createdAt: input.createdAt ?? new Date().toISOString(),
+      },
+      ...current.history,
+    ],
+  }
+  saveEnglishOutputJourney(next)
+  return loadEnglishOutputJourney()
 }
 
 export function loadEnglishOutputJourney(): EnglishOutputJourney {

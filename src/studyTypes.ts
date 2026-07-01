@@ -56,6 +56,8 @@ export interface StudySessionRecord {
   id: string
   taskTemplateId?: string
   customTaskId?: string
+  source?: 'study-timer' | 'expression-review-hub' | string
+  sourceImportId?: string
   title: string
   category: StudyCategory
   startedAt: string
