@@ -1037,7 +1037,7 @@ function TodayCommandCentre({
             ))}
           </p>
           {(dailyNote.caption || isEvening) && (
-            <small>
+            <small className="today-note-quote-en">
               {dailyNote.caption}
               {dailyNote.caption && isEvening ? ' · ' : ''}
               {isEvening ? 'Evening mode: quiet input and light review.' : ''}
