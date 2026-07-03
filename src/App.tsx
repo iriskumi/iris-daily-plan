@@ -1031,7 +1031,7 @@ function TodayCommandCentre({
 
         <div className="grounding-banner" aria-label="Today note">
           <div className="grounding-label">Today Note</div>
-          <p lang="zh-Hans">
+          <p className="today-note-quote-cn" lang="zh-Hans">
             {dailyNote.lines.map(line => (
               <span key={line}>{line}</span>
             ))}
