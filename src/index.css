@@ -12,6 +12,14 @@
 }
 
 @font-face {
+  font-family: "LXGW WenKai Screen Local";
+  src: url("/fonts/LXGWWenKaiScreen-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: "ELEYANG Plog";
   src: url("/fonts/ELEYANG-Plog.ttf") format("truetype");
   font-weight: 400;
@@ -74,7 +82,7 @@
 
   --font-cjk: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-quote-zh: 'Noto Serif SC', 'Songti SC', 'STSong', 'PingFang SC', 'Noto Sans SC', serif;
+  --font-quote-zh: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "Ma Shan Zheng", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-accent-hand: 'Iris Handwriting Accent', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', cursive;
   --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
 }
@@ -290,9 +298,9 @@ body {
 }
 
 .grounding-banner .today-note-quote-cn {
-  font-family: "LXGW WenKai Screen", "LXGW WenKai", "Ma Shan Zheng", "ZCOOL KuaiLe", "ZCOOL XiaoWei", "PingFang SC", "Microsoft YaHei", sans-serif;
-  font-size: 2.35rem;
-  font-weight: 400;
+  font-family: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "Ma Shan Zheng", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: clamp(2.15rem, 3.4vw, 3.4rem);
+  font-weight: 400 !important;
   line-height: 1.55;
   letter-spacing: 0.03em;
   color: #34251f;
