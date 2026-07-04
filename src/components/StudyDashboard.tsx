@@ -6,6 +6,9 @@ import { pushStudyDailyLogToNotion } from '../services/notionService'
 import {
   getExpressionHubImportStatus,
   importExpressionHubQueue,
+  importExpressionHubPayload,
+  loadExpressionHubImportNotice,
+  parseExpressionHubImportJson,
 } from '../expressionHubImport'
 import {
   addManualEnglishOutputRep,
@@ -254,7 +257,12 @@ export default function StudyDashboard() {
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
   const [pushingNotion, setPushingNotion] = useState(false)
   const [expressionImportStatus, setExpressionImportStatus] = useState(() => getExpressionHubImportStatus())
-  const [expressionImportMessage, setExpressionImportMessage] = useState<string | null>(null)
+  const [expressionImportMessage, setExpressionImportMessage] = useState<string | null>(() => {
+    const notice = loadExpressionHubImportNotice()
+    if (!notice) return null
+    return notice.error ? `${notice.message} ${notice.error}` : notice.message
+  })
+  const [expressionImportJson, setExpressionImportJson] = useState('')
   const [outputJourney, setOutputJourney] = useState(() => loadEnglishOutputJourney())
   const [manualRepNote, setManualRepNote] = useState('')
   const [activeSession, setActiveSession] = useState<StudyActiveSession | null>(() =>
@@ -530,7 +538,25 @@ export default function StudyDashboard() {
       setExpressionImportMessage(`Imported ${result.importedCount} Expression Review Hub item${result.importedCount === 1 ? '' : 's'}.`)
       return
     }
+    if (result.duplicateCount > 0) {
+      setExpressionImportMessage('Expression Review Hub queue items were already imported.')
+      return
+    }
     setExpressionImportMessage('No new Expression Review Hub items to import.')
+  }
+
+  function handleExpressionHubJsonImport() {
+    try {
+      const payload = parseExpressionHubImportJson(expressionImportJson)
+      const result = importExpressionHubPayload(payload)
+      refreshStudyState()
+      setExpressionImportMessage(result.error ? `${result.message} ${result.error}` : result.message)
+      if (result.success && result.importedCount > 0) {
+        setExpressionImportJson('')
+      }
+    } catch (error) {
+      setExpressionImportMessage(error instanceof Error ? error.message : 'Could not import Expression Review Hub JSON.')
+    }
   }
 
   function updateReview(patch: Partial<StudyDailyReview>) {
@@ -774,15 +800,18 @@ export default function StudyDashboard() {
 
       <section className="expression-hub-import-card">
         <div>
-          <div className="section-label">Expression Review Hub</div>
-          <h3>Import from Expression Hub</h3>
+          <div className="section-label">Integration Inbox</div>
+          <h3>Expression Review Hub</h3>
           {expressionImportStatus.pendingCount > 0 ? (
             <p>
               Expression Review Hub has {expressionImportStatus.pendingCount} output rep{expressionImportStatus.pendingCount === 1 ? '' : 's'} ready to import.
             </p>
           ) : (
-            <p>No pending Expression Review Hub output reps.</p>
+            <p>Import English output reps from Expression Review Hub by URL, local queue, or pasted JSON.</p>
           )}
+          <a href="https://iris-expression-review-hub.vercel.app/" target="_blank" rel="noreferrer">
+            Open Expression Review Hub
+          </a>
           {expressionImportStatus.lastImportedAt && (
             <small>
               Last imported {new Date(expressionImportStatus.lastImportedAt).toLocaleString('en-AU')}
@@ -790,9 +819,27 @@ export default function StudyDashboard() {
           )}
           {expressionImportMessage && <small>{expressionImportMessage}</small>}
         </div>
-        <button type="button" className="btn btn-secondary" onClick={handleExpressionHubImport}>
-          Import now
-        </button>
+        <div className="expression-hub-import-actions">
+          <button type="button" className="btn btn-secondary" onClick={handleExpressionHubImport}>
+            Import local queue
+          </button>
+          <label>
+            Import Expression Hub JSON
+            <textarea
+              value={expressionImportJson}
+              onChange={event => setExpressionImportJson(event.target.value)}
+              placeholder='Paste JSON payload, e.g. {"schemaVersion":1,"type":"english-output-rep",...}'
+            />
+          </label>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleExpressionHubJsonImport}
+            disabled={!expressionImportJson.trim()}
+          >
+            Import pasted JSON
+          </button>
+        </div>
       </section>
 
       <section className="study-timer-card">

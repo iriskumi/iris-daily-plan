@@ -110,6 +110,7 @@ import {
 import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
 import * as timerEngine from './timerEngine'
 import { writeFocusBlockSessionToTaskStore, writeInboxTaskToTaskStore } from './taskStore'
+import { consumeExpressionHubUrlImport } from './expressionHubImport'
 import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
@@ -408,6 +409,10 @@ export default function App() {
   const [focusStats, setFocusStats] = useState(() => getFocusStats(loadFocusSessions()))
   const [generatingPlan, setGeneratingPlan] = useState(false)
   const [generationMessage, setGenerationMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    consumeExpressionHubUrlImport()
+  }, [])
 
   useEffect(() => {
     setUrgentBills(getUrgentBills(loadBills()))
