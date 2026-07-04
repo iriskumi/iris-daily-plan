@@ -24,25 +24,30 @@ The selector now applies the quote font directly to the Chinese quote element.
 
 ## Font Loading
 
-The quote now uses a self-hosted local handwriting font first:
+The quote now uses a self-hosted local handwritten/note-style font first:
 
 ```text
-public/fonts/ELEYANG-Plog.ttf
+public/fonts/MaShanZheng-Regular.ttf
 ```
 
 Registered as:
 
 ```css
 @font-face {
-  font-family: "ELEYANG Plog";
-  src: url("/fonts/ELEYANG-Plog.ttf") format("truetype");
+  font-family: "Ma Shan Zheng Local";
+  src: url("/fonts/MaShanZheng-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 ```
 
-LXGW WenKai remains available as the second local/named fallback:
+The previous local fonts remain available as fallbacks:
+
+```text
+public/fonts/ELEYANG-Plog.ttf
+public/fonts/LXGWWenKaiScreen-Regular.ttf
+```
 
 ```text
 public/fonts/LXGWWenKaiScreen-Regular.ttf
@@ -62,17 +67,17 @@ Registered as:
 
 Note: the official repository currently provides `LXGWWenKai-Regular.ttf`; it is stored locally under the requested stable public filename and registered as `LXGW WenKai Screen Local` for the app.
 
-The first attempt with LXGW worked technically, but visually it still looked too regular/print-like in the large Today Note quote. `ELEYANG Plog` is now first because it gives a more obvious handwritten notebook style and its cmap includes the quote characters.
+The first attempt with LXGW worked technically, but visually it still looked too regular/print-like in the large Today Note quote. `Ma Shan Zheng Local` is now first because it gives a much more obvious handwritten note style.
 
 ## Applied Quote Style
 
 ```css
 .grounding-banner .today-note-quote-cn {
-  font-family: "ELEYANG Plog", "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "Ma Shan Zheng", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif !important;
-  font-size: clamp(2rem, 3.05vw, 3.05rem);
+  font-family: "Ma Shan Zheng Local", "Ma Shan Zheng", "ELEYANG Plog", "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: clamp(2.25rem, 3.45vw, 3.65rem);
   font-weight: 400 !important;
-  line-height: 1.55;
-  letter-spacing: 0.035em;
+  line-height: 1.42;
+  letter-spacing: 0.045em;
   color: #34251f;
   font-synthesis: none;
 }
@@ -87,16 +92,16 @@ The English subtitle keeps the normal UI font.
 3. Confirm the selected element is:
    - `p.today-note-quote-cn`
 4. In Computed styles, confirm:
-   - `font-family` starts with `"ELEYANG Plog"`
+   - `font-family` starts with `"Ma Shan Zheng Local"`
    - `font-weight` is `400`
 5. In Network, confirm this font file loads:
-   - `/fonts/ELEYANG-Plog.ttf`
-   - `/fonts/LXGWWenKaiScreen-Regular.ttf` may also appear as fallback/available font
+   - `/fonts/MaShanZheng-Regular.ttf`
 
 ## Failure Signs
 
 The font is still failing if computed `font-family` starts with:
 
+- `ELEYANG Plog` and still does not look handwritten enough
 - `LXGW WenKai Screen Local` but the visual still feels too regular
 - `PingFang SC`
 - `Microsoft YaHei`
