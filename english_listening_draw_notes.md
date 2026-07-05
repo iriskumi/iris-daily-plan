@@ -7,6 +7,7 @@
 - Hooked drawn tasks into the existing Study timer instead of adding a separate timer.
 - Simplified the feature to two playful modes: `精听 / Shadowing` and `泛听 / Light Input`.
 - Updated draw results to return concrete materials with `materialTitle`, `sourceName`, `suggestedWhereToOpen`, and `specificInstruction`.
+- Polished the card visually with a milk foam / strawberry milk / vanilla linen palette.
 
 ## Storage
 - Uses localStorage key `iris-english-listening-draw`.
@@ -24,6 +25,11 @@
 - Shadowing uses English Output so completed Study sessions can flow into the English Output Journey logic.
 - The main pool does not include YouGlish, Friends, Modern Family, Brooklyn Nine-Nine, How I Met Your Mother, random search, technical lecture material, or emotionally heavy material.
 - Vague items such as generic workplace/admin clips were replaced with concrete sources or saved-resource roleplays.
+
+## Visual polish
+- The draw card, result card, selector, and related buttons now use a soft dessert palette.
+- Palette: Milk Foam, Vanilla Linen, Strawberry Milk, Soft Peach Milk, and Blanched Almond.
+- Styling is scoped to English Listening Draw and does not restyle the whole app.
 
 ## Existing behavior preserved
 - Study timer still handles active sessions.

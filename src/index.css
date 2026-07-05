@@ -76,6 +76,16 @@
   --orange: #8B6F4A;
   --orange-bg: #FDF6EC;
 
+  --milk-foam: #FAF6F1;
+  --vanilla-linen: #F2E6D8;
+  --strawberry-milk: #F6C7CF;
+  --soft-peach-milk: #F7D8CC;
+  --blanched-almond: #EADFD6;
+  --cocoa-text: #3B2B25;
+  --soft-cocoa: #7A645A;
+  --rose-border: rgba(246, 199, 207, 0.65);
+  --cream-shadow: 0 18px 45px rgba(90, 62, 52, 0.08);
+
   --shadow-sm: none;
   --shadow: none;
   --shadow-md: none;
@@ -5428,12 +5438,16 @@ textarea {
 
 .english-listening-draw-card {
   display: grid;
-  gap: 0.95rem;
+  gap: 1.05rem;
   margin-bottom: 1.2rem;
-  padding: 1.15rem 1.25rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border) 78%);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface) 86%, #f8efe6 14%);
+  padding: 1.35rem 1.45rem;
+  border: 1px solid var(--rose-border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(246, 199, 207, 0.28), transparent 34%),
+    linear-gradient(135deg, var(--milk-foam), var(--vanilla-linen));
+  box-shadow: var(--cream-shadow);
+  color: var(--cocoa-text);
 }
 
 .english-listening-draw-header {
@@ -5444,7 +5458,7 @@ textarea {
 }
 
 .english-listening-draw-header h3 {
-  color: var(--text);
+  color: var(--cocoa-text);
   font-size: 17px;
   font-weight: 600;
 }
@@ -5453,34 +5467,35 @@ textarea {
 .english-listening-draw-header small,
 .english-listening-empty p {
   margin-top: 0.25rem;
-  color: var(--text-2);
+  color: var(--soft-cocoa);
   font-size: 13px;
   line-height: 1.55;
 }
 
 .english-listening-draw-header small {
   display: block;
-  color: var(--text-3);
+  color: var(--soft-cocoa);
 }
 
 .english-listening-redraws {
   min-width: 92px;
-  padding: 0.58rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  padding: 0.68rem 0.78rem;
+  border: 1px solid var(--blanched-almond);
+  border-radius: 22px;
+  background: rgba(250, 246, 241, 0.76);
+  box-shadow: 0 10px 26px rgba(90, 62, 52, 0.06);
   text-align: center;
 }
 
 .english-listening-redraws span {
   display: block;
-  color: var(--text);
+  color: var(--cocoa-text);
   font-size: 20px;
   font-weight: 600;
 }
 
 .english-listening-redraws small {
-  color: var(--text-3);
+  color: var(--soft-cocoa);
   font-size: 11px;
 }
 
@@ -5494,7 +5509,7 @@ textarea {
 .english-listening-draw-controls label {
   display: grid;
   gap: 0.3rem;
-  color: var(--section-label);
+  color: var(--soft-cocoa);
   font-size: 0.66rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -5502,14 +5517,15 @@ textarea {
 
 .english-listening-draw-controls select {
   min-height: var(--control-height);
-  padding: 0.62rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--control-radius);
-  background: #FFFCF9;
-  color: var(--text);
+  padding: 0.66rem 0.9rem;
+  border: 1px solid var(--rose-border);
+  border-radius: 999px;
+  background: rgba(250, 246, 241, 0.88);
+  color: var(--cocoa-text);
   font-size: 14px;
   text-transform: none;
   letter-spacing: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .english-listening-draw-actions,
@@ -5522,14 +5538,22 @@ textarea {
 .english-listening-result {
   display: grid;
   gap: 0.85rem;
-  padding: 0.95rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  padding: 1.05rem 1.1rem;
+  border: 1px solid var(--blanched-almond);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(250, 246, 241, 0.94), rgba(247, 216, 204, 0.24));
+  box-shadow: 0 14px 34px rgba(90, 62, 52, 0.07);
 }
 
 .english-listening-result-main > span {
-  color: var(--section-label);
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.22rem 0.52rem;
+  border: 1px solid var(--rose-border);
+  border-radius: 999px;
+  background: rgba(246, 199, 207, 0.36);
+  color: var(--cocoa-text);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -5537,8 +5561,8 @@ textarea {
 }
 
 .english-listening-result-main h4 {
-  margin-top: 0.22rem;
-  color: var(--text);
+  margin-top: 0.42rem;
+  color: var(--cocoa-text);
   font-size: 18px;
   font-weight: 600;
 }
@@ -5546,7 +5570,7 @@ textarea {
 .english-listening-source {
   display: block;
   margin-top: 0.25rem;
-  color: var(--text-3);
+  color: var(--soft-cocoa);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -5554,7 +5578,7 @@ textarea {
 .english-listening-result-main p,
 .english-listening-subtasks {
   margin-top: 0.4rem;
-  color: var(--text-2);
+  color: var(--soft-cocoa);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -5567,11 +5591,11 @@ textarea {
 }
 
 .english-listening-result-meta span {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border);
+  padding: 0.28rem 0.56rem;
+  border: 1px solid var(--blanched-almond);
   border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--text-2);
+  background: var(--vanilla-linen);
+  color: var(--soft-cocoa);
   font-size: 11px;
   font-weight: 500;
 }
@@ -5583,8 +5607,33 @@ textarea {
 
 .english-listening-draw-footer small {
   align-self: center;
-  color: var(--text-3);
+  color: var(--soft-cocoa);
   font-size: 11px;
+}
+
+.english-listening-draw-card .btn {
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(90, 62, 52, 0.08);
+}
+
+.english-listening-draw-card .btn-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--strawberry-milk), var(--soft-peach-milk));
+  color: var(--cocoa-text);
+}
+
+.english-listening-draw-card .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f8d0d7, #f9dfd4);
+}
+
+.english-listening-draw-card .btn-secondary {
+  border-color: var(--rose-border);
+  background: rgba(250, 246, 241, 0.86);
+  color: var(--cocoa-text);
+}
+
+.english-listening-draw-card .btn-secondary:hover:not(:disabled) {
+  background: var(--vanilla-linen);
 }
 
 .expression-hub-import-card {
@@ -6355,6 +6404,102 @@ textarea {
   margin-top: 1.2rem;
 }
 
+.iris365-home-card {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0 0 1.2rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.iris365-home-card h3 {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.iris365-home-card p,
+.iris365-home-card strong {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.iris365-home-card strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.iris365-home-proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.iris365-home-proof span,
+.iris365-low-energy-status,
+.iris365-weekly-summary span {
+  padding: 0.3rem 0.56rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.iris365-home-proof span.done,
+.iris365-low-energy-status.valid {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border) 64%);
+  background: var(--accent-bg);
+  color: var(--text);
+}
+
+.iris365-prestart-note,
+.iris365-low-energy-toggle {
+  margin-top: 1rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.iris365-prestart-note strong,
+.iris365-low-energy-toggle strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.iris365-prestart-note p,
+.iris365-low-energy-toggle small {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.iris365-low-energy-toggle {
+  display: flex;
+  gap: 0.62rem;
+  align-items: flex-start;
+}
+
+.iris365-low-energy-toggle input {
+  margin-top: 0.18rem;
+}
+
+.iris365-low-energy-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  margin-top: 0.65rem;
+}
+
 .iris365-recent-list {
   display: grid;
   gap: 0.65rem;
@@ -6400,6 +6545,134 @@ textarea {
   font-size: 11px;
 }
 
+.iris365-weekly-card,
+.iris365-proof-card {
+  margin-top: 1.2rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.iris365-weekly-card .card-header > span {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.iris365-weekly-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.iris365-weekly-grid,
+.iris365-proof-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.iris365-weekly-grid label,
+.iris365-proof-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--section-label);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iris365-weekly-grid textarea,
+.iris365-proof-form input,
+.iris365-proof-form select,
+.iris365-proof-form textarea {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0.62rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: #FFFCF9;
+  color: var(--text);
+  font-family: var(--font-cjk);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.iris365-weekly-grid textarea,
+.iris365-proof-form textarea {
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.iris365-proof-description {
+  grid-column: 1 / -1;
+}
+
+.iris365-proof-form .btn {
+  align-self: end;
+}
+
+.iris365-proof-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.iris365-proof-filter button {
+  padding: 0.34rem 0.62rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.iris365-proof-filter button.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.iris365-proof-list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.iris365-proof-item {
+  padding: 0.82rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #FFFCF9;
+}
+
+.iris365-proof-item span,
+.iris365-proof-item small {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.iris365-proof-item h3 {
+  margin-top: 0.2rem;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.iris365-proof-item p {
+  margin-top: 0.25rem;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 @media (max-width: 760px) {
   .study-hero-card,
   .english-output-journey-card,
@@ -6410,6 +6683,8 @@ textarea {
   .iris365-checkbox-grid,
   .iris365-rating-grid,
   .iris365-recent-row,
+  .iris365-weekly-grid,
+  .iris365-proof-form,
   .english-output-journey-stats,
   .english-output-manual-row,
   .study-picker-layout,
@@ -6441,6 +6716,11 @@ textarea {
 
   .iris365-recent-pills {
     justify-content: flex-start;
+  }
+
+  .english-listening-draw-card {
+    padding: 1.05rem;
+    border-radius: 22px;
   }
 
   .study-timer-custom {

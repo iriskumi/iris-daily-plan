@@ -94,7 +94,7 @@ import Settings from './components/Settings'
 import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
-import Iris365 from './components/Iris365'
+import Iris365, { Iris365HomeSummary } from './components/Iris365'
 import irisBearIcon from './assets/iris-bear-icon.svg'
 import {
   TASK_AREAS,
@@ -1055,6 +1055,7 @@ function TodayCommandCentre({
         </div>
 
         <HomeCommandCentre currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel} />
+        <Iris365HomeSummary />
 
         {showEmbeddedPlan && (
           <details

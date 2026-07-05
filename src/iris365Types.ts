@@ -10,6 +10,7 @@ export interface Iris365Phase {
 
 export interface Iris365Entry {
   date: string
+  lowEnergyDay: boolean
   englishOutput: boolean
   shadowing: boolean
   realityTask: boolean
@@ -23,10 +24,45 @@ export interface Iris365Entry {
   updatedAt: string
 }
 
+export type Iris365ProofCategory =
+  | 'English output'
+  | 'Shadowing'
+  | 'Cyber project'
+  | 'AI workflow'
+  | 'Job application'
+  | 'Work experience'
+  | 'Health / routine'
+  | 'Personal insight'
+
+export interface Iris365ProofItem {
+  id: string
+  date: string
+  category: Iris365ProofCategory
+  title: string
+  description: string
+  linkOrFile: string
+  relatedEntryDate?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Iris365WeeklyReview {
+  weekStartDate: string
+  weekEndDate: string
+  proofThisWeek: string
+  attentionDrain: string
+  bestReturnHabit: string
+  makeEasierNextWeek: string
+  nextWeekPriority: string
+  updatedAt: string
+}
+
 export interface Iris365Store {
   schemaVersion: number
   startDate: string
   entries: Record<string, Iris365Entry>
+  proofItems: Iris365ProofItem[]
+  weeklyReviews: Record<string, Iris365WeeklyReview>
 }
 
 export interface Iris365Streaks {
