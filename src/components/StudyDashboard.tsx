@@ -2,6 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Check, Clipboard, Clock, Copy, Pause, Play, Square, Target, X } from 'lucide-react'
 import { getLocalDateKey } from '../focus'
 import { STUDY_CATEGORIES, STUDY_TASK_LIBRARY } from '../studyTaskLibrary'
+import {
+  drawEnglishListeningMaterial,
+  ENGLISH_LISTENING_DRAW_MODES,
+  englishListeningDrawNotePrompt,
+  latestEnglishListeningDraw,
+  loadEnglishListeningDrawState,
+  markEnglishListeningDrawStarted,
+  redrawEnglishListeningMaterial,
+} from '../englishListeningDraw'
 import { pushStudyDailyLogToNotion } from '../services/notionService'
 import {
   getExpressionHubImportStatus,
@@ -46,6 +55,7 @@ import type {
   StudyDailyReview,
   StudySessionRecord,
 } from '../studyTypes'
+import type { EnglishListeningDrawMode, EnglishListeningDrawResult } from '../englishListeningDraw'
 import type { TimerSession } from '../timerEngineTypes'
 
 const QUICK_TARGETS = [3, 5, 6, 8]
@@ -265,6 +275,8 @@ export default function StudyDashboard() {
   const [expressionImportJson, setExpressionImportJson] = useState('')
   const [outputJourney, setOutputJourney] = useState(() => loadEnglishOutputJourney())
   const [manualRepNote, setManualRepNote] = useState('')
+  const [drawMode, setDrawMode] = useState<EnglishListeningDrawMode>('Intensive Listening / Shadowing')
+  const [listeningDrawState, setListeningDrawState] = useState(() => loadEnglishListeningDrawState())
   const [activeSession, setActiveSession] = useState<StudyActiveSession | null>(() =>
     restoreActiveStudySession(),
   )
@@ -304,6 +316,8 @@ export default function StudyDashboard() {
   const outputWeek = englishOutputRepsForLastSevenDays(outputJourney)
   const outputMilestonePercent = Math.min(100, Math.round((outputMilestone.progress / outputMilestone.span) * 100))
   const outputLongTermPercent = Math.min(100, (outputJourney.totalReps / ENGLISH_OUTPUT_LONG_TERM_TARGET) * 100)
+  const latestListeningDraw = latestEnglishListeningDraw(listeningDrawState)
+  const listeningDrawRedrawsRemaining = Math.max(0, listeningDrawState.redrawLimit - listeningDrawState.redrawsUsed)
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowMs(Date.now()), 1000)
@@ -368,6 +382,24 @@ export default function StudyDashboard() {
     ].join('\n')
   }
 
+  function listeningDrawSummary(draw: EnglishListeningDrawResult) {
+    return [
+      `# ${draw.title}`,
+      '',
+      `Mode: ${draw.mode}`,
+      `Material: ${draw.material}`,
+      `Category: ${draw.category}`,
+      `Duration: ${draw.recommendedDuration} min`,
+      `Counts as English Output Rep: ${draw.countsAsEnglishOutputRep ? 'Yes, if completed with output' : 'No, unless output is added'}`,
+      `Note: ${draw.noteDestination}`,
+      '',
+      `Method: ${draw.studyMethod}`,
+      '',
+      'Subtasks:',
+      ...draw.subtasks.map(subtask => `- ${subtask}`),
+    ].join('\n')
+  }
+
   function customTaskSummary() {
     const title = customTask.title.trim() || 'Custom study task'
     return [
@@ -379,6 +411,15 @@ export default function StudyDashboard() {
       '',
       customTask.notes.trim() ? `Notes: ${customTask.notes.trim()}` : 'Notes:',
     ].join('\n')
+  }
+
+  function handleListeningDraw() {
+    if (listeningDrawState.draws.length > 0) return
+    setListeningDrawState(drawEnglishListeningMaterial(drawMode, listeningDrawState))
+  }
+
+  function handleListeningRedraw() {
+    setListeningDrawState(redrawEnglishListeningMaterial(drawMode, listeningDrawState))
   }
 
   function persistActiveSession(session: StudyActiveSession | null) {
@@ -461,6 +502,46 @@ export default function StudyDashboard() {
     persistActiveSession(session)
   }
 
+  function startListeningDrawSession(draw: EnglishListeningDrawResult) {
+    if (activeSession) return
+    const start = Date.now()
+    const customTaskId = draw.id
+    const sessionId = crypto.randomUUID()
+    const timerSession = timerEngine.start(
+      `english-listening-draw:${draw.id}`,
+      draw.recommendedDuration,
+      'study',
+      { id: sessionId, startedAt: new Date(start).toISOString() },
+    )
+    const session = studySessionWithTimer({
+      id: sessionId,
+      customTaskId,
+      source: draw.source,
+      sourceImportId: draw.id,
+      title: draw.title,
+      category: draw.category,
+      sessionStartTime: start,
+      durationMinutes: draw.recommendedDuration,
+      expectedEndTime: start + draw.recommendedDuration * 60_000,
+      pausedAccumulatedMs: 0,
+      status: 'running',
+      noteDestination: draw.noteDestination,
+      notes: draw.studyMethod,
+      resourceUsed: draw.resourceSuggestion,
+    }, timerSession)
+    ensureCustomStudyTaskInTaskStore({
+      customTaskId,
+      title: draw.title,
+      category: draw.category,
+      durationMinutes: draw.recommendedDuration,
+      noteDestination: draw.noteDestination,
+      notes: draw.studyMethod,
+      activeSession: session,
+    })
+    persistActiveSession(session)
+    setListeningDrawState(markEnglishListeningDrawStarted(draw.id, sessionId, listeningDrawState))
+  }
+
   function startCustomDurationSession() {
     const duration = Number(customTimerMinutes)
     if (!Number.isFinite(duration) || duration <= 0) return
@@ -492,6 +573,8 @@ export default function StudyDashboard() {
       id: activeSession.id,
       taskTemplateId: activeSession.taskTemplateId,
       customTaskId: activeSession.customTaskId,
+      source: activeSession.source,
+      sourceImportId: activeSession.sourceImportId,
       title: activeSession.title,
       category: activeSession.category,
       startedAt: endedTimer.startedAt,
@@ -796,6 +879,111 @@ export default function StudyDashboard() {
           </button>
           <small>Use this only for English output done outside the timer.</small>
         </div>
+      </section>
+
+      <section className="english-listening-draw-card">
+        <div className="english-listening-draw-header">
+          <div>
+            <div className="section-label">今日英语抽签</div>
+            <h3>English Listening Draw</h3>
+            <p>Draw one listening / shadowing task for today.</p>
+            <small>今天摸一张英语签，抽到什么就从这里开始。</small>
+          </div>
+          <div className="english-listening-redraws">
+            <span>{listeningDrawRedrawsRemaining}</span>
+            <small>redraws left</small>
+          </div>
+        </div>
+
+        <div className="english-listening-draw-controls">
+          <label>
+            Mode
+            <select
+              value={drawMode}
+              onChange={event => setDrawMode(event.target.value as EnglishListeningDrawMode)}
+            >
+              {ENGLISH_LISTENING_DRAW_MODES.map(mode => (
+                <option key={mode} value={mode}>{mode}</option>
+              ))}
+            </select>
+          </label>
+          <div className="english-listening-draw-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleListeningDraw}
+              disabled={listeningDrawState.draws.length > 0}
+            >
+              Draw today’s material 🎲
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleListeningRedraw}
+              disabled={listeningDrawState.draws.length > 0 && listeningDrawRedrawsRemaining === 0}
+            >
+              Redraw / 不合心意？再摸一张
+            </button>
+          </div>
+        </div>
+
+        {latestListeningDraw ? (
+          <div className="english-listening-result">
+            <div className="english-listening-result-main">
+              <span>{latestListeningDraw.mode}</span>
+              <h4>{latestListeningDraw.material}</h4>
+              <p>{latestListeningDraw.studyMethod}</p>
+              <div className="english-listening-result-meta">
+                <span>{latestListeningDraw.recommendedDuration} min</span>
+                <span>{latestListeningDraw.category}</span>
+                <span>{latestListeningDraw.energy} energy</span>
+                <span>{latestListeningDraw.countsAsEnglishOutputRep ? 'Output rep eligible' : 'Input only'}</span>
+              </div>
+            </div>
+            <ul className="english-listening-subtasks">
+              {latestListeningDraw.subtasks.map(subtask => (
+                <li key={subtask}>{subtask}</li>
+              ))}
+            </ul>
+            <div className="english-listening-draw-footer">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => startListeningDrawSession(latestListeningDraw)}
+                disabled={Boolean(activeSession)}
+              >
+                <Play size={14} />
+                Start as Study Session
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => copyText('listening-draw-prompt', englishListeningDrawNotePrompt(latestListeningDraw, today))}
+              >
+                {copied === 'listening-draw-prompt' ? <Check size={14} /> : <Copy size={14} />}
+                {copied === 'listening-draw-prompt' ? 'Copied' : 'Copy Obsidian note prompt'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => copyText('listening-draw-summary', listeningDrawSummary(latestListeningDraw))}
+              >
+                {copied === 'listening-draw-summary' ? <Check size={14} /> : <Clipboard size={14} />}
+                {copied === 'listening-draw-summary' ? 'Copied' : 'Copy task summary'}
+              </button>
+              {latestListeningDraw.startedSessionId && (
+                <small>Started as Study Session today.</small>
+              )}
+              {activeSession && (
+                <small>Finish or abandon the current Study session before starting this draw.</small>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="english-listening-empty">
+            <p>No draw yet today. Choose a mode and draw one small, useful English starting point.</p>
+          </div>
+        )}
       </section>
 
       <section className="expression-hub-import-card">

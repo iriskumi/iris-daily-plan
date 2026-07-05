@@ -74,6 +74,8 @@ export interface StudyActiveSession {
   id: string
   taskTemplateId?: string
   customTaskId?: string
+  source?: 'study-timer' | 'english-listening-draw' | string
+  sourceImportId?: string
   title: string
   category: StudyCategory
   sessionStartTime: number

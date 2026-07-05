@@ -79,14 +79,14 @@ export const ENGLISH_LISTENING_DRAW_MATERIALS: EnglishListeningDrawMaterial[] = 
     guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
   },
   {
-    title: 'Friends scene',
-    type: 'sitcom-casual',
-    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
+    title: 'Rosehaven scene',
+    type: 'australian-tv-workplace',
+    guidance: 'Low-angst Australian daily conversation and rhythm.',
   },
   {
-    title: 'How I Met Your Mother scene',
-    type: 'sitcom-casual',
-    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
+    title: 'Upper Middle Bogan scene',
+    type: 'australian-tv-workplace',
+    guidance: 'Low-angst Melbourne family/social daily English and rhythm.',
   },
   {
     title: 'Australian workplace / admin explainer clip',
@@ -208,7 +208,7 @@ export const STUDY_TASK_LIBRARY: StudyTaskTemplate[] = [
     alternativeDurations: [25, 50],
     energy: 'low',
     type: 'input',
-    resourceSuggestion: `Draw one low-pressure material: ${intensiveListeningMaterialPool}. Avoid lookup tools, generic search, overly technical lectures, and passive audiobook-only tasks.`,
+    resourceSuggestion: `Draw one low-pressure material: ${intensiveListeningMaterialPool}. Use this as a curated, light practice pool rather than a lookup or search list.`,
     studyMethod: `Draw one useful material and start small. ${intensiveListeningMethodSummary}`,
     noteDestination: 'Obsidian/Study/English/Input.md',
     subtasks: [
