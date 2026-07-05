@@ -269,7 +269,7 @@ function createGrowthDayScaffold(
       '25-40 delayed shadowing without looking',
       '40-50 record oral summary',
       '50-60 replay and note 3 issues',
-      'Materials: WorkLife, ABC Conversations, The Assembly, Gruen, AWS/Cisco/Google Cloud video',
+      'Materials: WorkLife, No Stupid Questions, Luke’s English Podcast, The Assembly, Gruen, Utopia/Fisk scene, sitcom scene, Australian workplace explainer, Coursera AI concept explanation',
     ]),
     block('course-learning', 10 * 60 + 30, 12 * 60, 'AI / IT / Cyber English course', 'focus', 'high', 'daytime', [
       'Preview title and key terms',

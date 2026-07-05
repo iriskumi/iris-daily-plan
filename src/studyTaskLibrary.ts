@@ -14,6 +14,146 @@ export const STUDY_CATEGORIES: StudyCategory[] = [
   'Reset',
 ]
 
+export type EnglishListeningMaterialType =
+  | 'podcast-discussion'
+  | 'australian-tv-workplace'
+  | 'sitcom-casual'
+  | 'coursera-ai-explanation'
+
+interface EnglishListeningDrawMaterial {
+  title: string
+  type: EnglishListeningMaterialType
+  guidance: string
+}
+
+interface EnglishListeningDrawMethod {
+  type: EnglishListeningMaterialType
+  label: string
+  steps: string[]
+}
+
+export const ENGLISH_LISTENING_DRAW_MATERIALS: EnglishListeningDrawMaterial[] = [
+  {
+    title: 'WorkLife with Adam Grant',
+    type: 'podcast-discussion',
+    guidance: 'Structured oral summary and thoughtful workplace/life vocabulary.',
+  },
+  {
+    title: 'No Stupid Questions',
+    type: 'podcast-discussion',
+    guidance: 'Structured oral summary and thoughtful workplace/life vocabulary.',
+  },
+  {
+    title: "Luke's English Podcast",
+    type: 'podcast-discussion',
+    guidance: 'Natural explanation, shadowing rhythm, and useful spoken phrases.',
+  },
+  {
+    title: 'The Assembly',
+    type: 'australian-tv-workplace',
+    guidance: 'Australian English, discussion style, natural reactions, and public speaking rhythm.',
+  },
+  {
+    title: 'Gruen',
+    type: 'australian-tv-workplace',
+    guidance: 'Australian English, discussion style, natural reactions, and public speaking rhythm.',
+  },
+  {
+    title: 'Utopia scene',
+    type: 'australian-tv-workplace',
+    guidance: 'Workplace/admin English and Australian workplace humour.',
+  },
+  {
+    title: 'Fisk scene',
+    type: 'australian-tv-workplace',
+    guidance: 'Workplace/admin English and Australian workplace humour.',
+  },
+  {
+    title: 'Modern Family scene',
+    type: 'sitcom-casual',
+    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
+  },
+  {
+    title: 'Brooklyn Nine-Nine scene',
+    type: 'sitcom-casual',
+    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
+  },
+  {
+    title: 'Friends scene',
+    type: 'sitcom-casual',
+    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
+  },
+  {
+    title: 'How I Met Your Mother scene',
+    type: 'sitcom-casual',
+    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
+  },
+  {
+    title: 'Australian workplace / admin explainer clip',
+    type: 'australian-tv-workplace',
+    guidance: 'Requests, clarification, softening language, and admin phrasing.',
+  },
+  {
+    title: 'Coursera AI concept explanation',
+    type: 'coursera-ai-explanation',
+    guidance: 'Practice explaining AI concepts in simple English.',
+  },
+  {
+    title: 'TED / WorkLife-style workplace psychology clip',
+    type: 'podcast-discussion',
+    guidance: 'Structured oral summary and thoughtful workplace/life vocabulary.',
+  },
+]
+
+export const ENGLISH_LISTENING_DRAW_METHODS: EnglishListeningDrawMethod[] = [
+  {
+    type: 'podcast-discussion',
+    label: 'Podcast / discussion material',
+    steps: [
+      'Pick a 3-5 minute segment.',
+      'Listen once for the main idea.',
+      'Shadow one short section.',
+      'Speak a 3-sentence summary.',
+      'Save 3 useful expressions.',
+    ],
+  },
+  {
+    type: 'australian-tv-workplace',
+    label: 'Australian TV / workplace material',
+    steps: [
+      'Pick one short scene.',
+      'Notice requests, softening language, disagreement, clarification, or workplace phrasing.',
+      'Shadow 5-8 useful lines.',
+      'Rewrite 3 lines for Holmesglen, student-service, or admin context.',
+    ],
+  },
+  {
+    type: 'sitcom-casual',
+    label: 'Sitcom / casual English material',
+    steps: [
+      'Pick one short scene.',
+      'Shadow lines with natural rhythm.',
+      'Save casual expressions or reactions.',
+      'Create 3 original sentences using the expressions.',
+    ],
+  },
+  {
+    type: 'coursera-ai-explanation',
+    label: 'Coursera / AI explanation material',
+    steps: [
+      'Pick one short concept explanation.',
+      'Listen or read once.',
+      'Explain the concept out loud in simple English.',
+      'Save one portfolio or use-case idea.',
+    ],
+  },
+]
+
+const intensiveListeningMaterialPool = ENGLISH_LISTENING_DRAW_MATERIALS.map(material => material.title).join('; ')
+const intensiveListeningMethodSummary = ENGLISH_LISTENING_DRAW_METHODS
+  .map(method => `${method.label}: ${method.steps.join(' ')}`)
+  .join(' ')
+
 export const STUDY_TASK_LIBRARY: StudyTaskTemplate[] = [
   {
     id: 'english-output-speaking-loop',
@@ -62,16 +202,22 @@ export const STUDY_TASK_LIBRARY: StudyTaskTemplate[] = [
   },
   {
     id: 'english-input-shadowing',
-    title: 'Listening + shadowing',
+    title: 'Intensive listening / shadowing draw',
     category: 'English Input',
     defaultDuration: 25,
     alternativeDurations: [25, 50],
     energy: 'low',
     type: 'input',
-    resourceSuggestion: 'YouTube clip, podcast segment, class audio, or saved transcript',
-    studyMethod: 'Listen once for meaning, shadow one short section, and collect expressions.',
+    resourceSuggestion: `Draw one low-pressure material: ${intensiveListeningMaterialPool}. Avoid lookup tools, generic search, overly technical lectures, and passive audiobook-only tasks.`,
+    studyMethod: `Draw one useful material and start small. ${intensiveListeningMethodSummary}`,
     noteDestination: 'Obsidian/Study/English/Input.md',
-    subtasks: ['Listen once', 'Shadow one section', 'Save five expressions'],
+    subtasks: [
+      'Draw one material from the pool',
+      'Pick one short segment or scene',
+      'Use the matching method for that material type',
+      'Shadow or explain out loud',
+      'Save 3 useful expressions, rewritten lines, or one portfolio idea',
+    ],
     eveningFriendly: true,
     rescueFriendly: true,
   },
