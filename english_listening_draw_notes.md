@@ -6,6 +6,7 @@
 - Added mode selection, draw, redraw, redraw count, latest draw display, copy prompt, and Start as Study Session.
 - Hooked drawn tasks into the existing Study timer instead of adding a separate timer.
 - Simplified the feature to two playful modes: `精听 / Shadowing` and `泛听 / Light Input`.
+- Updated draw results to return concrete materials with `materialTitle`, `sourceName`, `suggestedWhereToOpen`, and `specificInstruction`.
 
 ## Storage
 - Uses localStorage key `iris-english-listening-draw`.
@@ -22,6 +23,7 @@
 - Light Input stays English Input and does not automatically count as an English Output Rep.
 - Shadowing uses English Output so completed Study sessions can flow into the English Output Journey logic.
 - The main pool does not include YouGlish, Friends, Modern Family, Brooklyn Nine-Nine, How I Met Your Mother, random search, technical lecture material, or emotionally heavy material.
+- Vague items such as generic workplace/admin clips were replaced with concrete sources or saved-resource roleplays.
 
 ## Existing behavior preserved
 - Study timer still handles active sessions.
@@ -35,7 +37,9 @@
 2. Confirm the mode selector only shows `精听 / Shadowing` and `泛听 / Light Input`.
 3. Redraw and confirm the daily redraw count decreases.
 4. Confirm the same material is avoided where possible within the day.
-5. Copy the Obsidian note prompt.
-6. Start a drawn task as Study Session.
-7. Complete it and confirm it appears in Study Review.
-8. Confirm English Output Journey increments for Shadowing draws, not Light Input draws.
+5. Confirm the result title is concrete, such as `Gruen — advertising discussion segment`.
+6. Confirm the result shows where to open it.
+7. Copy the Obsidian note prompt and confirm it includes material, source, and open location.
+8. Start a drawn task as Study Session.
+9. Complete it and confirm it appears in Study Review.
+10. Confirm English Output Journey increments for Shadowing draws, not Light Input draws.

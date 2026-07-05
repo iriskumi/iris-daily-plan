@@ -79,29 +79,29 @@ export const ENGLISH_LISTENING_DRAW_MATERIALS: EnglishListeningDrawMaterial[] = 
     guidance: 'Quick reactions and improvisation; keep it fun and low-pressure.',
   },
   {
-    title: 'Australian workplace / admin explainer clip',
-    type: 'australian-tv-workplace',
-    guidance: 'Requests, clarification, softening language, and admin phrasing.',
-  },
-  {
-    title: 'Australian interview / workplace conversation clip',
-    type: 'australian-tv-workplace',
-    guidance: 'Australia-relevant workplace conversation and interview phrasing.',
-  },
-  {
     title: 'Holmesglen student service roleplay',
     type: 'australian-tv-workplace',
-    guidance: 'Student-service, admin, and campus communication practice.',
+    guidance: 'Open saved Holmesglen/student-service roleplay notes for admin phrasing.',
   },
   {
-    title: 'Campus direction explanation',
+    title: 'Utopia workplace clarification scene',
     type: 'australian-tv-workplace',
-    guidance: 'Clear directions and helpful student-facing English.',
+    guidance: 'Open Utopia on ABC iview, Netflix, or saved episode for clarification language.',
   },
   {
-    title: 'Event check-in explanation',
+    title: 'Fisk client conversation scene',
     type: 'australian-tv-workplace',
-    guidance: 'Event check-in, clarification, and polite admin phrasing.',
+    guidance: 'Open Fisk on ABC iview, Netflix, or saved episode for legal/admin everyday English.',
+  },
+  {
+    title: 'Campus admin direction roleplay',
+    type: 'australian-tv-workplace',
+    guidance: 'Open saved campus/admin English notes for clear direction practice.',
+  },
+  {
+    title: 'Event check-in student welcome roleplay',
+    type: 'australian-tv-workplace',
+    guidance: 'Open saved event/admin English notes for polite check-in phrasing.',
   },
   {
     title: 'WorkLife with Adam Grant',

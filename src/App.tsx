@@ -19,6 +19,7 @@ import {
   Clock,
   Sparkles,
   Plus,
+  CalendarDays,
 } from 'lucide-react'
 import type {
   GeneratedPlan,
@@ -93,6 +94,7 @@ import Settings from './components/Settings'
 import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
+import Iris365 from './components/Iris365'
 import irisBearIcon from './assets/iris-bear-icon.svg'
 import {
   TASK_AREAS,
@@ -114,7 +116,7 @@ import { consumeExpressionHubUrlImport } from './expressionHubImport'
 import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
-type Tab = 'today' | 'study' | 'plan' | 'tasks' | 'integrations' | 'settings'
+type Tab = 'today' | 'study' | 'iris365' | 'plan' | 'tasks' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
 
 interface StartTodayResult {
@@ -122,9 +124,10 @@ interface StartTodayResult {
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'tasks'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'study' | 'iris365' | 'plan' | 'tasks'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
   { id: 'study', label: 'Study', icon: <BookOpen /> },
+  { id: 'iris365', label: 'Iris 365', icon: <CalendarDays /> },
   { id: 'plan', label: 'Plan', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
 ]
@@ -770,6 +773,7 @@ export default function App() {
           />
         )}
         {tab === 'study' && <StudyDashboard />}
+        {tab === 'iris365' && <Iris365 />}
         {tab === 'plan' && (
           <PlanWorkspace
             plan={plan}

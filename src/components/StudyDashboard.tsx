@@ -388,7 +388,9 @@ export default function StudyDashboard() {
       `# ${draw.title}`,
       '',
       `Mode: ${englishListeningDrawModeLabel(draw.mode)}`,
-      `Material: ${draw.material}`,
+      `Material: ${draw.materialTitle}`,
+      `Source: ${draw.sourceName}`,
+      `Open: ${draw.suggestedWhereToOpen}`,
       `Category: ${draw.category}`,
       `Duration: ${draw.recommendedDuration} min`,
       `Counts as English Output Rep: ${draw.countsAsEnglishOutputRep ? 'Yes, if completed with output' : 'No, unless output is added'}`,
@@ -932,7 +934,10 @@ export default function StudyDashboard() {
           <div className="english-listening-result">
             <div className="english-listening-result-main">
               <span>{englishListeningDrawModeLabel(latestListeningDraw.mode)}</span>
-              <h4>{latestListeningDraw.material}</h4>
+              <h4>{latestListeningDraw.materialTitle}</h4>
+              <small className="english-listening-source">
+                {latestListeningDraw.sourceName} · {latestListeningDraw.suggestedWhereToOpen}
+              </small>
               <p>{latestListeningDraw.studyMethod}</p>
               <div className="english-listening-result-meta">
                 <span>{latestListeningDraw.recommendedDuration} min</span>
