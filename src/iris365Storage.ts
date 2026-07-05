@@ -12,6 +12,7 @@ import type {
   Iris365Streaks,
   Iris365WeeklyReview,
 } from './iris365Types'
+import type { StudySessionRecord } from './studyTypes'
 
 const STORAGE_KEY = 'iris-365'
 const SCHEMA_VERSION = 1
@@ -23,8 +24,12 @@ export const IRIS_365_PROOF_CATEGORIES: Iris365ProofCategory[] = [
   'English output',
   'Shadowing',
   'Cyber project',
+  'Cyber / TAFE',
+  'AI / Coursera',
   'AI workflow',
+  'Project / AI coding',
   'Job application',
+  'Career',
   'Work experience',
   'Health / routine',
   'Personal insight',
@@ -199,6 +204,8 @@ function normaliseProofItem(value: Partial<Iris365ProofItem>): Iris365ProofItem 
     title: value.title,
     description: value.description ?? '',
     linkOrFile: value.linkOrFile ?? '',
+    source: value.source ?? 'manual',
+    sourceSessionId: value.sourceSessionId,
     relatedEntryDate: value.relatedEntryDate,
     createdAt: value.createdAt ?? new Date().toISOString(),
     updatedAt: value.updatedAt ?? new Date().toISOString(),
@@ -426,6 +433,9 @@ export function addIris365ProofItem(
   store = loadIris365Store(),
 ): Iris365Store {
   const now = new Date().toISOString()
+  if (input.sourceSessionId && store.proofItems.some(item => item.sourceSessionId === input.sourceSessionId)) {
+    return store
+  }
   return saveIris365Store({
     ...store,
     proofItems: [
@@ -438,4 +448,92 @@ export function addIris365ProofItem(
       ...store.proofItems,
     ],
   })
+}
+
+export function findIris365ProofByStudySession(
+  sessionId: string,
+  store = loadIris365Store(),
+): Iris365ProofItem | null {
+  return store.proofItems.find(item => item.sourceSessionId === sessionId) ?? null
+}
+
+export function getIris365ProofItemsForDate(
+  date = getLocalDateKey(),
+  store = loadIris365Store(),
+): Iris365ProofItem[] {
+  return store.proofItems.filter(item => item.date === date)
+}
+
+function isUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim())
+}
+
+export function isProofWorthyStudySession(session: StudySessionRecord): boolean {
+  return ['English Output', 'Coursera AI Pathway', 'AI Coding', 'Job / Career', 'Cyber'].includes(session.category)
+}
+
+export function studySessionHasProofArtifact(session: StudySessionRecord): boolean {
+  return Boolean(
+    session.notes.trim()
+    || session.noteDestination.trim()
+    || session.resourceUsed.trim(),
+  )
+}
+
+export function studySessionProofCategory(session: StudySessionRecord): Iris365ProofCategory {
+  if (session.category === 'English Output') return 'English output'
+  if (session.category === 'Coursera AI Pathway') return 'AI / Coursera'
+  if (session.category === 'AI Coding') return 'Project / AI coding'
+  if (session.category === 'Job / Career') return 'Career'
+  if (session.category === 'Cyber') return 'Cyber / TAFE'
+  return 'Personal insight'
+}
+
+export function studySessionProofDescription(session: StudySessionRecord): string {
+  if (session.category === 'English Output') {
+    return `Completed an English output session: ${session.title}. Practised speaking, shadowing, oral summary, or original English and created reusable expressions or notes.`
+  }
+  if (session.category === 'Coursera AI Pathway') {
+    return `Completed a Coursera AI Pathway study session: ${session.title}. Captured key concepts and potential portfolio or application ideas.`
+  }
+  if (session.category === 'AI Coding') {
+    return `Worked on an AI/project implementation session: ${session.title}. This can be used as evidence of hands-on AI workflow or coding practice.`
+  }
+  if (session.category === 'Job / Career') {
+    return `Completed a career development session: ${session.title}. This may support CV, LinkedIn, applications, or interview preparation.`
+  }
+  if (session.category === 'Cyber') {
+    return `Completed a cyber security learning session: ${session.title}. This supports my cyber foundation and TAFE assessment progress.`
+  }
+  return `Completed a study session: ${session.title}. This may become visible evidence if it produced a reusable note, artifact, or next action.`
+}
+
+export function buildProofDraftFromStudySession(
+  session: StudySessionRecord,
+): Omit<Iris365ProofItem, 'id' | 'createdAt' | 'updatedAt'> {
+  const resource = session.resourceUsed.trim()
+  const noteDestination = session.noteDestination.trim()
+  return {
+    date: getLocalDateKey(new Date(session.completedAt)),
+    category: studySessionProofCategory(session),
+    title: session.title,
+    linkOrFile: isUrl(resource) ? resource : noteDestination || resource,
+    description: studySessionProofDescription(session),
+    source: 'study-session',
+    sourceSessionId: session.id,
+  }
+}
+
+export function addIris365ProofFromStudySession(
+  session: StudySessionRecord,
+  input: Partial<Omit<Iris365ProofItem, 'id' | 'createdAt' | 'updatedAt' | 'source' | 'sourceSessionId'>> = {},
+  store = loadIris365Store(),
+): Iris365Store {
+  const draft = {
+    ...buildProofDraftFromStudySession(session),
+    ...input,
+    source: 'study-session' as const,
+    sourceSessionId: session.id,
+  }
+  return addIris365ProofItem(draft, store)
 }

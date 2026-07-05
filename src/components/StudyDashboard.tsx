@@ -14,6 +14,16 @@ import {
 } from '../englishListeningDraw'
 import { pushStudyDailyLogToNotion } from '../services/notionService'
 import {
+  addIris365ProofFromStudySession,
+  buildProofDraftFromStudySession,
+  findIris365ProofByStudySession,
+  getIris365ProofItemsForDate,
+  IRIS_365_PROOF_CATEGORIES,
+  isProofWorthyStudySession,
+  loadIris365Store,
+  studySessionHasProofArtifact,
+} from '../iris365Storage'
+import {
   getExpressionHubImportStatus,
   importExpressionHubQueue,
   importExpressionHubPayload,
@@ -56,6 +66,7 @@ import type {
   StudyDailyReview,
   StudySessionRecord,
 } from '../studyTypes'
+import type { Iris365ProofCategory, Iris365ProofItem } from '../iris365Types'
 import type { EnglishListeningDrawMode, EnglishListeningDrawResult } from '../englishListeningDraw'
 import type { TimerSession } from '../timerEngineTypes'
 
@@ -63,6 +74,8 @@ const QUICK_TARGETS = [3, 5, 6, 8]
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 const COURSERA_EXPIRY_DATE = '2026-09-23'
 const COURSERA_CATEGORY: StudyCategory = 'Coursera AI Pathway'
+
+type StudyProofDraft = Pick<Iris365ProofItem, 'date' | 'category' | 'title' | 'description' | 'linkOrFile' | 'sourceSessionId'>
 
 function formatHours(minutes: number): string {
   const hours = Math.floor(minutes / 60)
@@ -166,6 +179,18 @@ function categoryBreakdown(records: StudySessionRecord[]): Record<StudyCategory,
       breakdown[record.category] += record.actualMinutes
       return breakdown
     }, empty)
+}
+
+function canSaveSessionAsProof(record: StudySessionRecord): boolean {
+  if (record.status !== 'completed') return false
+  return isProofWorthyStudySession(record) || studySessionHasProofArtifact(record)
+}
+
+function proofSessionMicrocopy(record: StudySessionRecord): string {
+  if (isProofWorthyStudySession(record)) {
+    return 'This may help future CV / LinkedIn / portfolio / interview answers.'
+  }
+  return 'Save only if this produced a reusable note, link, or visible artifact.'
 }
 
 function formatTimer(ms: number): string {
@@ -285,8 +310,12 @@ export default function StudyDashboard() {
   const [sessions, setSessions] = useState(() => loadStudySessionRecordsForDate(today))
   const [allStudySessions, setAllStudySessions] = useState(() => loadStudySessionRecords())
   const [review, setReview] = useState<StudyDailyReview>(() => loadStudyDailyReview(today))
+  const [proofStore, setProofStore] = useState(() => loadIris365Store())
+  const [pendingProofSession, setPendingProofSession] = useState<StudySessionRecord | null>(null)
+  const [proofDraft, setProofDraft] = useState<StudyProofDraft | null>(null)
   const summary = todayStudySummary(sessions)
   const completedSessions = sessions.filter(record => record.status === 'completed')
+  const proofsToday = useMemo(() => getIris365ProofItemsForDate(today, proofStore), [proofStore, today])
   const breakdown = categoryBreakdown(sessions)
   const noteDestinations = Array.from(
     new Set(completedSessions.map(record => record.noteDestination).filter(Boolean)),
@@ -595,6 +624,9 @@ export default function StudyDashboard() {
     writeStudySessionToTaskStore(record)
     if (record.status === 'completed') {
       setOutputJourney(addStudySessionEnglishOutputRep(record))
+      if (canSaveSessionAsProof(record) && !findIris365ProofByStudySession(record.id, proofStore)) {
+        setPendingProofSession(record)
+      }
     }
     setSessions(loadStudySessionRecordsForDate(today))
     setAllStudySessions(loadStudySessionRecords())
@@ -655,6 +687,33 @@ export default function StudyDashboard() {
     saveStudyDailyReview(next)
   }
 
+  function saveSessionAsProof(record: StudySessionRecord, overrides: Partial<StudyProofDraft> = {}) {
+    const nextStore = addIris365ProofFromStudySession(record, overrides, proofStore)
+    setProofStore(nextStore)
+    setPendingProofSession(current => current?.id === record.id ? null : current)
+    setProofDraft(null)
+  }
+
+  function editSessionProof(record: StudySessionRecord) {
+    const draft = buildProofDraftFromStudySession(record)
+    setProofDraft({
+      date: draft.date,
+      category: draft.category,
+      title: draft.title,
+      description: draft.description,
+      linkOrFile: draft.linkOrFile,
+      sourceSessionId: record.id,
+    })
+    setPendingProofSession(current => current?.id === record.id ? null : current)
+  }
+
+  function saveProofDraft() {
+    if (!proofDraft?.sourceSessionId) return
+    const record = completedSessions.find(session => session.id === proofDraft.sourceSessionId)
+    if (!record) return
+    saveSessionAsProof(record, proofDraft)
+  }
+
   function dailyStudyMarkdown() {
     const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString('en-AU', {
       year: 'numeric',
@@ -668,6 +727,9 @@ export default function StudyDashboard() {
           `  - Notes: ${record.noteDestination || 'Not recorded'}`,
         ].join('\n'))
       : ['- No completed study sessions recorded.']
+    const proofLines = proofsToday.length > 0
+      ? proofsToday.map(item => `- ${item.category}: ${item.title}${item.linkOrFile ? ` — ${item.linkOrFile}` : ''}`)
+      : ['- None recorded.']
 
     return [
       `# Daily Study Log - ${dateLabel}`,
@@ -688,6 +750,9 @@ export default function StudyDashboard() {
       `- This week: ${outputWeek} reps`,
       `- Total: ${formatNumber(outputJourney.totalReps)} / ${formatNumber(ENGLISH_OUTPUT_LONG_TERM_TARGET)}`,
       `- Current milestone: ${formatNumber(outputMilestoneTotal)} / ${formatNumber(outputMilestone.next)}`,
+      '',
+      '## Proof Created Today',
+      ...proofLines,
       '',
       '## Actual Done',
       review.actualDone || '',
@@ -1320,6 +1385,79 @@ export default function StudyDashboard() {
           <Square size={16} />
         </div>
 
+        {pendingProofSession && (
+          <div className="study-proof-prompt">
+            <div>
+              <strong>Save this as proof?</strong>
+              <p>{pendingProofSession.title} · {proofSessionMicrocopy(pendingProofSession)}</p>
+            </div>
+            <div>
+              <button type="button" className="btn btn-primary" onClick={() => saveSessionAsProof(pendingProofSession)}>
+                Save proof
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => editSessionProof(pendingProofSession)}>
+                Edit first
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setPendingProofSession(null)}>
+                Skip
+              </button>
+            </div>
+          </div>
+        )}
+
+        {proofDraft && (
+          <div className="study-proof-draft-card">
+            <div className="card-header">
+              <div>
+                <div className="section-label">Visible evidence of progress</div>
+                <div className="card-title">Edit proof draft</div>
+              </div>
+            </div>
+            <div className="study-proof-draft-grid">
+              <label>
+                Category
+                <select
+                  value={proofDraft.category}
+                  onChange={event => setProofDraft(prev => prev ? { ...prev, category: event.target.value as Iris365ProofCategory } : prev)}
+                >
+                  {IRIS_365_PROOF_CATEGORIES.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Title
+                <input
+                  value={proofDraft.title}
+                  onChange={event => setProofDraft(prev => prev ? { ...prev, title: event.target.value } : prev)}
+                />
+              </label>
+              <label>
+                Link or file
+                <input
+                  value={proofDraft.linkOrFile}
+                  onChange={event => setProofDraft(prev => prev ? { ...prev, linkOrFile: event.target.value } : prev)}
+                />
+              </label>
+              <label className="study-proof-draft-description">
+                Description
+                <textarea
+                  value={proofDraft.description}
+                  onChange={event => setProofDraft(prev => prev ? { ...prev, description: event.target.value } : prev)}
+                />
+              </label>
+            </div>
+            <div className="study-copy-row">
+              <button type="button" className="btn btn-primary" onClick={saveProofDraft}>
+                Save proof
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setProofDraft(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="study-review-stats">
           <div>
             <span>{summary.completedSessions}</span>
@@ -1345,7 +1483,29 @@ export default function StudyDashboard() {
             <span>{formatNumber(outputJourney.totalReps)}</span>
             <small>English reps total</small>
           </div>
+          <div>
+            <span>{proofsToday.length}</span>
+            <small>proofs created today</small>
+          </div>
         </div>
+
+        <div className="study-review-panel study-proof-today-panel">
+          <h3>Proof Created Today</h3>
+          {proofsToday.length > 0 ? (
+            <div className="study-proof-created-list">
+              {proofsToday.map(item => (
+                <div key={item.id}>
+                  <span>{item.category}</span>
+                  <strong>{item.title}</strong>
+                  {item.linkOrFile && <small>{item.linkOrFile}</small>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="study-muted-copy">None recorded. Proof is for visible evidence, not every small input session.</p>
+          )}
+        </div>
+
 
         <div className="study-review-panel english-output-review-panel">
           <h3>English Output Journey</h3>
@@ -1374,15 +1534,35 @@ export default function StudyDashboard() {
             <h3>Sessions</h3>
             {completedSessions.length > 0 ? (
               <div className="study-session-list">
-                {completedSessions.map(record => (
-                  <div key={record.id} className="study-session-row">
-                    <strong>
-                      {timeLabel(record.startedAt)}-{timeLabel(record.completedAt)} · {record.title}
-                    </strong>
-                    <span>{record.category} · {record.actualMinutes} min</span>
-                    <small>{record.noteDestination}</small>
-                  </div>
-                ))}
+                {completedSessions.map(record => {
+                  const existingProof = findIris365ProofByStudySession(record.id, proofStore)
+                  const canSaveProof = canSaveSessionAsProof(record)
+                  return (
+                    <div key={record.id} className="study-session-row">
+                      <strong>
+                        {timeLabel(record.startedAt)}-{timeLabel(record.completedAt)} · {record.title}
+                      </strong>
+                      <span>{record.category} · {record.actualMinutes} min</span>
+                      <small>{record.noteDestination}</small>
+                      {canSaveProof && (
+                        <div className="study-session-proof-actions">
+                          {existingProof ? (
+                            <span>Proof saved</span>
+                          ) : (
+                            <>
+                              <button type="button" onClick={() => saveSessionAsProof(record)}>
+                                Save as proof
+                              </button>
+                              <button type="button" onClick={() => editSessionProof(record)}>
+                                Edit first
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <p className="study-muted-copy">No completed Study sessions yet today.</p>

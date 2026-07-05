@@ -6015,6 +6015,85 @@ textarea {
   margin-top: 1.2rem;
 }
 
+.study-proof-prompt,
+.study-proof-draft-card {
+  margin: 0.95rem 0 1rem;
+  padding: 0.95rem;
+  border: 0.5px solid color-mix(in srgb, var(--accent) 28%, var(--border) 72%);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent-bg) 36%, #FFFCF9 64%);
+}
+
+.study-proof-prompt {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.study-proof-prompt strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.study-proof-prompt p {
+  margin-top: 0.2rem;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.study-proof-prompt > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.study-proof-draft-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.study-proof-draft-grid label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--section-label);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.study-proof-draft-grid input,
+.study-proof-draft-grid select,
+.study-proof-draft-grid textarea {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0.62rem 0.75rem;
+  border: 0.5px solid var(--border);
+  border-radius: var(--control-radius);
+  background: #FFFCF9;
+  color: var(--text);
+  font-family: var(--font-cjk);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.study-proof-draft-description {
+  grid-column: 1 / -1;
+}
+
+.study-proof-draft-grid textarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
 .study-review-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -6065,6 +6144,45 @@ textarea {
   font-weight: 500;
 }
 
+.study-proof-today-panel {
+  margin-bottom: 1rem;
+}
+
+.study-proof-created-list {
+  display: grid;
+  gap: 0.52rem;
+}
+
+.study-proof-created-list div {
+  display: grid;
+  gap: 0.14rem;
+  padding-bottom: 0.52rem;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.study-proof-created-list div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.study-proof-created-list span {
+  color: var(--section-label);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.study-proof-created-list strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.study-proof-created-list small {
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .study-session-list {
   display: grid;
   gap: 0.55rem;
@@ -6095,6 +6213,34 @@ textarea {
   color: var(--text-2);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.study-session-proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  margin-top: 0.28rem;
+}
+
+.study-session-proof-actions button,
+.study-session-proof-actions span {
+  padding: 0.28rem 0.52rem;
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.study-session-proof-actions button {
+  cursor: pointer;
+}
+
+.study-session-proof-actions button:hover,
+.study-session-proof-actions span {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border) 66%);
+  background: var(--accent-bg);
+  color: var(--text);
 }
 
 .study-breakdown-list {
@@ -6873,8 +7019,19 @@ textarea {
   .study-review-stats,
   .study-review-grid,
   .study-review-fields,
-  .study-review-shell {
+  .study-review-shell,
+  .study-proof-prompt,
+  .study-proof-draft-grid {
     grid-template-columns: 1fr;
+  }
+
+  .study-proof-prompt {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .study-proof-prompt > div:last-child {
+    justify-content: flex-start;
   }
 
   .expression-hub-import-actions {

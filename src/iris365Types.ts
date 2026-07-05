@@ -54,11 +54,17 @@ export type Iris365ProofCategory =
   | 'English output'
   | 'Shadowing'
   | 'Cyber project'
+  | 'Cyber / TAFE'
+  | 'AI / Coursera'
   | 'AI workflow'
+  | 'Project / AI coding'
   | 'Job application'
+  | 'Career'
   | 'Work experience'
   | 'Health / routine'
   | 'Personal insight'
+
+export type Iris365ProofSource = 'study-session' | 'manual'
 
 export interface Iris365ProofItem {
   id: string
@@ -67,6 +73,8 @@ export interface Iris365ProofItem {
   title: string
   description: string
   linkOrFile: string
+  source: Iris365ProofSource
+  sourceSessionId?: string
   relatedEntryDate?: string
   createdAt: string
   updatedAt: string

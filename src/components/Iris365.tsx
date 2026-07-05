@@ -229,6 +229,7 @@ export default function Iris365() {
       title,
       description: proofDraft.description.trim(),
       linkOrFile: proofDraft.linkOrFile.trim(),
+      source: 'manual',
       relatedEntryDate: store.entries[today] ? today : undefined,
     }, store))
     setProofDraft({
