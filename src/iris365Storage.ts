@@ -1,6 +1,9 @@
 import { getLocalDateKey } from './focus'
 import type {
   Iris365Entry,
+  Iris365FoundationStatus,
+  Iris365HighStimulusPatternKey,
+  Iris365HighStimulusPatternStatus,
   Iris365Phase,
   Iris365ProofCategory,
   Iris365ProofItem,
@@ -26,6 +29,26 @@ export const IRIS_365_PROOF_CATEGORIES: Iris365ProofCategory[] = [
   'Health / routine',
   'Personal insight',
 ]
+
+export const IRIS_365_HIGH_STIMULUS_PATTERNS: Iris365HighStimulusPatternKey[] = [
+  'shortDramas',
+  'webNovels',
+  'xiaohongshuSocialMedia',
+  'shopping',
+  'mobileGames',
+  'other',
+]
+
+function defaultHighStimulusPatterns(): Record<Iris365HighStimulusPatternKey, Iris365HighStimulusPatternStatus> {
+  return {
+    shortDramas: 'not-used',
+    webNovels: 'not-used',
+    xiaohongshuSocialMedia: 'not-used',
+    shopping: 'not-used',
+    mobileGames: 'not-used',
+    other: 'not-used',
+  }
+}
 
 export const IRIS_365_PHASES: Iris365Phase[] = [
   {
@@ -73,6 +96,11 @@ export function isBeforeIris365Start(currentDate = getLocalDateKey(), startDate 
   return parseLocalDate(currentDate).getTime() < parseLocalDate(startDate).getTime()
 }
 
+export function isIris365JourneyDate(date: string): boolean {
+  const time = parseLocalDate(date).getTime()
+  return time >= parseLocalDate(IRIS_365_START_DATE).getTime() && time <= parseLocalDate(IRIS_365_END_DATE).getTime()
+}
+
 export function calculateCurrentDayNumber(startDate: string, currentDate = getLocalDateKey()): number {
   if (isBeforeIris365Start(currentDate, startDate)) return 0
   return Math.min(JOURNEY_DAYS, Math.max(1, dayDiffInclusive(startDate, currentDate)))
@@ -91,12 +119,26 @@ export function emptyIris365Entry(date = getLocalDateKey()): Iris365Entry {
   return {
     date,
     lowEnergyDay: false,
+    sleepRhythmProtected: false,
+    bodyMoved: false,
+    oneRealThingDone: false,
     englishOutput: false,
     shadowing: false,
+    cyberAiProject: false,
+    jobApplication: false,
+    workPrep: false,
+    studyCoursework: false,
+    lifeAdmin: false,
+    realThingToday: '',
     realityTask: false,
     movement: false,
     highStimulusControlled: false,
     sleepProtected: false,
+    sleepTime: '',
+    wakeTime: '',
+    movementType: '',
+    highStimulusPatterns: defaultHighStimulusPatterns(),
+    highStimulusTrigger: '',
     mood: 3,
     energy: 3,
     tinyWin: '',
@@ -116,10 +158,29 @@ function fallbackStore(): Iris365Store {
 }
 
 function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entry {
+  const sleepRhythmProtected = value.sleepRhythmProtected ?? value.sleepProtected ?? false
+  const bodyMoved = value.bodyMoved ?? value.movement ?? false
+  const oneRealThingDone = value.oneRealThingDone ?? value.realityTask ?? false
+  const highStimulusPatterns = {
+    ...defaultHighStimulusPatterns(),
+    ...(value.highStimulusPatterns ?? {}),
+  }
   return {
     ...emptyIris365Entry(date),
     ...value,
     date,
+    sleepRhythmProtected,
+    bodyMoved,
+    oneRealThingDone,
+    sleepProtected: sleepRhythmProtected,
+    movement: bodyMoved,
+    realityTask: oneRealThingDone,
+    highStimulusPatterns,
+    realThingToday: value.realThingToday ?? '',
+    sleepTime: value.sleepTime ?? '',
+    wakeTime: value.wakeTime ?? '',
+    movementType: value.movementType ?? '',
+    highStimulusTrigger: value.highStimulusTrigger ?? '',
     mood: clampRating(value.mood),
     energy: clampRating(value.energy),
     updatedAt: value.updatedAt ?? new Date().toISOString(),
@@ -197,9 +258,9 @@ export function loadIris365Store(): Iris365Store {
       saveIris365Store(store)
       return store
     }
-    return normaliseStore(JSON.parse(raw))
+    return saveIris365Store(normaliseStore(JSON.parse(raw)))
   } catch {
-    return fallbackStore()
+    return saveIris365Store(fallbackStore())
   }
 }
 
@@ -216,40 +277,44 @@ export function loadIris365Entry(date = getLocalDateKey(), store = loadIris365St
 }
 
 export function saveIris365Entry(entry: Iris365Entry, store = loadIris365Store()): Iris365Store {
+  const normalisedEntry = normaliseEntry(entry, entry.date)
   return saveIris365Store({
     ...store,
     entries: {
       ...store.entries,
-      [entry.date]: {
-        ...entry,
+      [normalisedEntry.date]: {
+        ...normalisedEntry,
         updatedAt: new Date().toISOString(),
       },
     },
   })
 }
 
-export function isValidIris365Day(entry: Iris365Entry): boolean {
-  if (entry.lowEnergyDay) {
-    const lowEnergyProofs = [
-      entry.englishOutput,
-      entry.realityTask,
-      entry.movement,
-      entry.sleepProtected,
-    ].filter(Boolean).length
-    return lowEnergyProofs >= 2
-  }
+export function calculateFoundationScore(entry: Iris365Entry): number {
   return [
-    entry.englishOutput,
-    entry.shadowing,
-    entry.realityTask,
-    entry.movement,
-    entry.highStimulusControlled,
-    entry.sleepProtected,
-  ].some(Boolean) || Boolean(entry.tinyWin.trim()) || Boolean(entry.notes.trim())
+    entry.sleepRhythmProtected,
+    entry.bodyMoved,
+    entry.oneRealThingDone,
+  ].filter(Boolean).length
+}
+
+export function foundationStatusForScore(score: number): Iris365FoundationStatus {
+  if (score >= 3) return 'Foundation day'
+  if (score === 2) return 'Valid day'
+  if (score === 1) return 'Recovery day'
+  return 'Drift day'
+}
+
+export function calculateFoundationStatus(entry: Iris365Entry): Iris365FoundationStatus {
+  return foundationStatusForScore(calculateFoundationScore(entry))
+}
+
+export function isValidIris365Day(entry: Iris365Entry): boolean {
+  return calculateFoundationScore(entry) >= 2
 }
 
 export function calculateIris365Streaks(entries: Record<string, Iris365Entry>, currentDate = getLocalDateKey()): Iris365Streaks {
-  const entryDates = new Set(Object.values(entries).filter(isValidIris365Day).map(entry => entry.date))
+  const entryDates = new Set(Object.values(entries).filter(entry => isIris365JourneyDate(entry.date) && isValidIris365Day(entry)).map(entry => entry.date))
   let currentStreak = 0
   const cursor = parseLocalDate(currentDate)
   while (entryDates.has(getLocalDateKey(cursor))) {
@@ -276,22 +341,29 @@ export function calculateIris365Streaks(entries: Record<string, Iris365Entry>, c
 }
 
 export function calculateIris365Stats(entries: Record<string, Iris365Entry>, currentDate = getLocalDateKey()): Iris365Stats {
-  const list = Object.values(entries)
+  const list = Object.values(entries).filter(entry => isIris365JourneyDate(entry.date))
   const streaks = calculateIris365Streaks(entries, currentDate)
   return {
-    totalCompletedDays: list.filter(isValidIris365Day).length,
+    totalRecordedDays: list.length,
+    validDays: list.filter(entry => calculateFoundationScore(entry) >= 2).length,
+    foundationDays: list.filter(entry => calculateFoundationScore(entry) === 3).length,
+    sleepRhythmProtectedDays: list.filter(entry => entry.sleepRhythmProtected).length,
+    movementDays: list.filter(entry => entry.bodyMoved).length,
+    realThingDays: list.filter(entry => entry.oneRealThingDone).length,
     englishOutputDays: list.filter(entry => entry.englishOutput).length,
     shadowingDays: list.filter(entry => entry.shadowing).length,
-    realityTaskDays: list.filter(entry => entry.realityTask).length,
-    movementDays: list.filter(entry => entry.movement).length,
+    cyberAiProjectDays: list.filter(entry => entry.cyberAiProject).length,
+    jobApplicationDays: list.filter(entry => entry.jobApplication).length,
+    studyCourseworkDays: list.filter(entry => entry.studyCoursework).length,
+    workPrepDays: list.filter(entry => entry.workPrep).length,
     highStimulusControlledDays: list.filter(entry => entry.highStimulusControlled).length,
-    sleepProtectedDays: list.filter(entry => entry.sleepProtected).length,
     ...streaks,
   }
 }
 
 export function recentIris365Entries(entries: Record<string, Iris365Entry>, count = 7): Iris365Entry[] {
   return Object.values(entries)
+    .filter(entry => isIris365JourneyDate(entry.date))
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, count)
 }

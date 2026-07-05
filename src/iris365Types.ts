@@ -11,18 +11,44 @@ export interface Iris365Phase {
 export interface Iris365Entry {
   date: string
   lowEnergyDay: boolean
+  sleepRhythmProtected: boolean
+  bodyMoved: boolean
+  oneRealThingDone: boolean
   englishOutput: boolean
   shadowing: boolean
+  cyberAiProject: boolean
+  jobApplication: boolean
+  workPrep: boolean
+  studyCoursework: boolean
+  lifeAdmin: boolean
+  realThingToday: string
   realityTask: boolean
   movement: boolean
   highStimulusControlled: boolean
   sleepProtected: boolean
+  sleepTime: string
+  wakeTime: string
+  movementType: string
+  highStimulusPatterns: Record<Iris365HighStimulusPatternKey, Iris365HighStimulusPatternStatus>
+  highStimulusTrigger: string
   mood: number
   energy: number
   tinyWin: string
   notes: string
   updatedAt: string
 }
+
+export type Iris365FoundationStatus = 'Drift day' | 'Recovery day' | 'Valid day' | 'Foundation day'
+
+export type Iris365HighStimulusPatternKey =
+  | 'shortDramas'
+  | 'webNovels'
+  | 'xiaohongshuSocialMedia'
+  | 'shopping'
+  | 'mobileGames'
+  | 'other'
+
+export type Iris365HighStimulusPatternStatus = 'not-used' | 'controlled' | 'overused'
 
 export type Iris365ProofCategory =
   | 'English output'
@@ -71,11 +97,17 @@ export interface Iris365Streaks {
 }
 
 export interface Iris365Stats extends Iris365Streaks {
-  totalCompletedDays: number
+  totalRecordedDays: number
+  validDays: number
+  foundationDays: number
+  sleepRhythmProtectedDays: number
+  movementDays: number
+  realThingDays: number
   englishOutputDays: number
   shadowingDays: number
-  realityTaskDays: number
-  movementDays: number
+  cyberAiProjectDays: number
+  jobApplicationDays: number
+  studyCourseworkDays: number
+  workPrepDays: number
   highStimulusControlledDays: number
-  sleepProtectedDays: number
 }

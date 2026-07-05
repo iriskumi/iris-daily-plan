@@ -6174,6 +6174,10 @@ textarea {
 
 .iris365-countdown-card,
 .iris365-checkin-card,
+.iris365-foundation-card,
+.iris365-growth-card,
+.iris365-details-card,
+.iris365-stimulus-card,
 .iris365-stats-card,
 .iris365-recent-card {
   border: 1px solid var(--border);
@@ -6211,6 +6215,23 @@ textarea {
   font-size: 13px;
   font-weight: 400;
   line-height: 1.55;
+}
+
+.iris365-motto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.iris365-motto span {
+  padding: 0.34rem 0.62rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border) 70%);
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .iris365-progress-bar {
@@ -6271,9 +6292,26 @@ textarea {
 }
 
 .iris365-checkin-card,
+.iris365-foundation-card,
+.iris365-growth-card,
+.iris365-details-card,
+.iris365-stimulus-card,
 .iris365-stats-card,
 .iris365-recent-card {
   padding: 1.1rem 1.2rem;
+}
+
+.iris365-main-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.iris365-foundation-card {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border) 62%);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-bg) 70%, transparent 30%), transparent 42%),
+    var(--surface);
+  box-shadow: 0 16px 42px rgba(78, 54, 43, 0.08);
 }
 
 .iris365-save-pill {
@@ -6297,6 +6335,54 @@ textarea {
   margin-top: 1rem;
 }
 
+.iris365-foundation-grid {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.iris365-foundation-score {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border) 66%);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 252, 249, 0.72);
+}
+
+.iris365-foundation-score > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.iris365-foundation-score strong {
+  display: block;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.iris365-foundation-score small {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.iris365-foundation-row {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border) 76%);
+}
+
 .iris365-check-row {
   display: flex;
   gap: 0.62rem;
@@ -6305,6 +6391,13 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: #FFFCF9;
+}
+
+.iris365-growth-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
 }
 
 .iris365-check-row input {
@@ -6374,6 +6467,39 @@ textarea {
   margin-top: 1rem;
 }
 
+.iris365-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.iris365-single-field,
+.iris365-detail-grid label {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  color: var(--section-label);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iris365-single-field input,
+.iris365-detail-grid input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0.62rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: #FFFCF9;
+  color: var(--text);
+  font-family: var(--font-cjk);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .iris365-form-grid label {
   display: grid;
   gap: 0.35rem;
@@ -6402,6 +6528,57 @@ textarea {
 
 .iris365-recent-card {
   margin-top: 1.2rem;
+}
+
+.iris365-growth-stat-title {
+  margin-top: 1.1rem;
+}
+
+.iris365-stimulus-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.iris365-stimulus-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(0, 1.6fr);
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #FFFCF9;
+}
+
+.iris365-stimulus-row > span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.iris365-stimulus-row div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.iris365-stimulus-row button {
+  padding: 0.3rem 0.52rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.iris365-stimulus-row button.active {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border) 56%);
+  background: var(--accent-bg);
+  color: var(--text);
+  font-weight: 600;
 }
 
 .iris365-home-card {
@@ -6681,6 +6858,9 @@ textarea {
   .iris365-countdown-card,
   .iris365-layout,
   .iris365-checkbox-grid,
+  .iris365-growth-grid,
+  .iris365-detail-grid,
+  .iris365-stimulus-row,
   .iris365-rating-grid,
   .iris365-recent-row,
   .iris365-weekly-grid,
