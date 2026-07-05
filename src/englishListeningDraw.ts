@@ -1,12 +1,7 @@
 import { getLocalDateKey } from './focus'
 import type { StudyCategory, StudyEnergy } from './studyTypes'
 
-export type EnglishListeningDrawMode =
-  | 'Intensive Listening / Shadowing'
-  | 'Low-energy Input'
-  | 'Workplace English'
-  | 'Output Challenge'
-  | 'Australian English'
+export type EnglishListeningDrawMode = 'shadowing' | 'light-input'
 
 export interface EnglishListeningDrawResult {
   id: string
@@ -36,77 +31,62 @@ export interface EnglishListeningDrawState {
 interface DrawMaterial {
   material: string
   mode: EnglishListeningDrawMode
-  template: 'podcast' | 'australian-workplace' | 'australian-panel' | 'sitcom' | 'coursera-ai' | 'low-energy' | 'workplace' | 'output'
+  priority: 'primary' | 'secondary'
 }
 
 const STORAGE_KEY = 'iris-english-listening-draw'
 const DEFAULT_REDRAW_LIMIT = 2
 
-export const ENGLISH_LISTENING_DRAW_MODES: EnglishListeningDrawMode[] = [
-  'Intensive Listening / Shadowing',
-  'Low-energy Input',
-  'Workplace English',
-  'Output Challenge',
-  'Australian English',
-]
+export const ENGLISH_LISTENING_DRAW_MODES: EnglishListeningDrawMode[] = ['shadowing', 'light-input']
+
+export const ENGLISH_LISTENING_DRAW_MODE_LABELS: Record<EnglishListeningDrawMode, string> = {
+  shadowing: '精听 / Shadowing',
+  'light-input': '泛听 / Light Input',
+}
+
+const LEGACY_MODE_MAP: Record<string, EnglishListeningDrawMode> = {
+  'Intensive Listening / Shadowing': 'shadowing',
+  'Australian English': 'shadowing',
+  'Workplace English': 'shadowing',
+  'Output Challenge': 'shadowing',
+  'Low-energy Input': 'light-input',
+  shadowing: 'shadowing',
+  'light-input': 'light-input',
+}
 
 const DRAW_MATERIALS: DrawMaterial[] = [
-  { mode: 'Intensive Listening / Shadowing', material: 'WorkLife with Adam Grant', template: 'podcast' },
-  { mode: 'Intensive Listening / Shadowing', material: 'No Stupid Questions', template: 'podcast' },
-  { mode: 'Intensive Listening / Shadowing', material: "Luke's English Podcast", template: 'podcast' },
-  { mode: 'Intensive Listening / Shadowing', material: 'The Assembly', template: 'podcast' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Gruen', template: 'podcast' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Utopia scene', template: 'australian-workplace' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Fisk scene', template: 'australian-workplace' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Rosehaven scene', template: 'australian-workplace' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Upper Middle Bogan scene', template: 'australian-workplace' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Modern Family scene', template: 'sitcom' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Brooklyn Nine-Nine scene', template: 'sitcom' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Australian workplace / admin explainer clip', template: 'australian-workplace' },
-  { mode: 'Intensive Listening / Shadowing', material: 'Coursera AI concept explanation', template: 'coursera-ai' },
-  { mode: 'Intensive Listening / Shadowing', material: 'TED / WorkLife-style workplace psychology clip', template: 'podcast' },
+  { mode: 'shadowing', material: 'Gruen', priority: 'primary' },
+  { mode: 'shadowing', material: 'The Assembly', priority: 'primary' },
+  { mode: 'shadowing', material: 'Utopia', priority: 'primary' },
+  { mode: 'shadowing', material: 'Fisk', priority: 'primary' },
+  { mode: 'shadowing', material: 'Rosehaven', priority: 'primary' },
+  { mode: 'shadowing', material: 'Upper Middle Bogan', priority: 'primary' },
+  { mode: 'shadowing', material: 'Have You Been Paying Attention?', priority: 'primary' },
+  { mode: 'shadowing', material: 'The Cheap Seats', priority: 'primary' },
+  { mode: 'shadowing', material: "Thank God You're Here", priority: 'primary' },
+  { mode: 'shadowing', material: 'Australian workplace / admin explainer clip', priority: 'primary' },
+  { mode: 'shadowing', material: 'Australian interview / workplace conversation clip', priority: 'primary' },
+  { mode: 'shadowing', material: 'Holmesglen student service roleplay', priority: 'primary' },
+  { mode: 'shadowing', material: 'Campus direction explanation', priority: 'primary' },
+  { mode: 'shadowing', material: 'Event check-in explanation', priority: 'primary' },
+  { mode: 'shadowing', material: 'WorkLife with Adam Grant', priority: 'secondary' },
+  { mode: 'shadowing', material: 'No Stupid Questions', priority: 'secondary' },
+  { mode: 'shadowing', material: "Luke's English Podcast", priority: 'secondary' },
+  { mode: 'shadowing', material: 'Coursera AI concept explanation', priority: 'secondary' },
+  { mode: 'shadowing', material: 'TED / WorkLife-style workplace psychology clip', priority: 'secondary' },
 
-  { mode: 'Australian English', material: 'Gruen', template: 'australian-panel' },
-  { mode: 'Australian English', material: 'The Assembly', template: 'podcast' },
-  { mode: 'Australian English', material: 'Utopia', template: 'australian-workplace' },
-  { mode: 'Australian English', material: 'Fisk', template: 'australian-workplace' },
-  { mode: 'Australian English', material: 'Rosehaven', template: 'australian-workplace' },
-  { mode: 'Australian English', material: 'Upper Middle Bogan', template: 'australian-workplace' },
-  { mode: 'Australian English', material: 'Kath & Kim', template: 'australian-panel' },
-  { mode: 'Australian English', material: 'Have You Been Paying Attention?', template: 'australian-panel' },
-  { mode: 'Australian English', material: 'The Cheap Seats', template: 'australian-panel' },
-  { mode: 'Australian English', material: "Thank God You're Here", template: 'australian-panel' },
-  { mode: 'Australian English', material: 'Australian workplace / admin explainer clip', template: 'australian-workplace' },
-
-  { mode: 'Low-energy Input', material: 'Easy audiobook', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'M/M audiobook', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Puckboy / Eden Finley / Saxon James audiobook', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Libby audiobook', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Light TV episode', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Rosehaven casual scene', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Fisk casual scene', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Modern Family scene', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Brooklyn Nine-Nine scene', template: 'low-energy' },
-  { mode: 'Low-energy Input', material: 'Low-pressure podcast episode', template: 'low-energy' },
-
-  { mode: 'Workplace English', material: 'Holmesglen student service roleplay', template: 'workplace' },
-  { mode: 'Workplace English', material: 'Campus direction explanation', template: 'workplace' },
-  { mode: 'Workplace English', material: 'Event check-in explanation', template: 'workplace' },
-  { mode: 'Workplace English', material: 'Email reply practice', template: 'workplace' },
-  { mode: 'Workplace English', material: 'Asking a colleague a question', template: 'workplace' },
-  { mode: 'Workplace English', material: 'Explaining a policy or process simply', template: 'workplace' },
-  { mode: 'Workplace English', material: 'Utopia workplace/admin scene', template: 'australian-workplace' },
-  { mode: 'Workplace English', material: 'Fisk workplace scene', template: 'australian-workplace' },
-  { mode: 'Workplace English', material: 'Australian workplace / admin explainer clip', template: 'australian-workplace' },
-
-  { mode: 'Output Challenge', material: '1-minute oral summary', template: 'output' },
-  { mode: 'Output Challenge', material: '3-sentence opinion', template: 'output' },
-  { mode: 'Output Challenge', material: 'Interview answer practice', template: 'output' },
-  { mode: 'Output Challenge', material: "Explain today's Coursera concept", template: 'coursera-ai' },
-  { mode: 'Output Challenge', material: 'Reuse 5 expressions from Expression Review Hub', template: 'output' },
-  { mode: 'Output Challenge', material: 'Record and improve one answer', template: 'output' },
-  { mode: 'Output Challenge', material: 'Explain my Daily Hub / Obsidian / Notion system in English', template: 'output' },
-  { mode: 'Output Challenge', material: 'Explain my AI + cyber foundation positioning in English', template: 'output' },
+  { mode: 'light-input', material: 'Easy audiobook', priority: 'primary' },
+  { mode: 'light-input', material: 'M/M audiobook', priority: 'primary' },
+  { mode: 'light-input', material: 'Puckboy / Eden Finley / Saxon James audiobook', priority: 'primary' },
+  { mode: 'light-input', material: 'Libby audiobook', priority: 'primary' },
+  { mode: 'light-input', material: 'Light Australian TV episode', priority: 'primary' },
+  { mode: 'light-input', material: 'Rosehaven casual episode', priority: 'primary' },
+  { mode: 'light-input', material: 'Fisk casual episode', priority: 'primary' },
+  { mode: 'light-input', material: 'Utopia casual scene', priority: 'primary' },
+  { mode: 'light-input', material: 'Gruen casual segment', priority: 'primary' },
+  { mode: 'light-input', material: 'The Assembly casual segment', priority: 'primary' },
+  { mode: 'light-input', material: 'Light podcast episode', priority: 'primary' },
+  { mode: 'light-input', material: "Luke's English Podcast easy episode", priority: 'primary' },
 ]
 
 function emptyState(date = getLocalDateKey()): EnglishListeningDrawState {
@@ -115,6 +95,26 @@ function emptyState(date = getLocalDateKey()): EnglishListeningDrawState {
     redrawLimit: DEFAULT_REDRAW_LIMIT,
     redrawsUsed: 0,
     draws: [],
+  }
+}
+
+function normaliseMode(value: unknown): EnglishListeningDrawMode {
+  return typeof value === 'string' && LEGACY_MODE_MAP[value] ? LEGACY_MODE_MAP[value] : 'shadowing'
+}
+
+function normaliseDraw(value: Partial<EnglishListeningDrawResult>): EnglishListeningDrawResult | null {
+  if (!value.id || !value.material || !value.title || !value.createdAt) return null
+  const mode = normaliseMode(value.mode)
+  const template = resultTemplate(mode, value.material)
+  return {
+    ...template,
+    id: value.id,
+    mode,
+    material: value.material,
+    title: value.title,
+    source: 'english-listening-draw',
+    createdAt: value.createdAt,
+    startedSessionId: value.startedSessionId,
   }
 }
 
@@ -127,7 +127,9 @@ function parseState(value: string | null): EnglishListeningDrawState {
       date: parsed.date,
       redrawLimit: typeof parsed.redrawLimit === 'number' ? parsed.redrawLimit : DEFAULT_REDRAW_LIMIT,
       redrawsUsed: typeof parsed.redrawsUsed === 'number' ? parsed.redrawsUsed : 0,
-      draws: Array.isArray(parsed.draws) ? parsed.draws as EnglishListeningDrawResult[] : [],
+      draws: Array.isArray(parsed.draws)
+        ? parsed.draws.map(draw => normaliseDraw(draw)).filter((draw): draw is EnglishListeningDrawResult => Boolean(draw))
+        : [],
     }
   } catch {
     return emptyState()
@@ -136,7 +138,9 @@ function parseState(value: string | null): EnglishListeningDrawState {
 
 export function loadEnglishListeningDrawState(): EnglishListeningDrawState {
   if (typeof localStorage === 'undefined') return emptyState()
-  return parseState(localStorage.getItem(STORAGE_KEY))
+  const state = parseState(localStorage.getItem(STORAGE_KEY))
+  saveEnglishListeningDrawState(state)
+  return state
 }
 
 export function saveEnglishListeningDrawState(state: EnglishListeningDrawState): EnglishListeningDrawState {
@@ -146,111 +150,58 @@ export function saveEnglishListeningDrawState(state: EnglishListeningDrawState):
   return state
 }
 
-function methodFor(material: DrawMaterial): Omit<EnglishListeningDrawResult, 'id' | 'mode' | 'material' | 'createdAt' | 'startedSessionId' | 'source'> {
-  switch (material.template) {
-    case 'podcast':
-      return {
-        title: `Shadowing draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Output',
-        energy: 'medium',
-        studyMethod: 'Pick a 3-5 minute segment. Listen once for the main idea. Shadow one short section. Speak a 3-sentence summary. Save 3 useful expressions.',
-        subtasks: ['Pick a 3-5 minute segment', 'Listen once for the main idea', 'Shadow one short section', 'Speak a 3-sentence summary', 'Save 3 useful expressions'],
-        countsAsEnglishOutputRep: true,
-        noteDestination: '01 English 英语/Shadowing 跟读/',
-        resourceSuggestion: material.material,
-      }
-    case 'australian-workplace':
-      return {
-        title: `Aussie workplace draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Output',
-        energy: 'medium',
-        studyMethod: 'Pick one short scene. Notice requests, softening language, disagreement, clarification, or workplace phrasing. Shadow 5-8 useful lines. Rewrite 3 lines for Holmesglen, student-service, or admin context. Save 3 expressions.',
-        subtasks: ['Pick one short scene', 'Notice softening, clarification, or workplace phrasing', 'Shadow 5-8 useful lines', 'Rewrite 3 lines for Holmesglen/admin context', 'Save 3 expressions'],
-        countsAsEnglishOutputRep: true,
-        noteDestination: '01 English 英语/Workplace English 职场英语/',
-        resourceSuggestion: material.material,
-      }
-    case 'australian-panel':
-      return {
-        title: `Australian English draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Output',
-        energy: 'low',
-        studyMethod: 'Pick one short segment. Listen for reactions, humour, and natural phrasing. Shadow 3-5 short lines. Write down 3 useful reaction phrases. Use 2 of them in your own sentences.',
-        subtasks: ['Pick one short segment', 'Listen for reactions and natural phrasing', 'Shadow 3-5 short lines', 'Save 3 reaction phrases', 'Use 2 in original sentences'],
-        countsAsEnglishOutputRep: true,
-        noteDestination: '01 English 英语/Australian English 澳洲英语/',
-        resourceSuggestion: material.material,
-      }
-    case 'sitcom':
-      return {
-        title: `Casual English draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Output',
-        energy: 'low',
-        studyMethod: 'Pick one short scene. Shadow lines with natural rhythm. Save casual expressions or reactions. Create 3 original sentences using the expressions.',
-        subtasks: ['Pick one short scene', 'Shadow lines with natural rhythm', 'Save casual expressions or reactions', 'Create 3 original sentences'],
-        countsAsEnglishOutputRep: true,
-        noteDestination: '01 English 英语/Expressions 表达/',
-        resourceSuggestion: material.material,
-      }
-    case 'coursera-ai':
-      return {
-        title: `AI explanation draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Output',
-        energy: 'medium',
-        studyMethod: 'Pick one short concept explanation. Listen or read once. Explain the concept out loud in simple English. Save one portfolio/use-case idea. Write one sentence connecting it to Daily Hub, workflow automation, or cyber/security awareness.',
-        subtasks: ['Pick one short concept explanation', 'Listen or read once', 'Explain it out loud in simple English', 'Save one portfolio/use-case idea', 'Connect it to Daily Hub, automation, or cyber'],
-        countsAsEnglishOutputRep: true,
-        noteDestination: '03 AI 人工智能/Coursera AI Pathway/Course Notes/',
-        resourceSuggestion: material.material,
-      }
-    case 'low-energy':
-      return {
-        title: `Gentle input draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Input',
-        energy: 'low',
-        studyMethod: 'Keep this recovery-friendly. Listen or watch lightly, then optionally add one tiny speaking or writing output step if you want it to count as output practice.',
-        subtasks: ['Start the material gently', 'Notice 1-2 useful phrases only if they naturally stand out', 'Optional: speak or write one tiny output step'],
-        countsAsEnglishOutputRep: false,
-        noteDestination: '01 English 英语/Low Energy Input 低能量输入/',
-        resourceSuggestion: material.material,
-      }
-    case 'workplace':
-      return {
-        title: `Workplace English draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Output',
-        energy: 'medium',
-        studyMethod: 'Practise one practical workplace or student-service situation. Speak it once, improve the wording, then save the most reusable phrases.',
-        subtasks: ['Set the situation', 'Speak one version out loud', 'Improve the wording', 'Save 3 reusable workplace phrases'],
-        countsAsEnglishOutputRep: true,
-        noteDestination: '01 English 英语/Workplace English 职场英语/',
-        resourceSuggestion: material.material,
-      }
-    case 'output':
-      return {
-        title: `Output challenge draw: ${material.material}`,
-        recommendedDuration: 25,
-        category: 'English Output',
-        energy: 'medium',
-        studyMethod: 'Make one small piece of English output. Keep it short, concrete, and finishable. Record or write it, then improve one sentence.',
-        subtasks: ['Create one short English output', 'Record or write it', 'Improve one sentence', 'Save 1-3 useful expressions'],
-        countsAsEnglishOutputRep: true,
-        noteDestination: '01 English 英语/Output 输出/',
-        resourceSuggestion: material.material,
-      }
+export function englishListeningDrawModeLabel(mode: EnglishListeningDrawMode): string {
+  return ENGLISH_LISTENING_DRAW_MODE_LABELS[mode]
+}
+
+function resultTemplate(
+  mode: EnglishListeningDrawMode,
+  material: string,
+): Omit<EnglishListeningDrawResult, 'id' | 'mode' | 'material' | 'createdAt' | 'startedSessionId' | 'source'> {
+  if (mode === 'light-input') {
+    return {
+      title: `今日泛听签：${material}`,
+      recommendedDuration: 25,
+      category: 'English Input',
+      energy: 'low',
+      studyMethod: '选一集或一个轻松片段。不暂停也可以，先保持英语环境。只保存自然跳出来的 1-3 个表达。如果状态好，最后用英文说 1 句 summary。',
+      subtasks: [
+        '选一集或一个轻松片段',
+        '不暂停也可以，先保持英语环境',
+        '只保存自然跳出来的 1-3 个表达',
+        '如果状态好，最后用英文说 1 句 summary',
+      ],
+      countsAsEnglishOutputRep: false,
+      noteDestination: '01 English 英语/Input 泛听/',
+      resourceSuggestion: material,
+    }
+  }
+
+  return {
+    title: `今日精听签：${material}`,
+    recommendedDuration: 25,
+    category: 'English Output',
+    energy: 'medium',
+    studyMethod: '选 3-5 分钟片段。先听一遍，只抓主旨。Shadow 一小段，1-3 轮即可。录一次或口头复述 3 句。保存 3 个可复用表达。',
+    subtasks: [
+      '选 3-5 分钟片段',
+      '先听一遍，只抓主旨',
+      'Shadow 一小段，1-3 轮即可',
+      '录一次或口头复述 3 句',
+      '保存 3 个可复用表达',
+    ],
+    countsAsEnglishOutputRep: true,
+    noteDestination: '01 English 英语/Shadowing 跟读/',
+    resourceSuggestion: material,
   }
 }
 
 function pickMaterial(mode: EnglishListeningDrawMode, previousMaterials: Set<string>): DrawMaterial {
   const materials = DRAW_MATERIALS.filter(item => item.mode === mode)
-  const fresh = materials.filter(item => !previousMaterials.has(item.material))
-  const pool = fresh.length > 0 ? fresh : materials
+  const primary = materials.filter(item => item.priority === 'primary')
+  const freshPrimary = primary.filter(item => !previousMaterials.has(item.material))
+  const freshAll = materials.filter(item => !previousMaterials.has(item.material))
+  const pool = freshPrimary.length > 0 ? freshPrimary : freshAll.length > 0 ? freshAll : materials
   return pool[Math.floor(Math.random() * pool.length)] ?? materials[0]
 }
 
@@ -258,21 +209,21 @@ export function drawEnglishListeningMaterial(
   mode: EnglishListeningDrawMode,
   state = loadEnglishListeningDrawState(),
 ): EnglishListeningDrawState {
+  const nextMode = normaliseMode(mode)
   const previousMaterials = new Set(state.draws.map(draw => draw.material))
-  const material = pickMaterial(mode, previousMaterials)
+  const material = pickMaterial(nextMode, previousMaterials)
   const result: EnglishListeningDrawResult = {
     id: crypto.randomUUID(),
-    mode,
+    mode: nextMode,
     material: material.material,
-    ...methodFor(material),
+    ...resultTemplate(nextMode, material.material),
     source: 'english-listening-draw',
     createdAt: new Date().toISOString(),
   }
-  const next = {
+  return saveEnglishListeningDrawState({
     ...state,
     draws: [...state.draws, result],
-  }
-  return saveEnglishListeningDrawState(next)
+  })
 }
 
 export function redrawEnglishListeningMaterial(
@@ -280,11 +231,10 @@ export function redrawEnglishListeningMaterial(
   state = loadEnglishListeningDrawState(),
 ): EnglishListeningDrawState {
   if (state.draws.length > 0 && state.redrawsUsed >= state.redrawLimit) return state
-  const next = drawEnglishListeningMaterial(mode, {
+  return drawEnglishListeningMaterial(mode, {
     ...state,
     redrawsUsed: state.draws.length > 0 ? state.redrawsUsed + 1 : state.redrawsUsed,
   })
-  return next
 }
 
 export function markEnglishListeningDrawStarted(
@@ -304,26 +254,26 @@ export function latestEnglishListeningDraw(state: EnglishListeningDrawState): En
 
 export function englishListeningDrawNotePrompt(draw: EnglishListeningDrawResult, date = getLocalDateKey()): string {
   return [
-    `# English Listening Draw - ${date}`,
+    `# 今日英语抽签 - ${date}`,
     '',
-    '## Draw Result',
-    `- Mode: ${draw.mode}`,
-    `- Material: ${draw.material}`,
-    `- Duration: ${draw.recommendedDuration} min`,
-    `- Counts as English Output Rep: ${draw.countsAsEnglishOutputRep ? 'Yes, if completed with output' : 'No, unless I add speaking/writing output'}`,
+    '## 抽到的材料',
+    `- 模式：${englishListeningDrawModeLabel(draw.mode)}`,
+    `- 材料：${draw.material}`,
+    `- 推荐时长：${draw.recommendedDuration} min`,
+    `- 是否可算 English Output Rep：${draw.countsAsEnglishOutputRep ? '可以，完成 speaking / recording / oral summary 时计入' : '默认不算，除非额外加 speaking / writing output'}`,
     '',
-    '## Method',
+    '## 做法',
     ...draw.subtasks.map((subtask, index) => `${index + 1}. ${subtask}`),
     '',
-    '## Useful Expressions',
+    '## 今日可保留表达',
     '- ',
     '- ',
     '- ',
     '',
-    '## My Output',
+    '## 我的输出 / 一句话总结',
     '- ',
     '',
-    '## Next Time',
+    '## 下次可以继续',
     '- ',
   ].join('\n')
 }

@@ -6,6 +6,7 @@ import {
   drawEnglishListeningMaterial,
   ENGLISH_LISTENING_DRAW_MODES,
   englishListeningDrawNotePrompt,
+  englishListeningDrawModeLabel,
   latestEnglishListeningDraw,
   loadEnglishListeningDrawState,
   markEnglishListeningDrawStarted,
@@ -275,7 +276,7 @@ export default function StudyDashboard() {
   const [expressionImportJson, setExpressionImportJson] = useState('')
   const [outputJourney, setOutputJourney] = useState(() => loadEnglishOutputJourney())
   const [manualRepNote, setManualRepNote] = useState('')
-  const [drawMode, setDrawMode] = useState<EnglishListeningDrawMode>('Intensive Listening / Shadowing')
+  const [drawMode, setDrawMode] = useState<EnglishListeningDrawMode>('shadowing')
   const [listeningDrawState, setListeningDrawState] = useState(() => loadEnglishListeningDrawState())
   const [activeSession, setActiveSession] = useState<StudyActiveSession | null>(() =>
     restoreActiveStudySession(),
@@ -386,7 +387,7 @@ export default function StudyDashboard() {
     return [
       `# ${draw.title}`,
       '',
-      `Mode: ${draw.mode}`,
+      `Mode: ${englishListeningDrawModeLabel(draw.mode)}`,
       `Material: ${draw.material}`,
       `Category: ${draw.category}`,
       `Duration: ${draw.recommendedDuration} min`,
@@ -886,24 +887,24 @@ export default function StudyDashboard() {
           <div>
             <div className="section-label">今日英语抽签</div>
             <h3>English Listening Draw</h3>
-            <p>Draw one listening / shadowing task for today.</p>
-            <small>今天摸一张英语签，抽到什么就从这里开始。</small>
+            <p>今天摸一张英语签</p>
+            <small>抽到什么就从这里开始，不用想太多。摸一张签，开始就赢了。</small>
           </div>
           <div className="english-listening-redraws">
             <span>{listeningDrawRedrawsRemaining}</span>
-            <small>redraws left</small>
+            <small>今日剩余重抽</small>
           </div>
         </div>
 
         <div className="english-listening-draw-controls">
           <label>
-            Mode
+            模式
             <select
               value={drawMode}
               onChange={event => setDrawMode(event.target.value as EnglishListeningDrawMode)}
             >
               {ENGLISH_LISTENING_DRAW_MODES.map(mode => (
-                <option key={mode} value={mode}>{mode}</option>
+                <option key={mode} value={mode}>{englishListeningDrawModeLabel(mode)}</option>
               ))}
             </select>
           </label>
@@ -914,7 +915,7 @@ export default function StudyDashboard() {
               onClick={handleListeningDraw}
               disabled={listeningDrawState.draws.length > 0}
             >
-              Draw today’s material 🎲
+              今天摸一张 🎲
             </button>
             <button
               type="button"
@@ -922,7 +923,7 @@ export default function StudyDashboard() {
               onClick={handleListeningRedraw}
               disabled={listeningDrawState.draws.length > 0 && listeningDrawRedrawsRemaining === 0}
             >
-              Redraw / 不合心意？再摸一张
+              不合心意？再摸一张
             </button>
           </div>
         </div>
@@ -930,14 +931,14 @@ export default function StudyDashboard() {
         {latestListeningDraw ? (
           <div className="english-listening-result">
             <div className="english-listening-result-main">
-              <span>{latestListeningDraw.mode}</span>
+              <span>{englishListeningDrawModeLabel(latestListeningDraw.mode)}</span>
               <h4>{latestListeningDraw.material}</h4>
               <p>{latestListeningDraw.studyMethod}</p>
               <div className="english-listening-result-meta">
                 <span>{latestListeningDraw.recommendedDuration} min</span>
                 <span>{latestListeningDraw.category}</span>
                 <span>{latestListeningDraw.energy} energy</span>
-                <span>{latestListeningDraw.countsAsEnglishOutputRep ? 'Output rep eligible' : 'Input only'}</span>
+                <span>{latestListeningDraw.countsAsEnglishOutputRep ? '可算 Output Rep' : '泛听默认不计 rep'}</span>
               </div>
             </div>
             <ul className="english-listening-subtasks">
@@ -972,16 +973,16 @@ export default function StudyDashboard() {
                 {copied === 'listening-draw-summary' ? 'Copied' : 'Copy task summary'}
               </button>
               {latestListeningDraw.startedSessionId && (
-                <small>Started as Study Session today.</small>
+                <small>今天已经从这张签开始过一次。</small>
               )}
               {activeSession && (
-                <small>Finish or abandon the current Study session before starting this draw.</small>
+                <small>先完成或放弃当前 Study session，再开始这张签。</small>
               )}
             </div>
           </div>
         ) : (
           <div className="english-listening-empty">
-            <p>No draw yet today. Choose a mode and draw one small, useful English starting point.</p>
+            <p>今天还没摸签。选一个模式，摸一张轻轻开始。</p>
           </div>
         )}
       </section>

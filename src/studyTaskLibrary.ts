@@ -34,64 +34,89 @@ interface EnglishListeningDrawMethod {
 
 export const ENGLISH_LISTENING_DRAW_MATERIALS: EnglishListeningDrawMaterial[] = [
   {
-    title: 'WorkLife with Adam Grant',
-    type: 'podcast-discussion',
-    guidance: 'Structured oral summary and thoughtful workplace/life vocabulary.',
-  },
-  {
-    title: 'No Stupid Questions',
-    type: 'podcast-discussion',
-    guidance: 'Structured oral summary and thoughtful workplace/life vocabulary.',
-  },
-  {
-    title: "Luke's English Podcast",
-    type: 'podcast-discussion',
-    guidance: 'Natural explanation, shadowing rhythm, and useful spoken phrases.',
+    title: 'Gruen',
+    type: 'australian-tv-workplace',
+    guidance: 'Australian discussion, persuasion, advertising, consumer/workplace vocabulary.',
   },
   {
     title: 'The Assembly',
     type: 'australian-tv-workplace',
-    guidance: 'Australian English, discussion style, natural reactions, and public speaking rhythm.',
+    guidance: 'Natural Q&A, tone, empathy, real-life reactions, and public speaking rhythm.',
   },
   {
-    title: 'Gruen',
+    title: 'Utopia',
     type: 'australian-tv-workplace',
-    guidance: 'Australian English, discussion style, natural reactions, and public speaking rhythm.',
+    guidance: 'Australian workplace, bureaucracy, meetings, clarification, and softening language.',
   },
   {
-    title: 'Utopia scene',
+    title: 'Fisk',
     type: 'australian-tv-workplace',
-    guidance: 'Workplace/admin English and Australian workplace humour.',
+    guidance: 'Legal/admin/workplace everyday English.',
   },
   {
-    title: 'Fisk scene',
+    title: 'Rosehaven',
     type: 'australian-tv-workplace',
-    guidance: 'Workplace/admin English and Australian workplace humour.',
+    guidance: 'Warm Australian daily conversation.',
   },
   {
-    title: 'Modern Family scene',
-    type: 'sitcom-casual',
-    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
-  },
-  {
-    title: 'Brooklyn Nine-Nine scene',
-    type: 'sitcom-casual',
-    guidance: 'Casual daily English, rhythm, reactions, and reusable phrases.',
-  },
-  {
-    title: 'Rosehaven scene',
+    title: 'Upper Middle Bogan',
     type: 'australian-tv-workplace',
-    guidance: 'Low-angst Australian daily conversation and rhythm.',
+    guidance: 'Melbourne family/social daily English.',
   },
   {
-    title: 'Upper Middle Bogan scene',
+    title: 'Have You Been Paying Attention?',
     type: 'australian-tv-workplace',
-    guidance: 'Low-angst Melbourne family/social daily English and rhythm.',
+    guidance: 'Light Aussie panel/news reactions.',
+  },
+  {
+    title: 'The Cheap Seats',
+    type: 'australian-tv-workplace',
+    guidance: 'Light Aussie panel/news reactions.',
+  },
+  {
+    title: "Thank God You're Here",
+    type: 'australian-tv-workplace',
+    guidance: 'Quick reactions and improvisation; keep it fun and low-pressure.',
   },
   {
     title: 'Australian workplace / admin explainer clip',
     type: 'australian-tv-workplace',
     guidance: 'Requests, clarification, softening language, and admin phrasing.',
+  },
+  {
+    title: 'Australian interview / workplace conversation clip',
+    type: 'australian-tv-workplace',
+    guidance: 'Australia-relevant workplace conversation and interview phrasing.',
+  },
+  {
+    title: 'Holmesglen student service roleplay',
+    type: 'australian-tv-workplace',
+    guidance: 'Student-service, admin, and campus communication practice.',
+  },
+  {
+    title: 'Campus direction explanation',
+    type: 'australian-tv-workplace',
+    guidance: 'Clear directions and helpful student-facing English.',
+  },
+  {
+    title: 'Event check-in explanation',
+    type: 'australian-tv-workplace',
+    guidance: 'Event check-in, clarification, and polite admin phrasing.',
+  },
+  {
+    title: 'WorkLife with Adam Grant',
+    type: 'podcast-discussion',
+    guidance: 'Structured summary and reflective workplace/life vocabulary.',
+  },
+  {
+    title: 'No Stupid Questions',
+    type: 'podcast-discussion',
+    guidance: 'Structured summary and reflective vocabulary.',
+  },
+  {
+    title: "Luke's English Podcast",
+    type: 'podcast-discussion',
+    guidance: 'Natural explanation and rhythm.',
   },
   {
     title: 'Coursera AI concept explanation',
