@@ -751,7 +751,7 @@ export default function StudyDashboard() {
       `- Total: ${formatNumber(outputJourney.totalReps)} / ${formatNumber(ENGLISH_OUTPUT_LONG_TERM_TARGET)}`,
       `- Current milestone: ${formatNumber(outputMilestoneTotal)} / ${formatNumber(outputMilestone.next)}`,
       '',
-      '## Proof Created Today',
+      '## Proof I’m Not Stuck',
       ...proofLines,
       '',
       '## Actual Done',
@@ -1388,12 +1388,12 @@ export default function StudyDashboard() {
         {pendingProofSession && (
           <div className="study-proof-prompt">
             <div>
-              <strong>Save this as proof?</strong>
+              <strong>要不要存成一个小证据？</strong>
               <p>{pendingProofSession.title} · {proofSessionMicrocopy(pendingProofSession)}</p>
             </div>
             <div>
               <button type="button" className="btn btn-primary" onClick={() => saveSessionAsProof(pendingProofSession)}>
-                Save proof
+                Save tiny proof
               </button>
               <button type="button" className="btn btn-secondary" onClick={() => editSessionProof(pendingProofSession)}>
                 Edit first
@@ -1409,8 +1409,8 @@ export default function StudyDashboard() {
           <div className="study-proof-draft-card">
             <div className="card-header">
               <div>
-                <div className="section-label">Visible evidence of progress</div>
-                <div className="card-title">Edit proof draft</div>
+                <div className="section-label">Small evidence still counts</div>
+                <div className="card-title">Edit tiny proof</div>
               </div>
             </div>
             <div className="study-proof-draft-grid">
@@ -1449,7 +1449,7 @@ export default function StudyDashboard() {
             </div>
             <div className="study-copy-row">
               <button type="button" className="btn btn-primary" onClick={saveProofDraft}>
-                Save proof
+                Save tiny proof
               </button>
               <button type="button" className="btn btn-secondary" onClick={() => setProofDraft(null)}>
                 Cancel
@@ -1485,12 +1485,12 @@ export default function StudyDashboard() {
           </div>
           <div>
             <span>{proofsToday.length}</span>
-            <small>proofs created today</small>
+            <small>tiny proofs today</small>
           </div>
         </div>
 
         <div className="study-review-panel study-proof-today-panel">
-          <h3>Proof Created Today</h3>
+          <h3>Proof I’m Not Stuck</h3>
           {proofsToday.length > 0 ? (
             <div className="study-proof-created-list">
               {proofsToday.map(item => (
@@ -1502,7 +1502,7 @@ export default function StudyDashboard() {
               ))}
             </div>
           ) : (
-            <p className="study-muted-copy">None recorded. Proof is for visible evidence, not every small input session.</p>
+            <p className="study-muted-copy">None recorded yet. Small evidence still counts when progress feels invisible.</p>
           )}
         </div>
 
@@ -1547,11 +1547,11 @@ export default function StudyDashboard() {
                       {canSaveProof && (
                         <div className="study-session-proof-actions">
                           {existingProof ? (
-                            <span>Proof saved</span>
+                            <span>Tiny proof saved</span>
                           ) : (
                             <>
                               <button type="button" onClick={() => saveSessionAsProof(record)}>
-                                Save as proof
+                                Save tiny proof
                               </button>
                               <button type="button" onClick={() => editSessionProof(record)}>
                                 Edit first

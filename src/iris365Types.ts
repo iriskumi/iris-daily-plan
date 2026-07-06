@@ -82,6 +82,28 @@ export type Iris365DopamineOutcome =
 
 export type Iris365SwapLibraryStatus = 'works' | 'doesnt-work'
 
+export type Iris365DopamineSuggestionType =
+  | 'bedtime-shutdown'
+  | 'pms-damage-reduction'
+  | 'shopping-wishlist'
+  | 'story-familiar-comfort'
+  | 'xiaohongshu-algorithm-exit'
+  | 'merge-visible-completion'
+  | 'real-life-edge'
+  | 'english-soft-mode'
+  | 'morning-empty'
+  | 'general-downshift'
+
+export type Iris365DopamineFeedbackReason =
+  | 'too-many-steps'
+  | 'too-much-screen-time'
+  | 'too-productive'
+  | 'too-weak'
+  | 'keeps-me-awake'
+  | 'still-rabbit-hole'
+  | 'not-realistic'
+  | 'other'
+
 export interface Iris365DopamineSwapLog {
   id: string
   date: string
@@ -100,8 +122,11 @@ export interface Iris365DopamineSwapLibraryItem {
   text: string
   urge?: Iris365DopamineUrge
   state?: Iris365DopamineState
+  suggestionType?: Iris365DopamineSuggestionType
+  feedbackReason?: Iris365DopamineFeedbackReason
   status: Iris365SwapLibraryStatus
   timesUsed: number
+  priorityScore?: number
   createdAt: string
   updatedAt: string
 }
@@ -118,6 +143,7 @@ export type Iris365ProofCategory =
   | 'Career'
   | 'Work experience'
   | 'Health / routine'
+  | 'Emotional regulation'
   | 'Personal insight'
 
 export type Iris365ProofSource = 'study-session' | 'manual'

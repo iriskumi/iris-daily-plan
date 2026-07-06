@@ -2,7 +2,9 @@ import { getLocalDateKey } from './focus'
 import type {
   Iris365Entry,
   Iris365DopamineOutcome,
+  Iris365DopamineFeedbackReason,
   Iris365DopamineState,
+  Iris365DopamineSuggestionType,
   Iris365DopamineSwapLibraryItem,
   Iris365DopamineSwapLog,
   Iris365DopamineUrge,
@@ -44,6 +46,34 @@ const DEFAULT_DOPAMINE_SWAP_LIBRARY: Array<Omit<Iris365DopamineSwapLibraryItem, 
   { text: 'Shame-based productivity language', status: 'doesnt-work' },
 ]
 
+function isDopamineSuggestionType(value: unknown): value is Iris365DopamineSuggestionType {
+  return [
+    'bedtime-shutdown',
+    'pms-damage-reduction',
+    'shopping-wishlist',
+    'story-familiar-comfort',
+    'xiaohongshu-algorithm-exit',
+    'merge-visible-completion',
+    'real-life-edge',
+    'english-soft-mode',
+    'morning-empty',
+    'general-downshift',
+  ].includes(String(value))
+}
+
+function isDopamineFeedbackReason(value: unknown): value is Iris365DopamineFeedbackReason {
+  return [
+    'too-many-steps',
+    'too-much-screen-time',
+    'too-productive',
+    'too-weak',
+    'keeps-me-awake',
+    'still-rabbit-hole',
+    'not-realistic',
+    'other',
+  ].includes(String(value))
+}
+
 export const IRIS_365_PROOF_CATEGORIES: Iris365ProofCategory[] = [
   'English output',
   'Shadowing',
@@ -56,6 +86,7 @@ export const IRIS_365_PROOF_CATEGORIES: Iris365ProofCategory[] = [
   'Career',
   'Work experience',
   'Health / routine',
+  'Emotional regulation',
   'Personal insight',
 ]
 
@@ -337,8 +368,11 @@ function normaliseSwapLibraryItem(value: Partial<Iris365DopamineSwapLibraryItem>
     text: value.text,
     urge: normaliseDopamineUrge(value.urge) ?? undefined,
     state: normaliseDopamineState(value.state) ?? undefined,
+    suggestionType: isDopamineSuggestionType(value.suggestionType) ? value.suggestionType : undefined,
+    feedbackReason: isDopamineFeedbackReason(value.feedbackReason) ? value.feedbackReason : undefined,
     status: value.status === 'doesnt-work' ? 'doesnt-work' : 'works',
     timesUsed: Math.max(0, Math.round(Number(value.timesUsed) || 0)),
+    priorityScore: Number.isFinite(Number(value.priorityScore)) ? Number(value.priorityScore) : undefined,
     createdAt: value.createdAt ?? new Date().toISOString(),
     updatedAt: value.updatedAt ?? new Date().toISOString(),
   }
@@ -609,12 +643,14 @@ export function saveIris365SwapLibraryItem(
         ...existing,
         ...input,
         timesUsed: existing.timesUsed + (input.status === 'works' ? 1 : 0),
+        priorityScore: (existing.priorityScore ?? 0) + (input.status === 'works' ? 2 : -2),
         updatedAt: now,
       }
     : {
         ...input,
         id: crypto.randomUUID(),
         timesUsed: input.status === 'works' ? 1 : 0,
+        priorityScore: input.status === 'works' ? 2 : -2,
         createdAt: now,
         updatedAt: now,
       }

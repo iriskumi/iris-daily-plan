@@ -95,6 +95,8 @@ import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
 import Iris365, { Iris365HomeSummary } from './components/Iris365'
+import ComfortLibrary from './components/ComfortLibrary'
+import StartSessionsPage from './components/StartSessionsPage'
 import irisBearIcon from './assets/iris-bear-icon.svg'
 import {
   TASK_AREAS,
@@ -116,7 +118,7 @@ import { consumeExpressionHubUrlImport } from './expressionHubImport'
 import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
-type Tab = 'today' | 'study' | 'iris365' | 'plan' | 'tasks' | 'integrations' | 'settings'
+type Tab = 'today' | 'sessions' | 'study' | 'comfort' | 'iris365' | 'plan' | 'tasks' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
 
 interface StartTodayResult {
@@ -124,9 +126,11 @@ interface StartTodayResult {
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'study' | 'iris365' | 'plan' | 'tasks'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'sessions' | 'study' | 'comfort' | 'iris365' | 'plan' | 'tasks'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
+  { id: 'sessions', label: 'Sessions', icon: <Play /> },
   { id: 'study', label: 'Study', icon: <BookOpen /> },
+  { id: 'comfort', label: 'Comfort', icon: <Heart /> },
   { id: 'iris365', label: 'Iris 365', icon: <CalendarDays /> },
   { id: 'plan', label: 'Plan', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
@@ -773,7 +777,9 @@ export default function App() {
             }}
           />
         )}
+        {tab === 'sessions' && <StartSessionsPage />}
         {tab === 'study' && <StudyDashboard />}
+        {tab === 'comfort' && <ComfortLibrary />}
         {tab === 'iris365' && <Iris365 />}
         {tab === 'plan' && (
           <PlanWorkspace
@@ -1057,7 +1063,10 @@ function TodayCommandCentre({
           )}
         </div>
 
-        <HomeCommandCentre currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel} />
+        <HomeCommandCentre
+          currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
+          onOpenComeback={onOpenIris365}
+        />
         <Iris365HomeSummary onOpenIris365={onOpenIris365} />
 
         {showEmbeddedPlan && (

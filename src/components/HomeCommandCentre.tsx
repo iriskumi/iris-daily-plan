@@ -15,6 +15,7 @@ import { DAY_MODE_CONFIGS, minimumViableBlock, queueOverview, suggestNextBlock, 
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
 import { writeQuickAddBlockToTaskStore } from '../taskStore'
+import StartNowDashboard from './StartNowDashboard'
 
 interface QuickAddTemplate {
   title: string
@@ -427,7 +428,13 @@ function isRescueFriendlyTemplate(template: QuickAddTemplate): boolean {
   )
 }
 
-export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: EnergyLevel }) {
+export default function HomeCommandCentre({
+  currentEnergy,
+  onOpenComeback,
+}: {
+  currentEnergy?: EnergyLevel
+  onOpenComeback?: () => void
+}) {
   const [queue, setQueue] = useState<DayBlockQueue>(() => loadDayBlockQueue(getLocalDateKey()))
   const [selectedGroup, setSelectedGroup] = useState<QuickAddGroup>('English Output')
   const [message, setMessage] = useState<string | null>(null)
@@ -630,6 +637,14 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
 
   return (
     <section className="home-command-centre" aria-label="Today command centre">
+      <StartNowDashboard onOpenComeback={onOpenComeback} />
+
+      <details className="start-now-secondary-planning">
+        <summary>
+          <span>Planning queue / habit blocks</span>
+          <small>Open when you want to choose or adjust the queue.</small>
+        </summary>
+
       <div className="home-status-card">
         <div className="home-status-summary">
           <div className="section-label">Today status</div>
@@ -1002,6 +1017,7 @@ export default function HomeCommandCentre({ currentEnergy }: { currentEnergy?: E
           ))}
         </div>
       </div>
+      </details>
     </section>
   )
 }
