@@ -677,6 +677,7 @@ export default function App() {
             onViewPlan={() => {
               if (appSettings.fullCommandHubMode) goToTab('plan')
             }}
+            onOpenIris365={() => goToTab('iris365')}
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
             onFocusBlocksChange={refreshReminders}
             showEmbeddedPlan={!appSettings.fullCommandHubMode}
@@ -861,6 +862,7 @@ interface TodayCommandCentreProps {
   generatingPlan: boolean
   generationMessage: string | null
   onViewPlan: () => void
+  onOpenIris365: () => void
   onSendStartPlanToTodayPlan: (startPlan: StartPlan) => string
   onFocusBlocksChange: () => void
   showEmbeddedPlan: boolean
@@ -878,6 +880,7 @@ function TodayCommandCentre({
   generatingPlan,
   generationMessage,
   onViewPlan,
+  onOpenIris365,
   onSendStartPlanToTodayPlan,
   onFocusBlocksChange,
   showEmbeddedPlan,
@@ -1055,7 +1058,7 @@ function TodayCommandCentre({
         </div>
 
         <HomeCommandCentre currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel} />
-        <Iris365HomeSummary />
+        <Iris365HomeSummary onOpenIris365={onOpenIris365} />
 
         {showEmbeddedPlan && (
           <details

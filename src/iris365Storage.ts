@@ -1,6 +1,11 @@
 import { getLocalDateKey } from './focus'
 import type {
   Iris365Entry,
+  Iris365DopamineOutcome,
+  Iris365DopamineState,
+  Iris365DopamineSwapLibraryItem,
+  Iris365DopamineSwapLog,
+  Iris365DopamineUrge,
   Iris365FoundationStatus,
   Iris365HighStimulusPatternKey,
   Iris365HighStimulusPatternStatus,
@@ -159,6 +164,8 @@ function fallbackStore(): Iris365Store {
     entries: {},
     proofItems: [],
     weeklyReviews: {},
+    dopamineSwapLogs: [],
+    dopamineSwapLibrary: [],
   }
 }
 
@@ -227,6 +234,72 @@ function normaliseWeeklyReview(value: Partial<Iris365WeeklyReview>, weekStartDat
   }
 }
 
+function isDopamineUrge(value: unknown): value is Iris365DopamineUrge {
+  return [
+    'short-dramas',
+    'web-novels',
+    'xiaohongshu-scrolling',
+    'shopping',
+    'mobile-game',
+    'random-phone-scrolling',
+    'avoiding-everything',
+  ].includes(String(value))
+}
+
+function isDopamineState(value: unknown): value is Iris365DopamineState {
+  return [
+    'tired',
+    'empty-bored',
+    'anxious',
+    'avoiding-task',
+    'bedtime-cant-stop',
+    'pms-low-control',
+    'low-energy',
+  ].includes(String(value))
+}
+
+function isDopamineOutcome(value: unknown): value is Iris365DopamineOutcome {
+  return [
+    'redirected',
+    'delayed-urge',
+    'softer-option',
+    'binged-but-noticed',
+    'need-sleep',
+    'need-food',
+    'need-comfort',
+  ].includes(String(value))
+}
+
+function normaliseSwapLog(value: Partial<Iris365DopamineSwapLog>): Iris365DopamineSwapLog | null {
+  if (!value.id || !value.date || !isDopamineUrge(value.urge) || !isDopamineState(value.state)) return null
+  return {
+    id: value.id,
+    date: value.date,
+    urge: value.urge,
+    state: value.state,
+    suggestion: value.suggestion ?? '',
+    comfortOption: value.comfortOption ?? '',
+    tinyAction: value.tinyAction,
+    outcome: isDopamineOutcome(value.outcome) ? value.outcome : undefined,
+    createdAt: value.createdAt ?? new Date().toISOString(),
+    completedAt: value.completedAt,
+  }
+}
+
+function normaliseSwapLibraryItem(value: Partial<Iris365DopamineSwapLibraryItem>): Iris365DopamineSwapLibraryItem | null {
+  if (!value.id || !value.text) return null
+  return {
+    id: value.id,
+    text: value.text,
+    urge: isDopamineUrge(value.urge) ? value.urge : undefined,
+    state: isDopamineState(value.state) ? value.state : undefined,
+    status: value.status === 'doesnt-work' ? 'doesnt-work' : 'works',
+    timesUsed: Math.max(0, Math.round(Number(value.timesUsed) || 0)),
+    createdAt: value.createdAt ?? new Date().toISOString(),
+    updatedAt: value.updatedAt ?? new Date().toISOString(),
+  }
+}
+
 function clampRating(value: unknown): number {
   const numeric = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(numeric)) return 3
@@ -247,12 +320,20 @@ function normaliseStore(value: unknown): Iris365Store {
     if (review && typeof review === 'object') acc[weekStartDate] = normaliseWeeklyReview(review as Partial<Iris365WeeklyReview>, weekStartDate)
     return acc
   }, {})
+  const dopamineSwapLogs = Array.isArray(parsed.dopamineSwapLogs)
+    ? parsed.dopamineSwapLogs.map(normaliseSwapLog).filter((item): item is Iris365DopamineSwapLog => Boolean(item))
+    : []
+  const dopamineSwapLibrary = Array.isArray(parsed.dopamineSwapLibrary)
+    ? parsed.dopamineSwapLibrary.map(normaliseSwapLibraryItem).filter((item): item is Iris365DopamineSwapLibraryItem => Boolean(item))
+    : []
   return {
     schemaVersion: SCHEMA_VERSION,
     startDate: IRIS_365_START_DATE,
     entries,
     proofItems,
     weeklyReviews,
+    dopamineSwapLogs,
+    dopamineSwapLibrary,
   }
 }
 
@@ -426,6 +507,100 @@ export function getIris365WeekEntries(entries: Record<string, Iris365Entry>, wee
     return getLocalDateKey(date)
   }))
   return Object.values(entries).filter(entry => dates.has(entry.date))
+}
+
+export function addIris365DopamineSwapLog(
+  input: Omit<Iris365DopamineSwapLog, 'id' | 'createdAt'>,
+  store = loadIris365Store(),
+): Iris365Store {
+  const now = new Date().toISOString()
+  return saveIris365Store({
+    ...store,
+    dopamineSwapLogs: [
+      {
+        ...input,
+        id: crypto.randomUUID(),
+        createdAt: now,
+      },
+      ...store.dopamineSwapLogs,
+    ],
+  })
+}
+
+export function updateIris365DopamineSwapLog(
+  logId: string,
+  patch: Partial<Iris365DopamineSwapLog>,
+  store = loadIris365Store(),
+): Iris365Store {
+  return saveIris365Store({
+    ...store,
+    dopamineSwapLogs: store.dopamineSwapLogs.map(log =>
+      log.id === logId ? { ...log, ...patch } : log,
+    ),
+  })
+}
+
+export function saveIris365SwapLibraryItem(
+  input: Omit<Iris365DopamineSwapLibraryItem, 'id' | 'createdAt' | 'updatedAt' | 'timesUsed'>,
+  store = loadIris365Store(),
+): Iris365Store {
+  const now = new Date().toISOString()
+  const existing = store.dopamineSwapLibrary.find(item => item.text.toLowerCase() === input.text.toLowerCase())
+  const nextItem: Iris365DopamineSwapLibraryItem = existing
+    ? {
+        ...existing,
+        ...input,
+        timesUsed: existing.timesUsed + (input.status === 'works' ? 1 : 0),
+        updatedAt: now,
+      }
+    : {
+        ...input,
+        id: crypto.randomUUID(),
+        timesUsed: input.status === 'works' ? 1 : 0,
+        createdAt: now,
+        updatedAt: now,
+      }
+  return saveIris365Store({
+    ...store,
+    dopamineSwapLibrary: [
+      nextItem,
+      ...store.dopamineSwapLibrary.filter(item => item.id !== nextItem.id),
+    ],
+  })
+}
+
+export function getIris365DopamineWeekStats(store = loadIris365Store(), date = getLocalDateKey()): {
+  swapsAttempted: number
+  mostCommonUrge: Iris365DopamineUrge | null
+  mostCommonState: Iris365DopamineState | null
+  mostEffectiveSavedSwap: Iris365DopamineSwapLibraryItem | null
+  delayedCount: number
+} {
+  const weekStart = getIris365WeekStart(date)
+  const start = parseLocalDate(weekStart)
+  const end = parseLocalDate(weekStart)
+  end.setDate(end.getDate() + 6)
+  const logs = store.dopamineSwapLogs.filter(log => {
+    const current = parseLocalDate(log.date)
+    return current >= start && current <= end
+  })
+  const mostCommon = <T extends string>(values: T[]): T | null => {
+    const counts = values.reduce<Record<string, number>>((acc, value) => {
+      acc[value] = (acc[value] ?? 0) + 1
+      return acc
+    }, {})
+    const winner = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]
+    return (winner as T | undefined) ?? null
+  }
+  return {
+    swapsAttempted: logs.length,
+    mostCommonUrge: mostCommon(logs.map(log => log.urge)),
+    mostCommonState: mostCommon(logs.map(log => log.state)),
+    mostEffectiveSavedSwap: [...store.dopamineSwapLibrary]
+      .filter(item => item.status === 'works')
+      .sort((a, b) => b.timesUsed - a.timesUsed)[0] ?? null,
+    delayedCount: logs.filter(log => log.outcome === 'delayed-urge').length,
+  }
 }
 
 export function addIris365ProofItem(

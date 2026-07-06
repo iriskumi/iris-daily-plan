@@ -50,6 +50,59 @@ export type Iris365HighStimulusPatternKey =
 
 export type Iris365HighStimulusPatternStatus = 'not-used' | 'controlled' | 'overused'
 
+export type Iris365DopamineUrge =
+  | 'short-dramas'
+  | 'web-novels'
+  | 'xiaohongshu-scrolling'
+  | 'shopping'
+  | 'mobile-game'
+  | 'random-phone-scrolling'
+  | 'avoiding-everything'
+
+export type Iris365DopamineState =
+  | 'tired'
+  | 'empty-bored'
+  | 'anxious'
+  | 'avoiding-task'
+  | 'bedtime-cant-stop'
+  | 'pms-low-control'
+  | 'low-energy'
+
+export type Iris365DopamineOutcome =
+  | 'redirected'
+  | 'delayed-urge'
+  | 'softer-option'
+  | 'binged-but-noticed'
+  | 'need-sleep'
+  | 'need-food'
+  | 'need-comfort'
+
+export type Iris365SwapLibraryStatus = 'works' | 'doesnt-work'
+
+export interface Iris365DopamineSwapLog {
+  id: string
+  date: string
+  urge: Iris365DopamineUrge
+  state: Iris365DopamineState
+  suggestion: string
+  comfortOption: string
+  tinyAction?: string
+  outcome?: Iris365DopamineOutcome
+  createdAt: string
+  completedAt?: string
+}
+
+export interface Iris365DopamineSwapLibraryItem {
+  id: string
+  text: string
+  urge?: Iris365DopamineUrge
+  state?: Iris365DopamineState
+  status: Iris365SwapLibraryStatus
+  timesUsed: number
+  createdAt: string
+  updatedAt: string
+}
+
 export type Iris365ProofCategory =
   | 'English output'
   | 'Shadowing'
@@ -97,6 +150,8 @@ export interface Iris365Store {
   entries: Record<string, Iris365Entry>
   proofItems: Iris365ProofItem[]
   weeklyReviews: Record<string, Iris365WeeklyReview>
+  dopamineSwapLogs: Iris365DopamineSwapLog[]
+  dopamineSwapLibrary: Iris365DopamineSwapLibraryItem[]
 }
 
 export interface Iris365Streaks {

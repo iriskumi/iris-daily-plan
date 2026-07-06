@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CalendarDays, CheckCircle2, Leaf, Plus, ShieldCheck, TrendingUp } from 'lucide-react'
 import { getLocalDateKey } from '../focus'
 import {
+  addIris365DopamineSwapLog,
   addIris365ProofItem,
   calculateCurrentDayNumber,
   calculateDaysRemaining,
@@ -12,6 +13,7 @@ import {
   emptyIris365WeeklyReview,
   getIris365WeekEntries,
   getIris365WeekStart,
+  getIris365DopamineWeekStats,
   IRIS_365_END_DATE,
   IRIS_365_HIGH_STIMULUS_PATTERNS,
   IRIS_365_PROOF_CATEGORIES,
@@ -23,9 +25,15 @@ import {
   loadIris365Store,
   recentIris365Entries,
   saveIris365Entry,
+  saveIris365SwapLibraryItem,
   saveIris365WeeklyReview,
+  updateIris365DopamineSwapLog,
 } from '../iris365Storage'
 import type {
+  Iris365DopamineOutcome,
+  Iris365DopamineState,
+  Iris365DopamineSwapLog,
+  Iris365DopamineUrge,
   Iris365Entry,
   Iris365HighStimulusPatternKey,
   Iris365HighStimulusPatternStatus,
@@ -100,6 +108,36 @@ const WEEKLY_REVIEW_FIELDS: Array<[keyof Omit<Iris365WeeklyReview, 'weekStartDat
   ['nextWeekPriority', 'What is next week’s one priority?'],
 ]
 
+const DOPAMINE_URGES: Array<{ value: Iris365DopamineUrge; label: string }> = [
+  { value: 'short-dramas', label: 'Short dramas' },
+  { value: 'web-novels', label: 'Web novels' },
+  { value: 'xiaohongshu-scrolling', label: 'Xiaohongshu / scrolling' },
+  { value: 'shopping', label: 'Shopping' },
+  { value: 'mobile-game', label: 'Mobile game' },
+  { value: 'random-phone-scrolling', label: 'Random phone scrolling' },
+  { value: 'avoiding-everything', label: 'Avoiding everything' },
+]
+
+const DOPAMINE_STATES: Array<{ value: Iris365DopamineState; label: string }> = [
+  { value: 'tired', label: 'Tired' },
+  { value: 'empty-bored', label: 'Empty / bored' },
+  { value: 'anxious', label: 'Anxious' },
+  { value: 'avoiding-task', label: 'Avoiding a task' },
+  { value: 'bedtime-cant-stop', label: 'Bedtime / can’t stop' },
+  { value: 'pms-low-control', label: 'PMS / low self-control' },
+  { value: 'low-energy', label: 'Low energy' },
+]
+
+const DOPAMINE_OUTCOMES: Array<{ value: Iris365DopamineOutcome; label: string }> = [
+  { value: 'redirected', label: 'I redirected' },
+  { value: 'delayed-urge', label: 'I delayed the urge' },
+  { value: 'softer-option', label: 'I chose a softer option' },
+  { value: 'binged-but-noticed', label: 'I still binged, but noticed it' },
+  { value: 'need-sleep', label: 'I need sleep' },
+  { value: 'need-food', label: 'I need food' },
+  { value: 'need-comfort', label: 'I need comfort' },
+]
+
 function formatDate(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString('en-AU', {
     day: 'numeric',
@@ -160,6 +198,92 @@ function updateStimulusControlledFlag(patterns: Iris365Entry['highStimulusPatter
   return statuses.includes('controlled') && !statuses.includes('overused')
 }
 
+function dopamineUrgeLabel(value: Iris365DopamineUrge | null): string {
+  return DOPAMINE_URGES.find(item => item.value === value)?.label ?? 'None yet'
+}
+
+function dopamineStateLabel(value: Iris365DopamineState | null): string {
+  return DOPAMINE_STATES.find(item => item.value === value)?.label ?? 'None yet'
+}
+
+function buildDopamineSwapSuggestion(urge: Iris365DopamineUrge, state: Iris365DopamineState): {
+  comfortOption: string
+  tinyAction?: string
+  reminder: string
+  note: string
+} {
+  if (state === 'bedtime-cant-stop') {
+    return {
+      comfortOption: 'Familiar comfort only: brown noise, rain, a familiar audiobook, or a familiar sitcom with the screen dim.',
+      tinyAction: 'Write one line for tomorrow, then put the phone face down.',
+      reminder: 'In 10 minutes, decide again. No new plot, no new shopping, no new rabbit hole.',
+      note: 'Bedtime Mode: protect tomorrow, not perfection.',
+    }
+  }
+  if (state === 'pms-low-control') {
+    return {
+      comfortOption: 'Choose damage-reduction comfort: tea or water, blanket, familiar audio, or one already-known comfort video.',
+      tinyAction: urge === 'shopping' ? 'Put the item in a note or cart. Do not decide tonight.' : undefined,
+      reminder: 'In 10 minutes, decide again gently. No shame, no success/failure language.',
+      note: 'PMS / low-control mode: reduce damage, do not judge your whole life tonight.',
+    }
+  }
+  if (state === 'low-energy' || state === 'tired') {
+    return {
+      comfortOption: 'Lower the stimulation: familiar audiobook, gentle music, shower, stretch, or lie down with brown noise.',
+      tinyAction: 'Do one tiny reset only if it feels easy: water, charger, lights, or one dish.',
+      reminder: 'In 10 minutes, decide again. Rest counts as a valid downshift.',
+      note: 'Low energy means softer comfort first.',
+    }
+  }
+  if (state === 'anxious') {
+    return {
+      comfortOption: 'Pick a contained comfort: rain sound, slow breathing, one familiar episode, or a warm drink.',
+      tinyAction: 'Name the worry in one sentence. No solving required.',
+      reminder: 'In 10 minutes, decide again with a calmer nervous system.',
+      note: 'You are interrupting the spiral, not proving discipline.',
+    }
+  }
+  if (state === 'avoiding-task') {
+    return {
+      comfortOption: 'Use a soft transition: timer for 10 minutes, low-volume music, or sit somewhere less sticky.',
+      tinyAction: 'Open the task and do the first 2-minute edge only.',
+      reminder: 'In 10 minutes, decide again. You only need a doorway, not the whole task.',
+      note: 'Avoidance needs a smaller door, not a lecture.',
+    }
+  }
+  if (urge === 'shopping') {
+    return {
+      comfortOption: 'Save the item to a wishlist note and look at something you already own that you like.',
+      tinyAction: 'Wait 10 minutes before any purchase decision.',
+      reminder: 'In 10 minutes, decide again. No big shopping decisions in a stimulation spike.',
+      note: 'Shopping urges often want comfort, not checkout.',
+    }
+  }
+  if (urge === 'short-dramas' || urge === 'web-novels') {
+    return {
+      comfortOption: 'Choose familiar comfort: a reread, familiar audiobook, or one saved low-stakes clip.',
+      tinyAction: undefined,
+      reminder: 'In 10 minutes, decide again. Avoid starting a new plot while pulled.',
+      note: 'The swap is softer story comfort, not no comfort.',
+    }
+  }
+  if (urge === 'mobile-game') {
+    return {
+      comfortOption: 'Swap to a lower-stakes hand comfort: stretch, tea, simple puzzle, or familiar audio.',
+      tinyAction: 'Put the phone on charge across the room if that feels possible.',
+      reminder: 'In 10 minutes, decide again. Keep the loop easy to exit.',
+      note: 'You are downshifting the loop, not banning fun.',
+    }
+  }
+  return {
+    comfortOption: 'Choose one softer comfort: familiar audio, brown noise, water, stretch, or a dim-screen familiar show.',
+    tinyAction: 'Do one tiny useful thing only if it feels kind: water, charger, or one-line note.',
+    reminder: 'In 10 minutes, decide again. Comfort is allowed; spirals are optional.',
+    note: 'This is a redirect, not a test.',
+  }
+}
+
 export default function Iris365() {
   const today = getLocalDateKey()
   const [store, setStore] = useState(() => loadIris365Store())
@@ -171,6 +295,9 @@ export default function Iris365() {
     description: '',
     linkOrFile: '',
   })
+  const [swapUrge, setSwapUrge] = useState<Iris365DopamineUrge | ''>('')
+  const [swapState, setSwapState] = useState<Iris365DopamineState | ''>('')
+  const [activeSwapLog, setActiveSwapLog] = useState<Iris365DopamineSwapLog | null>(null)
 
   const dayNumber = calculateCurrentDayNumber(IRIS_365_START_DATE, today)
   const daysRemaining = calculateDaysRemaining(IRIS_365_START_DATE, today)
@@ -185,8 +312,10 @@ export default function Iris365() {
   const weeklyReview = store.weeklyReviews[weekStart] ?? emptyIris365WeeklyReview(weekStart)
   const weekEntries = getIris365WeekEntries(store.entries, weekStart)
   const weeklyStats = calculateIris365Stats(Object.fromEntries(weekEntries.map(item => [item.date, item])), today)
+  const dopamineStats = getIris365DopamineWeekStats(store, today)
   const filteredProofItems = store.proofItems.filter(item => proofCategoryFilter === 'All' || item.category === proofCategoryFilter)
   const savedToday = Boolean(store.entries[today])
+  const activeSuggestion = swapUrge && swapState ? buildDopamineSwapSuggestion(swapUrge, swapState) : null
 
   function updateEntry(patch: Partial<Iris365Entry>) {
     if (preStart) return
@@ -238,6 +367,40 @@ export default function Iris365() {
       description: '',
       linkOrFile: '',
     })
+  }
+
+  function startDopamineSwap() {
+    if (!swapUrge || !swapState || !activeSuggestion) return
+    const nextStore = addIris365DopamineSwapLog({
+      date: today,
+      urge: swapUrge,
+      state: swapState,
+      suggestion: activeSuggestion.note,
+      comfortOption: activeSuggestion.comfortOption,
+      tinyAction: activeSuggestion.tinyAction,
+    }, store)
+    setStore(nextStore)
+    setActiveSwapLog(nextStore.dopamineSwapLogs[0] ?? null)
+  }
+
+  function logDopamineOutcome(outcome: Iris365DopamineOutcome) {
+    if (!activeSwapLog) return
+    const nextStore = updateIris365DopamineSwapLog(activeSwapLog.id, {
+      outcome,
+      completedAt: new Date().toISOString(),
+    }, store)
+    setStore(nextStore)
+    setActiveSwapLog(null)
+  }
+
+  function saveSwap(status: 'works' | 'doesnt-work') {
+    if (!activeSuggestion || !swapUrge || !swapState) return
+    setStore(saveIris365SwapLibraryItem({
+      text: activeSuggestion.comfortOption,
+      urge: swapUrge,
+      state: swapState,
+      status,
+    }, store))
   }
 
   return (
@@ -418,40 +581,162 @@ export default function Iris365() {
                 </div>
               </section>
 
-              <section className="iris365-stimulus-card">
+              <section className="iris365-stimulus-card dopamine-swap-card">
                 <div className="card-header">
                   <div>
-                    <div className="section-label">Pattern spotted, not failure</div>
-                    <div className="card-title">High-stimulus pattern check</div>
+                    <div className="section-label">Urge interruption</div>
+                    <div className="card-title">Before I Spiral</div>
                   </div>
                 </div>
-                <div className="iris365-stimulus-list">
-                  {IRIS_365_HIGH_STIMULUS_PATTERNS.map(key => (
-                    <div key={key} className="iris365-stimulus-row">
-                      <span>{HIGH_STIMULUS_LABELS[key]}</span>
-                      <div>
-                        {(Object.keys(STIMULUS_STATUS_LABELS) as Iris365HighStimulusPatternStatus[]).map(status => (
-                          <button
-                            key={status}
-                            type="button"
-                            className={entry.highStimulusPatterns[key] === status ? 'active' : ''}
-                            onClick={() => updateStimulusPattern(key, status)}
-                          >
-                            {STIMULUS_STATUS_LABELS[status]}
-                          </button>
-                        ))}
-                      </div>
+                <p className="dopamine-swap-subtitle">
+                  Feeling pulled into short dramas, web novels, shopping, scrolling, or games?
+                  Choose a softer comfort for 10 minutes, then decide again.
+                </p>
+
+                <div className="dopamine-swap-grid">
+                  <div className="dopamine-swap-step">
+                    <span>Current urge</span>
+                    <div className="dopamine-chip-grid">
+                      {DOPAMINE_URGES.map(option => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={swapUrge === option.value ? 'active' : ''}
+                          onClick={() => setSwapUrge(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="dopamine-swap-step">
+                    <span>Current state</span>
+                    <div className="dopamine-chip-grid">
+                      {DOPAMINE_STATES.map(option => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={swapState === option.value ? 'active' : ''}
+                          onClick={() => setSwapState(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <label className="iris365-single-field">
-                  What triggered it?
-                  <input
-                    value={entry.highStimulusTrigger}
-                    onChange={event => updateEntry({ highStimulusTrigger: event.target.value })}
-                    placeholder="Stress, boredom, transition gap, tired evening..."
-                  />
-                </label>
+
+                {activeSuggestion ? (
+                  <div className="dopamine-suggestion-card">
+                    <div>
+                      <div className="section-label">
+                        {swapState === 'bedtime-cant-stop'
+                          ? 'Bedtime mode'
+                          : swapState === 'pms-low-control'
+                            ? 'PMS / low-control mode'
+                            : 'Stimulation downshift'}
+                      </div>
+                      <h4>{activeSuggestion.comfortOption}</h4>
+                    </div>
+                    {activeSuggestion.tinyAction && (
+                      <p>
+                        <strong>Tiny useful action:</strong> {activeSuggestion.tinyAction}
+                      </p>
+                    )}
+                    <p>{activeSuggestion.reminder}</p>
+                    <small>{activeSuggestion.note}</small>
+                    <div className="dopamine-suggestion-actions">
+                      <button type="button" className="btn btn-primary" onClick={startDopamineSwap}>
+                        10-min redirect
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => saveSwap('works')}>
+                        Works for me
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => saveSwap('doesnt-work')}>
+                        Doesn&apos;t work for me
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="dopamine-empty-suggestion">
+                    Select an urge and state to get one softer comfort option.
+                  </div>
+                )}
+
+                {activeSwapLog && (
+                  <div className="dopamine-result-log">
+                    <div>
+                      <div className="section-label">After 10 minutes</div>
+                      <h4>What happened?</h4>
+                    </div>
+                    <div className="dopamine-outcome-grid">
+                      {DOPAMINE_OUTCOMES.map(option => (
+                        <button key={option.value} type="button" onClick={() => logDopamineOutcome(option.value)}>
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="dopamine-swap-footer">
+                  <div className="dopamine-weekly-stats">
+                    <span>{dopamineStats.swapsAttempted}</span>
+                    <small>swaps attempted</small>
+                    <span>{dopamineStats.delayedCount}</span>
+                    <small>urges delayed</small>
+                    <span>{dopamineStats.mostCommonUrge ? dopamineUrgeLabel(dopamineStats.mostCommonUrge) : 'None yet'}</span>
+                    <small>common urge</small>
+                    <span>{dopamineStats.mostCommonState ? dopamineStateLabel(dopamineStats.mostCommonState) : 'None yet'}</span>
+                    <small>common state</small>
+                  </div>
+
+                  <div className="dopamine-saved-swaps">
+                    <div className="section-label">Works for me</div>
+                    {store.dopamineSwapLibrary.filter(item => item.status === 'works').slice(0, 3).length > 0 ? (
+                      store.dopamineSwapLibrary.filter(item => item.status === 'works').slice(0, 3).map(item => (
+                        <span key={item.id}>{item.text}</span>
+                      ))
+                    ) : (
+                      <p>Save swaps that actually help. No perfection language here.</p>
+                    )}
+                    {dopamineStats.mostEffectiveSavedSwap && (
+                      <small>Most effective: {dopamineStats.mostEffectiveSavedSwap.text}</small>
+                    )}
+                  </div>
+                </div>
+
+                <details className="dopamine-legacy-details">
+                  <summary>Optional daily pattern note</summary>
+                  <div className="iris365-stimulus-list">
+                    {IRIS_365_HIGH_STIMULUS_PATTERNS.map(key => (
+                      <div key={key} className="iris365-stimulus-row">
+                        <span>{HIGH_STIMULUS_LABELS[key]}</span>
+                        <div>
+                          {(Object.keys(STIMULUS_STATUS_LABELS) as Iris365HighStimulusPatternStatus[]).map(status => (
+                            <button
+                              key={status}
+                              type="button"
+                              className={entry.highStimulusPatterns[key] === status ? 'active' : ''}
+                              onClick={() => updateStimulusPattern(key, status)}
+                            >
+                              {STIMULUS_STATUS_LABELS[status]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <label className="iris365-single-field">
+                    What triggered it?
+                    <input
+                      value={entry.highStimulusTrigger}
+                      onChange={event => updateEntry({ highStimulusTrigger: event.target.value })}
+                      placeholder="Stress, boredom, transition gap, tired evening..."
+                    />
+                  </label>
+                </details>
               </section>
             </>
           )}
@@ -637,7 +922,11 @@ export default function Iris365() {
   )
 }
 
-export function Iris365HomeSummary() {
+interface Iris365HomeSummaryProps {
+  onOpenIris365?: () => void
+}
+
+export function Iris365HomeSummary({ onOpenIris365 }: Iris365HomeSummaryProps = {}) {
   const today = getLocalDateKey()
   const store = loadIris365Store()
   const entry = loadIris365Entry(today, store)
@@ -645,21 +934,26 @@ export function Iris365HomeSummary() {
   const preStart = isBeforeIris365Start(today, IRIS_365_START_DATE)
   const phase = determineCurrentPhase(Math.max(1, dayNumber))
   const daysRemaining = calculateDaysRemaining(IRIS_365_START_DATE, today)
-  const minimumProofComplete = entry.englishOutput && entry.oneRealThingDone && entry.bodyMoved
 
   return (
-    <section className="iris365-home-card">
+    <section className="iris365-home-card dopamine-home-card">
       <div>
-        <div className="section-label">Iris 365</div>
-        <h3>{preStart ? 'Starts tomorrow' : `Day ${dayNumber} / 365`}</h3>
-        <p>{preStart ? 'Get ready: choose your first tiny proof.' : `${daysRemaining} days left · ${phase.title}`}</p>
+        <div className="section-label">Low-stimulation redirect</div>
+        <h3>Before I Spiral</h3>
+        <p>Feeling pulled into short dramas, web novels, shopping, scrolling, or games?</p>
       </div>
-      <div className="iris365-home-proof">
-        <span className={entry.englishOutput ? 'done' : ''}>English output</span>
-        <span className={entry.oneRealThingDone ? 'done' : ''}>Reality task</span>
-        <span className={entry.bodyMoved ? 'done' : ''}>Movement</span>
-      </div>
-      <strong>{minimumProofComplete ? 'Today has proof.' : 'Leave one small proof before the day ends.'}</strong>
+      <button type="button" className="btn btn-primary dopamine-home-action" onClick={onOpenIris365}>
+        10-min redirect
+      </button>
+      <strong>
+        Comfort is allowed. Choose a softer form for 10 minutes, then decide again.
+      </strong>
+      <small>
+        {preStart
+          ? 'Iris 365 starts tomorrow.'
+          : `Iris 365 day ${dayNumber} / 365 · ${daysRemaining} days left · ${phase.title}`}
+        {(entry.englishOutput || entry.oneRealThingDone || entry.bodyMoved) ? ' · proof started today' : ''}
+      </small>
     </section>
   )
 }

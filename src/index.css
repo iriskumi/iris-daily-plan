@@ -6727,6 +6727,166 @@ textarea {
   font-weight: 600;
 }
 
+.dopamine-swap-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.dopamine-swap-subtitle,
+.dopamine-empty-suggestion,
+.dopamine-saved-swaps p,
+.dopamine-suggestion-card p,
+.dopamine-suggestion-card small {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dopamine-swap-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.dopamine-swap-step {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.dopamine-swap-step > span {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dopamine-chip-grid,
+.dopamine-outcome-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.dopamine-chip-grid button,
+.dopamine-outcome-grid button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  padding: 0.46rem 0.7rem;
+}
+
+.dopamine-chip-grid button.active,
+.dopamine-outcome-grid button:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border) 58%);
+  background: var(--accent-bg);
+  color: var(--text);
+}
+
+.dopamine-suggestion-card,
+.dopamine-result-log,
+.dopamine-empty-suggestion {
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border) 76%);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 86%, var(--accent-bg) 14%);
+  padding: 0.95rem 1rem;
+}
+
+.dopamine-suggestion-card {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.dopamine-suggestion-card h4,
+.dopamine-result-log h4 {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.dopamine-suggestion-card strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dopamine-suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dopamine-result-log {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.dopamine-swap-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.dopamine-weekly-stats,
+.dopamine-saved-swaps {
+  display: grid;
+  gap: 0.38rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 0.85rem;
+}
+
+.dopamine-weekly-stats {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.dopamine-weekly-stats span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dopamine-weekly-stats small,
+.dopamine-saved-swaps small {
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.dopamine-saved-swaps span {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 0.5rem 0.6rem;
+}
+
+.dopamine-legacy-details {
+  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+}
+
+.dopamine-legacy-details summary {
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dopamine-legacy-details[open] summary {
+  margin-bottom: 0.75rem;
+}
+
 .iris365-home-card {
   display: grid;
   gap: 0.8rem;
@@ -6753,6 +6913,21 @@ textarea {
 .iris365-home-card strong {
   color: var(--text);
   font-weight: 600;
+}
+
+.iris365-home-card small {
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dopamine-home-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--surface) 90%, var(--accent-bg) 10%), var(--surface));
+}
+
+.dopamine-home-action {
+  justify-self: start;
 }
 
 .iris365-home-proof {
@@ -7007,6 +7182,7 @@ textarea {
   .iris365-growth-grid,
   .iris365-detail-grid,
   .iris365-stimulus-row,
+  .dopamine-swap-footer,
   .iris365-rating-grid,
   .iris365-recent-row,
   .iris365-weekly-grid,
