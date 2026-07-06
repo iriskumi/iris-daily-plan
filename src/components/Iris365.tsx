@@ -109,33 +109,36 @@ const WEEKLY_REVIEW_FIELDS: Array<[keyof Omit<Iris365WeeklyReview, 'weekStartDat
 ]
 
 const DOPAMINE_URGES: Array<{ value: Iris365DopamineUrge; label: string }> = [
-  { value: 'short-dramas', label: 'Short dramas' },
-  { value: 'web-novels', label: 'Web novels' },
+  { value: 'ai-short-dramas', label: 'AI short dramas' },
+  { value: 'chinese-web-novels', label: 'Chinese web novels' },
   { value: 'xiaohongshu-scrolling', label: 'Xiaohongshu / scrolling' },
-  { value: 'shopping', label: 'Shopping' },
-  { value: 'mobile-game', label: 'Mobile game' },
-  { value: 'random-phone-scrolling', label: 'Random phone scrolling' },
-  { value: 'avoiding-everything', label: 'Avoiding everything' },
+  { value: 'shopping-price-checking', label: 'Shopping / price checking' },
+  { value: 'romance-restaurant-merge-game', label: 'Romance Restaurant / merge game' },
+  { value: 'bedtime-find-watch', label: 'Bedtime “find something to watch”' },
+  { value: 'avoiding-real-life-tasks', label: 'Avoiding real life tasks' },
 ]
 
 const DOPAMINE_STATES: Array<{ value: Iris365DopamineState; label: string }> = [
-  { value: 'tired', label: 'Tired' },
-  { value: 'empty-bored', label: 'Empty / bored' },
-  { value: 'anxious', label: 'Anxious' },
-  { value: 'avoiding-task', label: 'Avoiding a task' },
-  { value: 'bedtime-cant-stop', label: 'Bedtime / can’t stop' },
+  { value: 'just-woke-empty', label: 'Just woke up and feel empty' },
+  { value: 'afternoon-low-motivation', label: 'Afternoon low motivation' },
+  { value: 'evening-cant-transition', label: 'Evening can’t transition' },
+  { value: 'bedtime-cant-stop', label: 'Bedtime and can’t stop' },
   { value: 'pms-low-control', label: 'PMS / low self-control' },
-  { value: 'low-energy', label: 'Low energy' },
+  { value: 'avoiding-assignment-admin', label: 'Avoiding assignment or admin' },
+  { value: 'english-feels-hard', label: 'English feels hard today' },
+  { value: 'anxious-numb-out', label: 'Anxious and want to numb out' },
 ]
 
 const DOPAMINE_OUTCOMES: Array<{ value: Iris365DopamineOutcome; label: string }> = [
-  { value: 'redirected', label: 'I redirected' },
-  { value: 'delayed-urge', label: 'I delayed the urge' },
-  { value: 'softer-option', label: 'I chose a softer option' },
-  { value: 'binged-but-noticed', label: 'I still binged, but noticed it' },
-  { value: 'need-sleep', label: 'I need sleep' },
-  { value: 'need-food', label: 'I need food' },
-  { value: 'need-comfort', label: 'I need comfort' },
+  { value: 'redirected', label: '我被救回来了' },
+  { value: 'delayed-urge', label: '我拖住了这个冲动' },
+  { value: 'softer-option', label: '我换成了软一点的安慰' },
+  { value: 'rabbit-hole-avoided', label: '我没有开新坑' },
+  { value: 'saved-tomorrow', label: '我保住了明天' },
+  { value: 'binged-but-noticed', label: '还是刷了，但我看见它了' },
+  { value: 'need-sleep', label: '我需要睡觉' },
+  { value: 'need-food', label: '我需要吃东西' },
+  { value: 'need-comfort', label: '我需要被安慰一下' },
 ]
 
 function formatDate(date: string): string {
@@ -198,89 +201,232 @@ function updateStimulusControlledFlag(patterns: Iris365Entry['highStimulusPatter
   return statuses.includes('controlled') && !statuses.includes('overused')
 }
 
-function dopamineUrgeLabel(value: Iris365DopamineUrge | null): string {
-  return DOPAMINE_URGES.find(item => item.value === value)?.label ?? 'None yet'
-}
-
 function dopamineStateLabel(value: Iris365DopamineState | null): string {
   return DOPAMINE_STATES.find(item => item.value === value)?.label ?? 'None yet'
 }
 
 function buildDopamineSwapSuggestion(urge: Iris365DopamineUrge, state: Iris365DopamineState): {
   comfortOption: string
-  tinyAction?: string
-  reminder: string
+  wants: string
+  steps: string[]
+  dont: string[]
+  after: string
   note: string
 } {
+  const bedtime = state === 'bedtime-cant-stop' || urge === 'bedtime-find-watch'
+  const pms = state === 'pms-low-control'
+  const englishHard = state === 'english-feels-hard'
+  const fragile = bedtime || pms || englishHard || state === 'just-woke-empty'
+
   if (state === 'bedtime-cant-stop') {
     return {
-      comfortOption: 'Familiar comfort only: brown noise, rain, a familiar audiobook, or a familiar sitcom with the screen dim.',
-      tinyAction: 'Write one line for tomorrow, then put the phone face down.',
-      reminder: 'In 10 minutes, decide again. No new plot, no new shopping, no new rabbit hole.',
-      note: 'Bedtime Mode: protect tomorrow, not perfection.',
+      comfortOption: 'Shutdown mode: familiar comfort only, no new plot hole.',
+      wants: 'Brain-off comfort, fake “one more thing”, and the feeling of not ending the day yet.',
+      steps: [
+        'Turn on Brownian noise with rain and thunder.',
+        'Pick one already-known comfort: Modern Family, Brooklyn Nine-Nine, Fisk, Utopia, or a familiar Puckboy / Eden Finley / Saxon James audiobook.',
+        'Make Ceylon/Assam milk tea or water if your body is still asking for something.',
+        'Write one tiny tomorrow note: “Do One Real Thing = ____.”',
+      ],
+      dont: [
+        'No new plot.',
+        'No new shopping tab.',
+        'No Xiaohongshu “just to find a vibe”.',
+        'No replanning your whole life at midnight. Tiny CEO can clock out.',
+      ],
+      after: 'After 10 minutes: if you still want comfort, keep the same familiar thing. Do not open a new universe.',
+      note: 'Bedtime Mode: protect tomorrow-Iris. She has done nothing to deserve a 2am cliffhanger.',
     }
   }
   if (state === 'pms-low-control') {
     return {
-      comfortOption: 'Choose damage-reduction comfort: tea or water, blanket, familiar audio, or one already-known comfort video.',
-      tinyAction: urge === 'shopping' ? 'Put the item in a note or cart. Do not decide tonight.' : undefined,
-      reminder: 'In 10 minutes, decide again gently. No shame, no success/failure language.',
-      note: 'PMS / low-control mode: reduce damage, do not judge your whole life tonight.',
+      comfortOption: 'PMS mode: reduce damage, do not negotiate with the algorithm.',
+      wants: 'Comfort, control, softness, and a fast reward without having to be impressive.',
+      steps: [
+        'Choose one body comfort first: shower / wash hair, milk tea, blanket, or Brownian rain noise.',
+        'If you need a screen, choose Modern Family / B99 / Fisk / Utopia only. Familiar means exit doors exist.',
+        urge === 'shopping-price-checking'
+          ? 'Move the item to a 24-hour wishlist note. No buying, no comparing, no “but the sale ends”.'
+          : 'If your hands need something, clear one tiny surface or hold tea. No heroic reset.',
+        'Say: “This is hormone weather. I am not making life conclusions tonight.”',
+      ],
+      dont: [
+        'No big shopping decisions.',
+        'No judging your entire future.',
+        'No starting new dramas or novels at night.',
+        'No shame-based productivity language. Absolutely banned from the group chat.',
+      ],
+      after: 'After 10 minutes: choose sleep, food, or familiar comfort. Any of those counts.',
+      note: 'PMS / low-control mode: damage reduction is the win condition.',
     }
   }
-  if (state === 'low-energy' || state === 'tired') {
+
+  if (urge === 'shopping-price-checking') {
     return {
-      comfortOption: 'Lower the stimulation: familiar audiobook, gentle music, shower, stretch, or lie down with brown noise.',
-      tinyAction: 'Do one tiny reset only if it feels easy: water, charger, lights, or one dish.',
-      reminder: 'In 10 minutes, decide again. Rest counts as a valid downshift.',
-      note: 'Low energy means softer comfort first.',
+      comfortOption: '24-hour wishlist cooling-off: keep the desire, delay the decision.',
+      wants: 'Control, novelty, imagined future-self upgrade, and a tiny dopamine checkout sparkle.',
+      steps: [
+        'Put the exact item, price, and reason into a wishlist note.',
+        'Add one line: “What problem do I think this solves?”',
+        fragile ? 'Make milk tea or turn on Brownian rain noise. No replacement study required.' : 'Save one resume bullet or work note if your brain wants a useful micro-win.',
+        'Close the tab. If it is still good tomorrow, it can survive 24 hours.',
+      ],
+      dont: [
+        'No price checking spiral.',
+        'No “while I’m here” browsing.',
+        'No buying at bedtime.',
+        'No letting a sale timer become your project manager.',
+      ],
+      after: 'After 10 minutes: decide only whether to keep it on the wishlist. Purchase decisions wait 24 hours.',
+      note: 'Shopping urge is often control wearing a cute little outfit.',
     }
   }
-  if (state === 'anxious') {
+
+  if (urge === 'ai-short-dramas' || urge === 'chinese-web-novels') {
+    const storyLabel = urge === 'ai-short-dramas' ? 'AI short drama' : 'Chinese web novel'
     return {
-      comfortOption: 'Pick a contained comfort: rain sound, slow breathing, one familiar episode, or a warm drink.',
-      tinyAction: 'Name the worry in one sentence. No solving required.',
-      reminder: 'In 10 minutes, decide again with a calmer nervous system.',
-      note: 'You are interrupting the spiral, not proving discipline.',
+      comfortOption: `Do not open a new ${storyLabel} plot hole. Swap to known-story comfort.`,
+      wants: 'Narrative escape, romance/justice payoff, novelty, and “please take me out of my real life for a second.”',
+      steps: [
+        'Choose familiar story comfort only: Puckboy / Eden Finley / Saxon James audiobook, or a known Modern Family / B99 episode.',
+        'Set the 10-minute redirect. The job is not productivity; the job is avoiding a new cliffhanger.',
+        englishHard ? 'If English feels hard, just catch one English sentence you like. No notes, no performance.' : 'If you want one tiny real-life anchor, write one Do One Real Thing.',
+        'Keep the screen dim or audio-only if it is evening.',
+      ],
+      dont: [
+        `No starting a new ${storyLabel}.`,
+        'No “just chapter one”. That phrase has committed crimes.',
+        'No comment-section archaeology.',
+        'No turning comfort into punishment afterward.',
+      ],
+      after: 'After 10 minutes: if you still need story, continue the familiar one. New plot holes remain closed.',
+      note: 'The win is not “be productive”. The win is not handing your evening to a cliffhanger machine.',
     }
   }
-  if (state === 'avoiding-task') {
+
+  if (urge === 'xiaohongshu-scrolling') {
     return {
-      comfortOption: 'Use a soft transition: timer for 10 minutes, low-volume music, or sit somewhere less sticky.',
-      tinyAction: 'Open the task and do the first 2-minute edge only.',
-      reminder: 'In 10 minutes, decide again. You only need a doorway, not the whole task.',
-      note: 'Avoidance needs a smaller door, not a lecture.',
+      comfortOption: 'Do not let the algorithm decide what Iris needs.',
+      wants: 'Novelty, identity browsing, aesthetic control, and the feeling that someone else knows what to do.',
+      steps: [
+        'Close Xiaohongshu and name the category: beauty, study, lifestyle, jobs, or “I don’t know, vibes”.',
+        'Choose one real alternative: clear one tiny surface, make milk tea, or take a 10-minute walk.',
+        state === 'anxious-numb-out'
+          ? 'Write one line: “The thing I am numbing is probably ____.” No solving.'
+          : 'If you want input, use familiar audio instead of algorithm input.',
+        'If you found something useful, save only one note. Do not keep scrolling to become a better person by osmosis.',
+      ],
+      dont: [
+        'No “just five minutes”.',
+        'No comparing your life to curated girls with ring lights.',
+        'No buying a new identity starter pack.',
+        'No algorithm-as-therapist.',
+      ],
+      after: 'After 10 minutes: choose one human thing: tea, shower, walk, sleep, or one real task edge.',
+      note: 'Xiaohongshu is not the boss of Iris. It is a glittery slot machine with skincare lighting.',
     }
   }
-  if (urge === 'shopping') {
+
+  if (urge === 'romance-restaurant-merge-game') {
     return {
-      comfortOption: 'Save the item to a wishlist note and look at something you already own that you like.',
-      tinyAction: 'Wait 10 minutes before any purchase decision.',
-      reminder: 'In 10 minutes, decide again. No big shopping decisions in a stimulation spike.',
-      note: 'Shopping urges often want comfort, not checkout.',
+      comfortOption: 'Replace the merge loop with a tiny visible completion loop.',
+      wants: 'Fast reward, tidy progress bars, cute control, and a world where tasks actually stay done.',
+      steps: [
+        'Set a 10-minute timer and clear one tiny surface: desk corner, bedside, one cup, one wrapper zone.',
+        'If moving feels impossible, make Ceylon/Assam milk tea and turn on Brownian rain noise.',
+        fragile ? 'No study replacement. Just a soft exit ramp.' : 'Save one resume bullet or work note if you want a real progress ping.',
+        'Let the game wait. It will still have tomatoes / gems / chaos later.',
+      ],
+      dont: [
+        'No “one more level”.',
+        'No ad reward chain.',
+        'No spending to speed up fake progress.',
+        'No calling yourself lazy because a game was engineered well.',
+      ],
+      after: 'After 10 minutes: if you play, choose a time box on purpose. No accidental restaurant empire.',
+      note: 'The real-life merge item is one tiny surface. Annoyingly effective.',
     }
   }
-  if (urge === 'short-dramas' || urge === 'web-novels') {
+
+  if (urge === 'avoiding-real-life-tasks' || state === 'avoiding-assignment-admin') {
     return {
-      comfortOption: 'Choose familiar comfort: a reread, familiar audiobook, or one saved low-stakes clip.',
-      tinyAction: undefined,
-      reminder: 'In 10 minutes, decide again. Avoid starting a new plot while pulled.',
-      note: 'The swap is softer story comfort, not no comfort.',
+      comfortOption: 'Open the smallest real-life edge. Not the whole life, just the edge.',
+      wants: 'Escape from ambiguity, fear of starting wrong, and relief from admin-shaped fog.',
+      steps: [
+        'Write one “Do One Real Thing”: one sentence, one email title, one file name, one bill check, one assessment heading.',
+        englishHard ? 'If English is hard, capture one English sentence only. Do not force output.' : 'If work mode is available, save one resume bullet or work note.',
+        'Pair it with a comfort anchor: milk tea, Brownian rain noise, or a familiar sitcom queued for after.',
+        'Stop after 10 minutes unless momentum feels genuinely kind.',
+      ],
+      dont: [
+        'No rebuilding the whole plan.',
+        'No opening five tabs “for research”.',
+        'No deciding your future from one admin task.',
+        'No hard study as self-punishment.',
+      ],
+      after: 'After 10 minutes: decide whether to continue, switch to comfort, or sleep. All allowed.',
+      note: 'Avoidance usually needs a smaller door, not a courtroom drama.',
     }
   }
-  if (urge === 'mobile-game') {
+
+  if (state === 'english-feels-hard') {
     return {
-      comfortOption: 'Swap to a lower-stakes hand comfort: stretch, tea, simple puzzle, or familiar audio.',
-      tinyAction: 'Put the phone on charge across the room if that feels possible.',
-      reminder: 'In 10 minutes, decide again. Keep the loop easy to exit.',
-      note: 'You are downshifting the loop, not banning fun.',
+      comfortOption: 'English soft mode: one sentence only, no pressure.',
+      wants: 'Avoiding performance pressure while still wanting to feel connected to English-Iris.',
+      steps: [
+        'Pick familiar input: Modern Family / B99 / Fisk / Utopia or familiar MM audiobook.',
+        'Capture one English sentence only if it naturally pops out.',
+        'No shadowing, no drilling, no “I should be fluent by now” speech.',
+        'Make milk tea or take a 10-minute walk if your brain refuses language today.',
+      ],
+      dont: [
+        'No hard study replacement.',
+        'No comparing accents.',
+        'No turning English into a moral exam.',
+        'No new addictive plot as “English practice”. Sneaky, but no.',
+      ],
+      after: 'After 10 minutes: one sentence counts. Zero sentences plus calmer nervous system also counts.',
+      note: 'English Output Journey can have soft days. The streak does not need a dramatic monologue.',
     }
   }
+
+  if (state === 'just-woke-empty') {
+    return {
+      comfortOption: 'Morning emptiness protocol: body first, internet later.',
+      wants: 'A quick identity refill before the day has shape.',
+      steps: [
+        'Water or Ceylon/Assam milk tea first.',
+        'Open curtains or take a 10-minute walk if possible.',
+        'Write one Do One Real Thing for today.',
+        'Choose one familiar comfort only after the day has one tiny anchor.',
+      ],
+      dont: [
+        'No algorithm before the day has a spine.',
+        'No shopping identity search.',
+        'No new drama while half-awake.',
+      ],
+      after: 'After 10 minutes: choose the next smallest block, not the perfect morning personality.',
+      note: 'Waking up empty is a state, not a prophecy.',
+    }
+  }
+
   return {
-    comfortOption: 'Choose one softer comfort: familiar audio, brown noise, water, stretch, or a dim-screen familiar show.',
-    tinyAction: 'Do one tiny useful thing only if it feels kind: water, charger, or one-line note.',
-    reminder: 'In 10 minutes, decide again. Comfort is allowed; spirals are optional.',
-    note: 'This is a redirect, not a test.',
+    comfortOption: 'Iris-style downshift: soft comfort plus one tiny real anchor.',
+    wants: 'Comfort, escape, control, and a fast reward without being swallowed by the internet.',
+    steps: [
+      'Turn on Brownian noise with rain and thunder, or choose a familiar comfort show.',
+      'Make milk tea, shower / wash hair, or take a 10-minute walk.',
+      fragile ? 'Skip hard study. Capture one English sentence only if it feels easy.' : 'Write one Do One Real Thing or save one work note.',
+      'Close the thing that was trying to open a new rabbit hole.',
+    ],
+    dont: [
+      'No new plot hole.',
+      'No shopping spiral.',
+      'No shame productivity.',
+      'No letting the algorithm pick your next personality.',
+    ],
+    after: 'After 10 minutes: decide again like a kind person, not a productivity police officer.',
+    note: 'Comfort is allowed. The mission is simply to choose a softer doorway.',
   }
 }
 
@@ -375,9 +521,9 @@ export default function Iris365() {
       date: today,
       urge: swapUrge,
       state: swapState,
-      suggestion: activeSuggestion.note,
+      suggestion: `${activeSuggestion.wants} ${activeSuggestion.note}`,
       comfortOption: activeSuggestion.comfortOption,
-      tinyAction: activeSuggestion.tinyAction,
+      tinyAction: activeSuggestion.steps[0],
     }, store)
     setStore(nextStore)
     setActiveSwapLog(nextStore.dopamineSwapLogs[0] ?? null)
@@ -635,32 +781,50 @@ export default function Iris365() {
                           ? 'Bedtime mode'
                           : swapState === 'pms-low-control'
                             ? 'PMS / low-control mode'
-                            : 'Stimulation downshift'}
+                            : 'Iris downshift'}
                       </div>
                       <h4>{activeSuggestion.comfortOption}</h4>
                     </div>
-                    {activeSuggestion.tinyAction && (
-                      <p>
-                        <strong>Tiny useful action:</strong> {activeSuggestion.tinyAction}
-                      </p>
-                    )}
-                    <p>{activeSuggestion.reminder}</p>
+                    <div className="dopamine-suggestion-section">
+                      <span>What this urge probably wants</span>
+                      <p>{activeSuggestion.wants}</p>
+                    </div>
+                    <div className="dopamine-suggestion-section">
+                      <span>Iris-style 10-minute downshift</span>
+                      <ol>
+                        {activeSuggestion.steps.map(step => (
+                          <li key={step}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                    <div className="dopamine-suggestion-section">
+                      <span>Do not do right now</span>
+                      <ul>
+                        {activeSuggestion.dont.map(item => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="dopamine-suggestion-section">
+                      <span>After 10 minutes</span>
+                      <p>{activeSuggestion.after}</p>
+                    </div>
                     <small>{activeSuggestion.note}</small>
                     <div className="dopamine-suggestion-actions">
                       <button type="button" className="btn btn-primary" onClick={startDopamineSwap}>
-                        10-min redirect
+                        救我10分钟
                       </button>
                       <button type="button" className="btn btn-secondary" onClick={() => saveSwap('works')}>
-                        Works for me
+                        这个真的有用
                       </button>
                       <button type="button" className="btn btn-secondary" onClick={() => saveSwap('doesnt-work')}>
-                        Doesn&apos;t work for me
+                        这个对我没用
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="dopamine-empty-suggestion">
-                    Select an urge and state to get one softer comfort option.
+                    选一个冲动 + 当前状态，我给 Iris 一个 10 分钟下坡，不讲大道理。
                   </div>
                 )}
 
@@ -686,20 +850,24 @@ export default function Iris365() {
                     <small>swaps attempted</small>
                     <span>{dopamineStats.delayedCount}</span>
                     <small>urges delayed</small>
-                    <span>{dopamineStats.mostCommonUrge ? dopamineUrgeLabel(dopamineStats.mostCommonUrge) : 'None yet'}</span>
-                    <small>common urge</small>
+                    <span>{dopamineStats.rabbitHolesAvoided}</span>
+                    <small>new rabbit holes avoided</small>
+                    <span>{dopamineStats.savedTomorrowCount}</span>
+                    <small>saved tomorrow</small>
                     <span>{dopamineStats.mostCommonState ? dopamineStateLabel(dopamineStats.mostCommonState) : 'None yet'}</span>
-                    <small>common state</small>
+                    <small>most common trigger</small>
+                    <span>{dopamineStats.mostEffectiveSavedSwap?.text ?? 'None yet'}</span>
+                    <small>most effective Iris swap</small>
                   </div>
 
                   <div className="dopamine-saved-swaps">
-                    <div className="section-label">Works for me</div>
+                    <div className="section-label">Works for Iris</div>
                     {store.dopamineSwapLibrary.filter(item => item.status === 'works').slice(0, 3).length > 0 ? (
                       store.dopamineSwapLibrary.filter(item => item.status === 'works').slice(0, 3).map(item => (
                         <span key={item.id}>{item.text}</span>
                       ))
                     ) : (
-                      <p>Save swaps that actually help. No perfection language here.</p>
+                      <p>Save swaps that actually help Iris. No generic wellness wallpaper.</p>
                     )}
                     {dopamineStats.mostEffectiveSavedSwap && (
                       <small>Most effective: {dopamineStats.mostEffectiveSavedSwap.text}</small>
@@ -940,13 +1108,13 @@ export function Iris365HomeSummary({ onOpenIris365 }: Iris365HomeSummaryProps = 
       <div>
         <div className="section-label">Low-stimulation redirect</div>
         <h3>Before I Spiral</h3>
-        <p>Feeling pulled into short dramas, web novels, shopping, scrolling, or games?</p>
+        <p>AI 短剧、中文网文、小红书、查价格、merge game、睡前找东西看？先别开新坑。</p>
       </div>
       <button type="button" className="btn btn-primary dopamine-home-action" onClick={onOpenIris365}>
-        10-min redirect
+        救我10分钟
       </button>
       <strong>
-        Comfort is allowed. Choose a softer form for 10 minutes, then decide again.
+        Comfort is allowed. 不戒快乐，只是先别把今晚交给算法。
       </strong>
       <small>
         {preStart

@@ -6816,6 +6816,34 @@ textarea {
   font-weight: 600;
 }
 
+.dopamine-suggestion-section {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.dopamine-suggestion-section > span {
+  color: var(--section-label);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dopamine-suggestion-section ol,
+.dopamine-suggestion-section ul {
+  display: grid;
+  gap: 0.34rem;
+  margin-left: 1.1rem;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.dopamine-suggestion-section li::marker {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 .dopamine-suggestion-actions {
   display: flex;
   flex-wrap: wrap;
@@ -8851,5 +8879,693 @@ body,
 
   .grounding-banner .today-note-quote-en {
     font-size: 0.95rem;
+  }
+}
+
+/* ── Iris quiet luxury beige polish ──────────────────────── */
+:root {
+  --color-bg: #F7F1EA;
+  --color-bg-wash: #FBF7F1;
+  --color-surface: #FFFDF8;
+  --color-surface-soft: #F1E7DC;
+  --color-card: #FFFBF5;
+  --color-card-warm: #F8EEE4;
+  --color-accent: #D8BBA6;
+  --color-accent-strong: #9D725E;
+  --color-accent-soft: #EFE0D5;
+  --color-text: #342721;
+  --color-text-muted: #75655B;
+  --color-text-soft: #9A8B80;
+  --color-border: #E7D9CC;
+  --color-border-soft: rgba(166, 134, 114, 0.18);
+  --color-shadow: rgba(88, 64, 50, 0.08);
+
+  --bg-page: var(--color-bg);
+  --bg-card: var(--color-card);
+  --bg-surface: var(--color-surface-soft);
+  --bg-hover: var(--color-accent-soft);
+  --bg: var(--color-bg);
+  --surface: var(--color-card);
+  --surface-2: var(--color-surface-soft);
+  --border: var(--color-border);
+  --border-strong: #D2BFAA;
+  --text: var(--color-text);
+  --text-2: var(--color-text-muted);
+  --text-3: var(--color-text-soft);
+  --text-hint: var(--color-text-soft);
+  --section-label: #A28F80;
+  --accent: var(--color-accent);
+  --accent-light: var(--color-accent-soft);
+  --accent-bg: var(--color-accent-soft);
+  --accent-border: var(--color-accent);
+  --accent-text: #6D4B3C;
+  --accent-2: var(--accent-text);
+  --reward-accent: var(--color-accent-strong);
+  --rose-border: var(--color-border-soft);
+  --cream-shadow: 0 18px 48px var(--color-shadow);
+  --shadow-sm: 0 8px 22px rgba(88, 64, 50, 0.055);
+  --shadow: 0 16px 42px rgba(88, 64, 50, 0.075);
+  --shadow-md: 0 24px 64px rgba(88, 64, 50, 0.09);
+  --radius-sm: 12px;
+  --radius: 18px;
+  --radius-lg: 26px;
+  --control-height: 44px;
+  --control-radius: 999px;
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body,
+.app-shell,
+.page,
+.app-header,
+.nav-tabs {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 253, 248, 0.86), transparent 34rem),
+    linear-gradient(180deg, var(--color-bg-wash) 0%, var(--color-bg) 42%, #F4EDE4 100%);
+  color: var(--color-text);
+}
+
+.page {
+  width: min(100%, 1120px);
+  padding-inline: clamp(1rem, 2.5vw, 2rem);
+}
+
+.page-header {
+  margin-bottom: clamp(1.2rem, 3vw, 2rem);
+}
+
+.app-header {
+  border-bottom: 1px solid rgba(231, 217, 204, 0.62);
+  backdrop-filter: blur(18px);
+  background: rgba(247, 241, 234, 0.86);
+}
+
+.app-header h1,
+.page-title,
+.card-title,
+.card-title-row h3,
+.block-queue-header h3,
+.home-status-card h3,
+.next-best-block-card h3,
+.iris365-countdown-main h3,
+.iris365-stats-card h3 {
+  color: var(--color-text);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.page-title {
+  font-size: clamp(1.5rem, 2.7vw, 2.15rem);
+}
+
+.page-subtitle,
+.card p,
+.next-action-card p,
+.start-today-card p,
+.block-queue-header p,
+.block-queue-card-main p,
+.iris365-empty-copy {
+  color: var(--color-text-muted);
+  line-height: 1.68;
+}
+
+.section-label,
+.plan-section-title,
+.step-indicator,
+.plan-date-label,
+.focus-garden-label,
+.form-group label,
+.settings-section-label,
+.pomo-phase-label,
+.next-action-now,
+.dopamine-swap-step > span,
+.dopamine-suggestion-section > span {
+  color: var(--section-label);
+  font-size: 0.69rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.nav-tabs {
+  min-height: 56px;
+  border-bottom: 1px solid rgba(231, 217, 204, 0.72);
+  gap: 0.35rem;
+}
+
+.nav-tab {
+  min-height: 44px;
+  border-radius: 999px;
+  color: var(--color-text-soft);
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  padding-inline: 0.85rem;
+}
+
+.nav-tab:hover {
+  background: rgba(255, 253, 248, 0.72);
+  color: var(--color-text);
+}
+
+.nav-tab.active {
+  background: rgba(255, 253, 248, 0.86);
+  color: var(--accent-text);
+  border-bottom-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(157, 114, 94, 0.18);
+}
+
+.card,
+.plan-header,
+.reality-card,
+.actual-log-card,
+.notion-export-card,
+.generation-status-card,
+.today-focus-section,
+.start-now-card,
+.focus-block-card,
+.start-today-card,
+.next-action-card,
+.focus-garden,
+.pomo-box,
+.inline-form,
+.task-card,
+.opp-card,
+.bill-card,
+.template-card,
+.ai-btn,
+.ai-toast,
+.calendar-integration-card,
+.settings-slideover,
+.home-status-card,
+.next-best-block-card,
+.home-block-queue,
+.home-block-card,
+.block-queue-section,
+.block-queue-card,
+.iris365-countdown-card,
+.iris365-checkin-card,
+.iris365-foundation-card,
+.iris365-growth-card,
+.iris365-details-card,
+.iris365-stimulus-card,
+.iris365-stats-card,
+.iris365-recent-card,
+.iris365-weekly-card,
+.iris365-proof-card,
+.study-hero-card,
+.english-output-journey-card,
+.english-listening-draw-card,
+.expression-hub-import-card,
+.study-timer-card,
+.study-review-card,
+.study-proof-draft-card {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(250, 244, 236, 0.92));
+  box-shadow: var(--shadow-sm);
+}
+
+.card::after,
+.plan-header::after,
+.task-card::after,
+.template-card::after,
+.next-action-card::after,
+.focus-garden::after,
+.pomo-box::after,
+.start-now-card::after {
+  display: none;
+}
+
+.grounding-banner {
+  border: 1px solid rgba(166, 134, 114, 0.16);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(216, 187, 166, 0.2), transparent 16rem),
+    linear-gradient(135deg, #FFFCF7 0%, #F7EEE5 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.grounding-label {
+  color: var(--section-label);
+}
+
+.grounding-banner .today-note-quote-cn {
+  color: #3A2A24;
+  text-wrap: balance;
+}
+
+.grounding-banner .today-note-quote-en {
+  color: var(--color-text-soft);
+}
+
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-generate,
+.pomo-btn-primary,
+.pomo-btn-ghost,
+.pomo-toggle-btn,
+.home-chip-row button,
+.queue-filter-pills button,
+.habit-tabs button,
+.block-queue-actions button,
+.home-block-actions button,
+.dopamine-chip-grid button,
+.dopamine-outcome-grid button,
+.iris365-stimulus-row button,
+.iris365-rating button,
+.iris365-proof-filter button,
+.filter-chip,
+.btn-option {
+  min-height: 44px;
+  border-radius: 999px;
+}
+
+.home-chip-row button {
+  min-height: 36px;
+  padding: 0.38rem 0.72rem;
+}
+
+.btn-primary,
+.btn-generate,
+.pomo-btn-primary,
+.pomo-toggle-btn.pomo-toggle-primary,
+.english-listening-draw-card .btn-primary {
+  border: 1px solid rgba(157, 114, 94, 0.22);
+  background: linear-gradient(180deg, #C8A48D 0%, var(--color-accent-strong) 100%);
+  color: #FFFDF8;
+  box-shadow: 0 12px 24px rgba(122, 86, 68, 0.16);
+}
+
+.btn-primary:hover,
+.btn-generate:hover,
+.pomo-btn-primary:hover,
+.pomo-toggle-btn.pomo-toggle-primary:hover,
+.english-listening-draw-card .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #B99178 0%, #815947 100%);
+  color: #FFFDF8;
+}
+
+.btn-secondary,
+.pomo-btn-ghost,
+.english-listening-draw-card .btn-secondary,
+.start-today-card .btn-primary {
+  border: 1px solid rgba(166, 134, 114, 0.24);
+  background: rgba(255, 253, 248, 0.76);
+  color: var(--accent-text);
+  box-shadow: none;
+}
+
+.btn-secondary:hover,
+.pomo-btn-ghost:hover,
+.english-listening-draw-card .btn-secondary:hover:not(:disabled) {
+  border-color: rgba(157, 114, 94, 0.38);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+input,
+select,
+textarea,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.time-block-follow-up textarea,
+.pomo-quick-input,
+.iris365-single-field input,
+.iris365-detail-grid input,
+.iris365-form-grid input,
+.iris365-form-grid textarea,
+.iris365-weekly-grid textarea,
+.iris365-proof-form input,
+.iris365-proof-form select,
+.iris365-proof-form textarea {
+  border: 1px solid rgba(166, 134, 114, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 253, 248, 0.78);
+  color: var(--color-text);
+  min-height: 44px;
+}
+
+textarea {
+  line-height: 1.65;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.time-block-follow-up textarea:focus,
+.pomo-quick-input:focus {
+  outline: 2px solid rgba(157, 114, 94, 0.22);
+  border-color: rgba(157, 114, 94, 0.48);
+  background: #FFFDF8;
+}
+
+.badge,
+.filter-chip,
+.bill-status-badge,
+.template-default-badge,
+.template-pomo-badge,
+.pomo-badge-inline,
+.plan-source-pill,
+.time-block-type,
+.scope-status,
+.next-action-time,
+.btn-option.selected,
+.btn-option.selected-low,
+.btn-option.selected-medium,
+.btn-option.selected-high,
+.filter-chip.active,
+.block-queue-status,
+.queue-badge-priority,
+.queue-badge-type,
+.iris365-motto span,
+.iris365-home-proof span,
+.iris365-low-energy-status,
+.iris365-weekly-summary span,
+.iris365-recent-pills span {
+  border: 1px solid rgba(166, 134, 114, 0.22);
+  background: rgba(241, 231, 220, 0.76);
+  color: var(--accent-text);
+  border-radius: 999px;
+}
+
+.day-type-card,
+.energy-option,
+.btn-option,
+.command-card,
+.segmented-control,
+.start-flow-step,
+.light-reminder-item,
+.template-subtask-list,
+.pomo-form-section,
+.settings-panel-item,
+.block-queue-stat,
+.focus-stats-grid div,
+.iris365-countdown-stats div,
+.iris365-stat-grid div,
+.dopamine-weekly-stats,
+.dopamine-saved-swaps {
+  border: 1px solid rgba(166, 134, 114, 0.14);
+  background: rgba(255, 253, 248, 0.58);
+  border-radius: 18px;
+}
+
+.day-type-card.selected,
+.energy-option.selected,
+.btn-option.selected,
+.filter-chip.active,
+.dopamine-chip-grid button.active,
+.dopamine-outcome-grid button:hover,
+.iris365-rating button.active,
+.iris365-proof-filter button.active {
+  border-color: rgba(157, 114, 94, 0.42);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.next-action-card,
+.next-best-block-card {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(216, 187, 166, 0.2), transparent 14rem),
+    linear-gradient(135deg, #FFFDF8 0%, #F6EBE0 100%);
+}
+
+.focus-garden,
+.pomo-box,
+.dopamine-suggestion-card,
+.dopamine-result-log,
+.dopamine-empty-suggestion {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(241, 231, 220, 0.54));
+  border-color: rgba(166, 134, 114, 0.2);
+}
+
+.focus-garden-visual,
+.focus-sparkline span,
+.pomo-progress-fill,
+.task-progress-bar span,
+.iris365-progress-bar span {
+  background: linear-gradient(180deg, #D8BBA6, #9D725E);
+}
+
+.pomo-body {
+  fill: #E8D4C3;
+}
+
+.pomo-cheek,
+.pomo-kiss-hearts,
+.pomo-sparkles {
+  fill: #C09A84;
+}
+
+.time-block {
+  border-left-color: rgba(157, 114, 94, 0.32);
+}
+
+.time-block-focus,
+.priority-item {
+  border-left-color: var(--color-accent-strong);
+}
+
+.time-block-type-focus {
+  background: var(--color-accent-soft);
+  color: var(--accent-text);
+}
+
+.task-checkbox {
+  border-color: rgba(157, 114, 94, 0.38);
+}
+
+.task-checkbox.checked {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-strong);
+}
+
+.task-checkbox.checked::after {
+  border-left-color: var(--color-accent-strong);
+  border-bottom-color: var(--color-accent-strong);
+}
+
+.dopamine-suggestion-section ol,
+.dopamine-suggestion-section ul {
+  color: var(--color-text-muted);
+}
+
+.dopamine-saved-swaps span,
+.iris365-proof-item,
+.study-review-card,
+.home-block-card,
+.block-queue-card {
+  background: rgba(255, 253, 248, 0.7);
+  border-color: rgba(166, 134, 114, 0.16);
+}
+
+@media (max-width: 760px) {
+  html {
+    font-size: 15px;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  .app-header {
+    height: 56px;
+    padding-inline: 0.9rem;
+  }
+
+  .app-header h1 {
+    max-width: 58vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-header .header-date {
+    display: none;
+  }
+
+  .nav-tabs {
+    position: fixed;
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: max(0.7rem, env(safe-area-inset-bottom));
+    z-index: 200;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(68px, 1fr);
+    overflow-x: auto;
+    min-height: 60px;
+    padding: 0.45rem;
+    border: 1px solid rgba(166, 134, 114, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 253, 248, 0.9);
+    box-shadow: 0 18px 42px rgba(88, 64, 50, 0.16);
+    backdrop-filter: blur(18px);
+  }
+
+  .nav-tab {
+    min-width: 68px;
+    min-height: 48px;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.76rem;
+    flex-direction: column;
+    gap: 0.16rem;
+    white-space: nowrap;
+  }
+
+  .nav-tab svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .page {
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem 0.9rem 1.4rem;
+  }
+
+  .page-title {
+    font-size: 1.55rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.94rem;
+  }
+
+  .card,
+  .plan-header,
+  .reality-card,
+  .actual-log-card,
+  .notion-export-card,
+  .today-focus-section,
+  .start-now-card,
+  .focus-block-card,
+  .start-today-card,
+  .next-action-card,
+  .focus-garden,
+  .pomo-box,
+  .task-card,
+  .template-card,
+  .home-status-card,
+  .next-best-block-card,
+  .home-block-queue,
+  .home-block-card,
+  .block-queue-section,
+  .block-queue-card,
+  .iris365-countdown-card,
+  .iris365-checkin-card,
+  .iris365-foundation-card,
+  .iris365-growth-card,
+  .iris365-details-card,
+  .iris365-stimulus-card,
+  .iris365-stats-card,
+  .iris365-recent-card,
+  .iris365-weekly-card,
+  .iris365-proof-card,
+  .study-hero-card,
+  .english-output-journey-card,
+  .english-listening-draw-card,
+  .expression-hub-import-card,
+  .study-timer-card {
+    border-radius: 22px;
+    padding: 1rem;
+  }
+
+  .grounding-banner {
+    border-radius: 24px;
+    padding: 1rem;
+  }
+
+  .grounding-banner .today-note-quote-cn {
+    font-size: clamp(1.8rem, 10vw, 2.55rem);
+  }
+
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-generate,
+  .pomo-btn-primary,
+  .pomo-btn-ghost,
+  .home-chip-row button,
+  .queue-filter-pills button,
+  .habit-tabs button,
+  .block-queue-actions button,
+  .home-block-actions button,
+  .dopamine-chip-grid button,
+  .dopamine-outcome-grid button {
+    width: 100%;
+    min-height: 46px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .dopamine-chip-grid,
+  .dopamine-outcome-grid,
+  .dopamine-suggestion-actions,
+  .next-best-actions,
+  .home-block-actions,
+  .block-queue-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .home-status-grid,
+  .block-queue-overview,
+  .iris365-countdown-stats,
+  .iris365-stat-grid,
+  .dopamine-weekly-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .iris365-layout,
+  .iris365-countdown-card,
+  .block-queue-header,
+  .block-queue-next,
+  .home-status-card,
+  .next-best-block-card,
+  .home-block-card {
+    grid-template-columns: 1fr;
+  }
+
+  .time-block,
+  .task-card,
+  .block-queue-card,
+  .home-block-card {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 420px) {
+  .page {
+    padding-inline: 0.72rem;
+  }
+
+  .home-status-grid,
+  .block-queue-overview,
+  .iris365-countdown-stats,
+  .iris365-stat-grid,
+  .dopamine-weekly-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-tabs {
+    grid-auto-columns: minmax(62px, 1fr);
+  }
+
+  .nav-tab {
+    min-width: 62px;
+    font-size: 0.7rem;
   }
 }
