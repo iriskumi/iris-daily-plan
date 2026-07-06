@@ -19,7 +19,6 @@ import {
   Clock,
   Sparkles,
   Plus,
-  CalendarDays,
 } from 'lucide-react'
 import type {
   GeneratedPlan,
@@ -95,11 +94,8 @@ import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
 import Iris365, { Iris365HomeSummary } from './components/Iris365'
-import ComfortLibrary from './components/ComfortLibrary'
-import StartSessionsPage from './components/StartSessionsPage'
 import MediaTab from './components/MediaTab'
 import ExerciseTab from './components/ExerciseTab'
-import Iris365MomentumTab from './components/Iris365MomentumTab'
 import irisBearIcon from './assets/iris-bear-icon.svg'
 import {
   TASK_AREAS,
@@ -118,26 +114,29 @@ import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
 import * as timerEngine from './timerEngine'
 import { writeFocusBlockSessionToTaskStore, writeInboxTaskToTaskStore } from './taskStore'
 import { consumeExpressionHubUrlImport } from './expressionHubImport'
+import {
+  iris365DayInfo,
+  loadIris365Momentum,
+  MONTHLY_MOMENTUM_PLAN,
+} from './iris365MomentumStorage'
 import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
-type Tab = 'today' | 'study' | 'tasks' | 'media' | 'exercise' | 'iris365' | 'tools' | 'settings' | 'sessions' | 'comfort' | 'progress' | 'plan' | 'integrations'
+type Tab = 'today' | 'study' | 'plan' | 'exercise' | 'media' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
-type ToolView = 'sessions' | 'plan' | 'comfort' | 'progress' | 'integrations'
 
 interface StartTodayResult {
   steps: string[]
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'study' | 'tasks' | 'media' | 'exercise' | 'iris365' | 'tools'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'exercise' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
   { id: 'study', label: 'Study', icon: <BookOpen /> },
-  { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
-  { id: 'media', label: 'Media', icon: <Heart /> },
+  { id: 'plan', label: 'Plan', icon: <Zap /> },
   { id: 'exercise', label: 'Exercise', icon: <Sparkles /> },
-  { id: 'iris365', label: 'Iris365', icon: <CalendarDays /> },
-  { id: 'tools', label: 'Tools', icon: <Sparkles /> },
+  { id: 'media', label: 'Media', icon: <Heart /> },
+  { id: 'integrations', label: 'Integrations', icon: <Plug /> },
 ]
 
 function getUrgentBills(bills: Bill[]): Bill[] {
@@ -412,7 +411,6 @@ function mergeProtectedPlan(existing: GeneratedPlan, generated: GeneratedPlan): 
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [taskView, setTaskView] = useState<TaskView>('tasks')
-  const [toolView, setToolView] = useState<ToolView>('sessions')
   const [appSettings, setAppSettings] = useState(() => loadSettings())
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan(getLocalDateKey()))
@@ -459,10 +457,7 @@ export default function App() {
       setPlan(existingPlan)
       setGenerationMessage(message)
       setGeneratingPlan(false)
-      if (!options.stayOnTab) {
-        setToolView('plan')
-        setTab('tools')
-      }
+      if (!options.stayOnTab) setTab('plan')
       return { success: true, message, plan: existingPlan }
     }
     console.log('[DailyPlan] active tasks used:', context.tasks)
@@ -518,10 +513,7 @@ export default function App() {
       const savedPlan = loadPlan(finalPlan.date) ?? finalPlan
       setPlan(savedPlan)
       setGenerationMessage(message)
-      if (!options.stayOnTab) {
-        setToolView('plan')
-        setTab('tools')
-      }
+      if (!options.stayOnTab) setTab('plan')
       return {
         success: true,
         message,
@@ -580,8 +572,7 @@ export default function App() {
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const visibleTabs = TABS
 
-  function goToTab(nextTab: Tab, nextToolView?: ToolView) {
-    if (nextToolView) setToolView(nextToolView)
+  function goToTab(nextTab: Tab) {
     setTab(nextTab)
     setSettingsPanelOpen(false)
   }
@@ -636,7 +627,7 @@ export default function App() {
               <X />
             </button>
           </div>
-          <button className="settings-panel-item" type="button" onClick={() => goToTab('tools', 'integrations')}>
+          <button className="settings-panel-item" type="button" onClick={() => goToTab('integrations')}>
             <Plug />
             <span>
               <strong>Integrations</strong>
@@ -683,9 +674,8 @@ export default function App() {
             generatingPlan={generatingPlan}
             generationMessage={generationMessage}
             onViewPlan={() => {
-                  if (appSettings.fullCommandHubMode) goToTab('tools', 'plan')
+              if (appSettings.fullCommandHubMode) goToTab('plan')
             }}
-            onOpenIris365={() => goToTab('tools', 'progress')}
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
             onFocusBlocksChange={refreshReminders}
             showEmbeddedPlan={!appSettings.fullCommandHubMode}
@@ -700,6 +690,8 @@ export default function App() {
                   savePlan(updatedPlan)
                   setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
                 }}
+                taskView={taskView}
+                onTaskViewChange={setTaskView}
               />
             }
             onStartToday={async () => {
@@ -782,36 +774,8 @@ export default function App() {
           />
         )}
         {tab === 'study' && <StudyDashboard />}
-        {tab === 'tasks' && (
-          <>
-            <div className="subnav-shell">
-              <div className="segmented-control" aria-label="Task section">
-                <button
-                  className={taskView === 'tasks' ? 'active' : ''}
-                  onClick={() => setTaskView('tasks')}
-                >
-                  <CheckSquare />
-                  Tasks
-                </button>
-                <button
-                  className={taskView === 'templates' ? 'active' : ''}
-                  onClick={() => setTaskView('templates')}
-                >
-                  <LayoutTemplate />
-                  Templates
-                </button>
-              </div>
-            </div>
-            {taskView === 'tasks' ? <TaskInbox /> : <RecurringTemplates />}
-          </>
-        )}
-        {tab === 'media' && <MediaTab />}
-        {tab === 'exercise' && <ExerciseTab />}
-        {tab === 'iris365' && <Iris365MomentumTab />}
-        {tab === 'tools' && (
-          <ToolsWorkspace
-            toolView={toolView}
-            onToolViewChange={setToolView}
+        {tab === 'plan' && (
+          <PlanWorkspace
             plan={plan}
             onGenerate={handleGeneratePlan}
             onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
@@ -821,8 +785,13 @@ export default function App() {
               savePlan(updatedPlan)
               setPlan(loadPlan(updatedPlan.date) ?? updatedPlan)
             }}
+            taskView={taskView}
+            onTaskViewChange={setTaskView}
           />
         )}
+        {tab === 'exercise' && <ExerciseTab />}
+        {tab === 'media' && <MediaTab />}
+        {tab === 'integrations' && <AIAssistant onGeneratePlan={handleGeneratePlan} />}
         {tab === 'settings' && <Settings onSettingsChange={setAppSettings} />}
       </main>
     </div>
@@ -836,69 +805,8 @@ interface PlanWorkspaceProps {
   onGoToCheckin: () => void
   onReducePlan: () => void
   onPlanChange: (plan: GeneratedPlan) => void
-}
-
-interface ToolsWorkspaceProps extends PlanWorkspaceProps {
-  toolView: ToolView
-  onToolViewChange: (view: ToolView) => void
-}
-
-const TOOL_TABS: Array<{ id: ToolView; label: string; icon: ReactNode }> = [
-  { id: 'sessions', label: 'Sessions', icon: <Play /> },
-  { id: 'plan', label: 'Plan', icon: <Zap /> },
-  { id: 'comfort', label: 'Comfort', icon: <Heart /> },
-  { id: 'progress', label: 'Comeback', icon: <CalendarDays /> },
-  { id: 'integrations', label: 'Integrations', icon: <Plug /> },
-]
-
-function ToolsWorkspace({
-  toolView,
-  onToolViewChange,
-  plan,
-  onGenerate,
-  onRegenerate,
-  onGoToCheckin,
-  onReducePlan,
-  onPlanChange,
-}: ToolsWorkspaceProps) {
-  return (
-    <div className="tools-workspace">
-      <div className="page tools-page-header">
-        <div className="page-header">
-          <h2 className="page-title">Tools</h2>
-          <p className="page-subtitle">Planning, study, tasks, comfort notes, and integrations live here.</p>
-        </div>
-        <div className="tools-tab-row" aria-label="Tools">
-          {TOOL_TABS.map(item => (
-            <button
-              key={item.id}
-              type="button"
-              className={toolView === item.id ? 'active' : ''}
-              onClick={() => onToolViewChange(item.id)}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {toolView === 'sessions' && <StartSessionsPage />}
-      {toolView === 'comfort' && <ComfortLibrary />}
-      {toolView === 'progress' && <Iris365 />}
-      {toolView === 'integrations' && <AIAssistant onGeneratePlan={onGenerate} />}
-      {toolView === 'plan' && (
-        <PlanWorkspace
-          plan={plan}
-          onGenerate={onGenerate}
-          onRegenerate={onRegenerate}
-          onGoToCheckin={onGoToCheckin}
-          onReducePlan={onReducePlan}
-          onPlanChange={onPlanChange}
-        />
-      )}
-    </div>
-  )
+  taskView: TaskView
+  onTaskViewChange: (view: TaskView) => void
 }
 
 function PlanWorkspace({
@@ -908,6 +816,8 @@ function PlanWorkspace({
   onGoToCheckin,
   onReducePlan,
   onPlanChange,
+  taskView,
+  onTaskViewChange,
 }: PlanWorkspaceProps) {
   return (
     <>
@@ -922,6 +832,33 @@ function PlanWorkspace({
         onReducePlan={onReducePlan}
         onPlanChange={onPlanChange}
       />
+      <div className="page plan-task-tools">
+        <details className="home-secondary-panel">
+          <summary>
+            <span>Task inbox / templates</span>
+            <small>Daily task tools moved here from the old top-level Tasks tab.</small>
+          </summary>
+          <div className="subnav-shell">
+            <div className="segmented-control" aria-label="Task section">
+              <button
+                className={taskView === 'tasks' ? 'active' : ''}
+                onClick={() => onTaskViewChange('tasks')}
+              >
+                <CheckSquare />
+                Tasks
+              </button>
+              <button
+                className={taskView === 'templates' ? 'active' : ''}
+                onClick={() => onTaskViewChange('templates')}
+              >
+                <LayoutTemplate />
+                Templates
+              </button>
+            </div>
+          </div>
+          {taskView === 'tasks' ? <TaskInbox /> : <RecurringTemplates />}
+        </details>
+      </div>
     </>
   )
 }
@@ -936,12 +873,38 @@ interface TodayCommandCentreProps {
   generatingPlan: boolean
   generationMessage: string | null
   onViewPlan: () => void
-  onOpenIris365: () => void
   onSendStartPlanToTodayPlan: (startPlan: StartPlan) => string
   onFocusBlocksChange: () => void
   showEmbeddedPlan: boolean
   planSection: ReactNode
   onStartToday: () => Promise<StartTodayResult>
+}
+
+function Iris365MomentumCompactCard() {
+  const today = getLocalDateKey()
+  const { dayNumber, daysRemaining } = iris365DayInfo(today)
+  const store = loadIris365Momentum()
+  const entry = store.entries[today]
+  const month = MONTHLY_MOMENTUM_PLAN[today.slice(0, 7)] ?? MONTHLY_MOMENTUM_PLAN['2026-07']
+  const movedToday = Boolean(entry?.movementDone)
+  const yesterday = new Date(`${today}T12:00:00`)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const movedYesterday = Boolean(store.entries[getLocalDateKey(yesterday)]?.movementDone)
+  const neverMissTwice = movedToday || movedYesterday ? 'On track' : 'Restart today'
+
+  return (
+    <section className="iris365-compact-card" aria-label="Iris365 Momentum">
+      <div>
+        <div className="section-label">Iris365 Momentum</div>
+        <h3>Day {dayNumber} / 365</h3>
+        <p>{month.theme} · {daysRemaining} days remaining</p>
+      </div>
+      <div className="iris365-compact-grid">
+        <span><strong>{neverMissTwice}</strong><small>never miss twice</small></span>
+        <span><strong>{entry?.tomorrowRestartStep || 'One small step'}</strong><small>today’s smallest step</small></span>
+      </div>
+    </section>
+  )
 }
 
 function TodayCommandCentre({
@@ -954,7 +917,6 @@ function TodayCommandCentre({
   generatingPlan,
   generationMessage,
   onViewPlan,
-  onOpenIris365,
   onSendStartPlanToTodayPlan,
   onFocusBlocksChange,
   showEmbeddedPlan,
@@ -977,6 +939,7 @@ function TodayCommandCentre({
   const [startNowMessage, setStartNowMessage] = useState<string | null>(null)
   const [startNowCopied, setStartNowCopied] = useState(false)
   const [planSectionOpen, setPlanSectionOpen] = useState(false)
+  const [comebackOpen, setComebackOpen] = useState(false)
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const workReminders = getTodayWorkReminders(activeWorkLeads)
@@ -1112,8 +1075,9 @@ function TodayCommandCentre({
       <div className="page command-page">
         <HomeCommandCentre
           currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
-          onOpenComeback={onOpenIris365}
+          onOpenComeback={() => setComebackOpen(true)}
         />
+        <Iris365MomentumCompactCard />
 
         <div className="grounding-banner grounding-banner-secondary" aria-label="Today note">
           <div className="grounding-label">Today Note</div>
@@ -1130,7 +1094,19 @@ function TodayCommandCentre({
             </small>
           )}
         </div>
-        <Iris365HomeSummary onOpenIris365={onOpenIris365} />
+        <Iris365HomeSummary onOpenIris365={() => setComebackOpen(true)} />
+
+        <details
+          className="home-secondary-panel"
+          open={comebackOpen}
+          onToggle={event => setComebackOpen(event.currentTarget.open)}
+        >
+          <summary>
+            <span>Proof / Comeback tools</span>
+            <small>Before I Spiral, Proof I’m Not Stuck, and older Iris365 tools.</small>
+          </summary>
+          <Iris365 />
+        </details>
 
         {showEmbeddedPlan && (
           <details
