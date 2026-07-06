@@ -19,7 +19,6 @@ import {
   Clock,
   Sparkles,
   Plus,
-  CalendarDays,
 } from 'lucide-react'
 import type {
   GeneratedPlan,
@@ -118,22 +117,21 @@ import { consumeExpressionHubUrlImport } from './expressionHubImport'
 import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
-type Tab = 'today' | 'sessions' | 'study' | 'comfort' | 'iris365' | 'plan' | 'tasks' | 'integrations' | 'settings'
+type Tab = 'today' | 'sessions' | 'tools' | 'progress' | 'settings' | 'study' | 'comfort' | 'iris365' | 'plan' | 'tasks' | 'integrations'
 type TaskView = 'tasks' | 'templates'
+type ToolView = 'study' | 'plan' | 'tasks' | 'comfort' | 'integrations'
 
 interface StartTodayResult {
   steps: string[]
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'sessions' | 'study' | 'comfort' | 'iris365' | 'plan' | 'tasks'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'sessions' | 'tools' | 'progress' | 'settings'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
   { id: 'sessions', label: 'Sessions', icon: <Play /> },
-  { id: 'study', label: 'Study', icon: <BookOpen /> },
-  { id: 'comfort', label: 'Comfort', icon: <Heart /> },
-  { id: 'iris365', label: 'Iris 365', icon: <CalendarDays /> },
-  { id: 'plan', label: 'Plan', icon: <Zap /> },
-  { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
+  { id: 'tools', label: 'Tools', icon: <Sparkles /> },
+  { id: 'progress', label: 'Progress', icon: <Heart /> },
+  { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
 ]
 
 function getUrgentBills(bills: Bill[]): Bill[] {
@@ -408,6 +406,7 @@ function mergeProtectedPlan(existing: GeneratedPlan, generated: GeneratedPlan): 
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
   const [taskView, setTaskView] = useState<TaskView>('tasks')
+  const [toolView, setToolView] = useState<ToolView>('study')
   const [appSettings, setAppSettings] = useState(() => loadSettings())
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(false)
   const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan(getLocalDateKey()))
@@ -426,12 +425,6 @@ export default function App() {
     setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
     setFocusStats(getFocusStats(loadFocusSessions()))
   }, [tab])
-
-  useEffect(() => {
-    if (!appSettings.fullCommandHubMode && tab === 'plan') {
-      setTab('today')
-    }
-  }, [appSettings.fullCommandHubMode, tab])
 
   function refreshReminders() {
     setUrgentBills(getUrgentBills(loadBills()))
@@ -460,7 +453,10 @@ export default function App() {
       setPlan(existingPlan)
       setGenerationMessage(message)
       setGeneratingPlan(false)
-      if (!options.stayOnTab) setTab('plan')
+      if (!options.stayOnTab) {
+        setToolView('plan')
+        setTab('tools')
+      }
       return { success: true, message, plan: existingPlan }
     }
     console.log('[DailyPlan] active tasks used:', context.tasks)
@@ -516,7 +512,10 @@ export default function App() {
       const savedPlan = loadPlan(finalPlan.date) ?? finalPlan
       setPlan(savedPlan)
       setGenerationMessage(message)
-      if (!options.stayOnTab) setTab('plan')
+      if (!options.stayOnTab) {
+        setToolView('plan')
+        setTab('tools')
+      }
       return {
         success: true,
         message,
@@ -573,11 +572,10 @@ export default function App() {
 
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
-  const visibleTabs = appSettings.fullCommandHubMode
-    ? TABS
-    : TABS.filter(item => item.id !== 'plan')
+  const visibleTabs = TABS
 
-  function goToTab(nextTab: Tab) {
+  function goToTab(nextTab: Tab, nextToolView?: ToolView) {
+    if (nextToolView) setToolView(nextToolView)
     setTab(nextTab)
     setSettingsPanelOpen(false)
   }
@@ -632,7 +630,7 @@ export default function App() {
               <X />
             </button>
           </div>
-          <button className="settings-panel-item" type="button" onClick={() => goToTab('integrations')}>
+          <button className="settings-panel-item" type="button" onClick={() => goToTab('tools', 'integrations')}>
             <Plug />
             <span>
               <strong>Integrations</strong>
@@ -679,9 +677,9 @@ export default function App() {
             generatingPlan={generatingPlan}
             generationMessage={generationMessage}
             onViewPlan={() => {
-              if (appSettings.fullCommandHubMode) goToTab('plan')
+                  if (appSettings.fullCommandHubMode) goToTab('tools', 'plan')
             }}
-            onOpenIris365={() => goToTab('iris365')}
+            onOpenIris365={() => goToTab('progress')}
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
             onFocusBlocksChange={refreshReminders}
             showEmbeddedPlan={!appSettings.fullCommandHubMode}
@@ -778,11 +776,12 @@ export default function App() {
           />
         )}
         {tab === 'sessions' && <StartSessionsPage />}
-        {tab === 'study' && <StudyDashboard />}
-        {tab === 'comfort' && <ComfortLibrary />}
-        {tab === 'iris365' && <Iris365 />}
-        {tab === 'plan' && (
-          <PlanWorkspace
+        {tab === 'tools' && (
+          <ToolsWorkspace
+            toolView={toolView}
+            onToolViewChange={setToolView}
+            taskView={taskView}
+            onTaskViewChange={setTaskView}
             plan={plan}
             onGenerate={handleGeneratePlan}
             onRegenerate={feedback => handleGeneratePlan(feedback, plan ?? undefined)}
@@ -794,30 +793,7 @@ export default function App() {
             }}
           />
         )}
-        {tab === 'tasks' && (
-          <>
-            <div className="subnav-shell">
-              <div className="segmented-control" aria-label="Task section">
-                <button
-                  className={taskView === 'tasks' ? 'active' : ''}
-                  onClick={() => setTaskView('tasks')}
-                >
-                  <CheckSquare />
-                  Tasks
-                </button>
-                <button
-                  className={taskView === 'templates' ? 'active' : ''}
-                  onClick={() => setTaskView('templates')}
-                >
-                  <LayoutTemplate />
-                  Templates
-                </button>
-              </div>
-            </div>
-            {taskView === 'tasks' ? <TaskInbox /> : <RecurringTemplates />}
-          </>
-        )}
-        {tab === 'integrations' && <AIAssistant onGeneratePlan={handleGeneratePlan} />}
+        {tab === 'progress' && <Iris365 />}
         {tab === 'settings' && <Settings onSettingsChange={setAppSettings} />}
       </main>
     </div>
@@ -831,6 +807,95 @@ interface PlanWorkspaceProps {
   onGoToCheckin: () => void
   onReducePlan: () => void
   onPlanChange: (plan: GeneratedPlan) => void
+}
+
+interface ToolsWorkspaceProps extends PlanWorkspaceProps {
+  toolView: ToolView
+  onToolViewChange: (view: ToolView) => void
+  taskView: TaskView
+  onTaskViewChange: (view: TaskView) => void
+}
+
+const TOOL_TABS: Array<{ id: ToolView; label: string; icon: ReactNode }> = [
+  { id: 'study', label: 'Study', icon: <BookOpen /> },
+  { id: 'plan', label: 'Plan', icon: <Zap /> },
+  { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
+  { id: 'comfort', label: 'Comfort', icon: <Heart /> },
+  { id: 'integrations', label: 'Integrations', icon: <Plug /> },
+]
+
+function ToolsWorkspace({
+  toolView,
+  onToolViewChange,
+  taskView,
+  onTaskViewChange,
+  plan,
+  onGenerate,
+  onRegenerate,
+  onGoToCheckin,
+  onReducePlan,
+  onPlanChange,
+}: ToolsWorkspaceProps) {
+  return (
+    <div className="tools-workspace">
+      <div className="page tools-page-header">
+        <div className="page-header">
+          <h2 className="page-title">Tools</h2>
+          <p className="page-subtitle">Planning, study, tasks, comfort notes, and integrations live here.</p>
+        </div>
+        <div className="tools-tab-row" aria-label="Tools">
+          {TOOL_TABS.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              className={toolView === item.id ? 'active' : ''}
+              onClick={() => onToolViewChange(item.id)}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {toolView === 'study' && <StudyDashboard />}
+      {toolView === 'comfort' && <ComfortLibrary />}
+      {toolView === 'integrations' && <AIAssistant onGeneratePlan={onGenerate} />}
+      {toolView === 'plan' && (
+        <PlanWorkspace
+          plan={plan}
+          onGenerate={onGenerate}
+          onRegenerate={onRegenerate}
+          onGoToCheckin={onGoToCheckin}
+          onReducePlan={onReducePlan}
+          onPlanChange={onPlanChange}
+        />
+      )}
+      {toolView === 'tasks' && (
+        <>
+          <div className="subnav-shell">
+            <div className="segmented-control" aria-label="Task section">
+              <button
+                className={taskView === 'tasks' ? 'active' : ''}
+                onClick={() => onTaskViewChange('tasks')}
+              >
+                <CheckSquare />
+                Tasks
+              </button>
+              <button
+                className={taskView === 'templates' ? 'active' : ''}
+                onClick={() => onTaskViewChange('templates')}
+              >
+                <LayoutTemplate />
+                Templates
+              </button>
+            </div>
+          </div>
+          {taskView === 'tasks' ? <TaskInbox /> : <RecurringTemplates />}
+        </>
+      )}
+    </div>
+  )
 }
 
 function PlanWorkspace({
@@ -1042,12 +1107,12 @@ function TodayCommandCentre({
   return (
     <>
       <div className="page command-page">
-        <div className="page-header">
-          <h2 className="page-title">Today</h2>
-          <p className="page-subtitle">Start the day, check the next action, then protect your energy.</p>
-        </div>
+        <HomeCommandCentre
+          currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
+          onOpenComeback={onOpenIris365}
+        />
 
-        <div className="grounding-banner" aria-label="Today note">
+        <div className="grounding-banner grounding-banner-secondary" aria-label="Today note">
           <div className="grounding-label">Today Note</div>
           <p className="today-note-quote-cn" lang="zh-Hans">
             {dailyNote.lines.map(line => (
@@ -1062,11 +1127,6 @@ function TodayCommandCentre({
             </small>
           )}
         </div>
-
-        <HomeCommandCentre
-          currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
-          onOpenComeback={onOpenIris365}
-        />
         <Iris365HomeSummary onOpenIris365={onOpenIris365} />
 
         {showEmbeddedPlan && (

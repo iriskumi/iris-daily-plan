@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Pause, Play, RotateCcw, X } from 'lucide-react'
+import { Check, Moon, Pause, Play, X } from 'lucide-react'
+import { IRIS_365_START_DATE } from '../iris365Storage'
 import {
   addStartNowCounter,
   addStartNowSession,
@@ -31,6 +32,15 @@ function actionHelper(action: StartNowActionType) {
   return 'Done counts.'
 }
 
+function getIris365DayNumber() {
+  const start = new Date(`${IRIS_365_START_DATE}T00:00:00`)
+  const today = new Date()
+  start.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.floor((today.getTime() - start.getTime()) / 86_400_000)
+  return Math.max(1, Math.min(365, diff + 1))
+}
+
 export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardProps) {
   const [duration, setDuration] = useState<(typeof START_NOW_DURATIONS)[number]>(10)
   const [actionType, setActionType] = useState<StartNowActionType>('Study')
@@ -41,6 +51,8 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
   const [message, setMessage] = useState<string | null>(null)
 
   const summary = useMemo(() => summarizeStartNow(records), [records])
+  const irisDay = useMemo(() => getIris365DayNumber(), [])
+  const isBedtimeMode = new Date().getHours() >= 21
   const visibleCounters = START_NOW_COUNTERS.filter(option =>
     actionType === 'Before I Spiral'
       ? option.actionType === 'Before I Spiral' || option.label.includes('bedtime')
@@ -110,19 +122,27 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
 
   return (
     <section className="start-now-dashboard" aria-label="Start now dashboard">
-      <div className="start-now-hero">
+      <div className="today-compact-status">
         <div>
-          <div className="section-label">Start Now</div>
-          <h2>What can I start right now?</h2>
-          <p>Open app → choose action → start timer or add reps → save → today counted.</p>
+          <h2>Today</h2>
+          <p>One real thing counts.</p>
         </div>
-        <div className="start-now-status">
+        <div className="today-status-pills" aria-label="Today status">
+          <span>Day {irisDay} / 365</span>
           <span>{summary.dayStatus}</span>
-          <strong>{summary.statusMessage}</strong>
         </div>
       </div>
 
-      <div className="start-now-controls-panel">
+      <div className="quick-start-card">
+        <div className="quick-start-heading">
+          <div>
+            <div className="section-label">Quick Start</div>
+            <h3>Start small</h3>
+          </div>
+          <small>{summary.statusMessage}</small>
+        </div>
+
+        <div className="start-now-controls-panel">
         <div className="start-now-control-block">
           <span>Duration</span>
           <div className="start-now-pill-grid duration-grid">
@@ -158,8 +178,9 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
 
         <button className="start-now-main-cta" type="button" onClick={startSession}>
           <Play size={18} />
-          {actionType === 'Before I Spiral' ? '救我10分钟' : 'Start now'}
+          {actionType === 'Before I Spiral' ? '救我10分钟' : 'Start'}
         </button>
+        </div>
       </div>
 
       {activeSession && (
@@ -203,19 +224,43 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
         <div className="today-counts-header">
           <div>
             <div className="section-label">Today so far</div>
-            <h3>{summary.statusMessage}</h3>
+            <h3>Soft progress is still progress.</h3>
           </div>
-          <RotateCcw aria-hidden="true" />
         </div>
         <div className="today-counts-grid">
           <div><strong>{summary.studyMinutes}</strong><span>Study min</span></div>
           <div><strong>{summary.englishPoints}</strong><span>English pts</span></div>
           <div><strong>{summary.bodyReps} / {summary.bodyMinutes}</strong><span>Body reps / min</span></div>
-          <div><strong>{summary.realThings}</strong><span>Real things</span></div>
           <div><strong>{summary.spiralsDelayed}</strong><span>Spirals delayed</span></div>
-          <div><strong>{summary.resetSessions}</strong><span>Reset sessions</span></div>
+          <div><strong>{summary.realThings}</strong><span>Real things</span></div>
         </div>
       </div>
+
+      <div className="today-minimum-card">
+        <div>
+          <div className="section-label">Today’s minimum</div>
+          <h3>今天不用完美，先开始一点点。</h3>
+        </div>
+        <div className="today-minimum-grid">
+          <span>Move body</span>
+          <span>Do one real thing</span>
+          <span>Protect sleep</span>
+        </div>
+      </div>
+
+      {isBedtimeMode && (
+        <div className="bedtime-shutdown-card">
+          <div>
+            <div className="section-label">Bedtime Shutdown</div>
+            <h3>Protect tomorrow.</h3>
+            <p>No new plot · No shopping · Familiar comfort only</p>
+          </div>
+          <button type="button" onClick={() => saveCounter('+1 bedtime shutdown')}>
+            <Moon size={14} />
+            Protect tomorrow
+          </button>
+        </div>
+      )}
 
       <div className="start-now-counters-card">
         <div>

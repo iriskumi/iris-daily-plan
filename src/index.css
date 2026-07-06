@@ -10500,3 +10500,275 @@ textarea:focus,
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Calm Today dashboard refinement */
+.today-compact-status,
+.quick-start-card,
+.today-minimum-card,
+.bedtime-shutdown-card {
+  background: rgba(255, 253, 248, 0.78);
+  border: 1px solid rgba(166, 134, 114, 0.12);
+  border-radius: 24px;
+  padding: 1rem;
+}
+
+.today-compact-status {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.today-compact-status h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.55rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.today-compact-status p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.today-status-pills,
+.today-minimum-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.today-status-pills span,
+.today-minimum-grid span {
+  border-radius: 999px;
+  background: rgba(230, 201, 195, 0.22);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.42rem 0.68rem;
+}
+
+.quick-start-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.quick-start-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.quick-start-heading h3,
+.today-minimum-card h3,
+.bedtime-shutdown-card h3 {
+  margin: 0.25rem 0 0;
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.quick-start-heading small {
+  max-width: 16rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  line-height: 1.5;
+}
+
+.quick-start-card .start-now-controls-panel {
+  grid-template-columns: minmax(0, 0.62fr) minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.quick-start-card .start-now-pill-grid button {
+  min-height: 40px;
+  padding: 0.5rem 0.72rem;
+}
+
+.quick-start-card .start-now-main-cta {
+  min-width: 7rem;
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  padding: 0.65rem 0.95rem;
+}
+
+.today-counts-card,
+.start-now-counters-card {
+  border-radius: 24px;
+  padding: 1rem;
+}
+
+.today-counts-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.today-counts-grid div {
+  min-height: 3.65rem;
+  padding: 0.62rem;
+}
+
+.today-counts-grid strong {
+  font-size: 1rem;
+}
+
+.today-counts-grid span {
+  font-size: 0.72rem;
+}
+
+.today-minimum-card,
+.bedtime-shutdown-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bedtime-shutdown-card p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.bedtime-shutdown-card button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 42px;
+  border: 1px solid rgba(185, 131, 143, 0.3);
+  border-radius: 999px;
+  background: rgba(230, 201, 195, 0.26);
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0.55rem 0.85rem;
+}
+
+.tools-page-header {
+  padding-bottom: 0.35rem;
+}
+
+.tools-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tools-tab-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-height: 42px;
+  border: 1px solid rgba(166, 134, 114, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.72);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 0.52rem 0.82rem;
+}
+
+.tools-tab-row button.active {
+  border-color: rgba(185, 131, 143, 0.38);
+  background: rgba(230, 201, 195, 0.3);
+  color: var(--color-text);
+}
+
+.tools-tab-row svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.grounding-banner-secondary {
+  margin-top: 0.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 24px;
+}
+
+.grounding-banner-secondary .today-note-quote-cn {
+  margin-block: 0.45rem 0.35rem;
+  font-size: clamp(1.45rem, 3.2vw, 2.35rem);
+  line-height: 1.42;
+}
+
+.grounding-banner-secondary .today-note-quote-en {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .quick-start-card .start-now-controls-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .today-counts-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .today-compact-status,
+  .quick-start-heading,
+  .today-minimum-card,
+  .bedtime-shutdown-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .today-status-pills,
+  .today-minimum-grid {
+    justify-content: flex-start;
+  }
+
+  .quick-start-heading small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .quick-start-card .action-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .quick-start-card .duration-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .today-counts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bedtime-shutdown-card button {
+    width: 100%;
+  }
+
+  .tools-tab-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+  }
+
+  .tools-tab-row button {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .quick-start-card .action-grid,
+  .today-counts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-start-card .duration-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
