@@ -10772,3 +10772,251 @@ textarea:focus,
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Life-system tabs: Media, Exercise, Iris365 */
+.media-tab-page,
+.exercise-tab-page,
+.iris365-momentum-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.life-system-card,
+.movement-mission-card {
+  background: rgba(255, 253, 248, 0.78);
+  border: 1px solid rgba(166, 134, 114, 0.12);
+  border-radius: 24px;
+  padding: 1rem;
+}
+
+.life-system-card h3,
+.movement-mission-card h3 {
+  margin: 0.3rem 0 0.45rem;
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.life-system-card p,
+.movement-mission-card p,
+.life-log-card p,
+.life-mini-card span {
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+
+.life-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.life-link-row,
+.life-filter-row,
+.life-chip-group,
+.life-tag-row,
+.life-log-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.life-link-row a,
+.life-filter-row button,
+.life-chip-group button,
+.life-log-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  border: 1px solid rgba(166, 134, 114, 0.15);
+  border-radius: 999px;
+  background: rgba(255, 252, 249, 0.75);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.5rem 0.78rem;
+  text-decoration: none;
+}
+
+.life-filter-row button.active,
+.life-chip-group button.active,
+.life-link-row a:hover,
+.life-log-actions button:hover {
+  border-color: rgba(185, 131, 143, 0.38);
+  background: rgba(230, 201, 195, 0.28);
+  color: var(--color-text);
+}
+
+.life-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.life-field {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-text-soft);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.life-field.wide {
+  grid-column: span 2;
+}
+
+.life-field input,
+.life-field select,
+.life-field textarea {
+  width: 100%;
+}
+
+.life-chip-group {
+  margin-top: 0.75rem;
+}
+
+.recommendation-grid,
+.life-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.recommendation-card,
+.life-stat-grid div,
+.life-mini-card,
+.life-log-card {
+  background: rgba(255, 252, 249, 0.72);
+  border: 1px solid rgba(166, 134, 114, 0.1);
+  border-radius: 20px;
+  padding: 0.85rem;
+}
+
+.recommendation-card ul,
+.recommendation-card ol,
+.iris365-momentum-page ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+
+.life-stat-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.life-stat-grid strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 1.1rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.life-stat-grid span {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.life-card-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.life-mini-card {
+  display: grid;
+  grid-template-columns: minmax(6rem, 0.24fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.life-mini-card strong,
+.life-log-card h3 {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.life-log-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.life-log-card h3,
+.life-log-card p {
+  margin: 0 0 0.35rem;
+}
+
+.life-log-card small {
+  display: block;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.life-tag-row span {
+  border-radius: 999px;
+  background: rgba(246, 238, 230, 0.62);
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  padding: 0.3rem 0.52rem;
+}
+
+.life-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.iris365-overview-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.55fr);
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .life-form-grid,
+  .recommendation-grid,
+  .life-stat-grid,
+  .life-stat-grid.compact,
+  .iris365-overview-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .life-card-heading,
+  .life-log-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .life-form-grid,
+  .recommendation-grid,
+  .life-stat-grid,
+  .life-stat-grid.compact,
+  .iris365-overview-card {
+    grid-template-columns: 1fr;
+  }
+
+  .life-field.wide {
+    grid-column: span 1;
+  }
+
+  .life-mini-card {
+    grid-template-columns: 1fr;
+  }
+
+  .life-link-row a,
+  .life-card-heading .btn-primary,
+  .life-card-heading .btn-secondary,
+  .life-log-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
