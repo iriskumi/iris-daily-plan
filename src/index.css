@@ -100,7 +100,8 @@
 
   --font-cjk: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-quote-zh: "Ma Shan Zheng Local", "Ma Shan Zheng", "ELEYANG Plog", "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-quote-zh: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "ELEYANG Plog", "Ma Shan Zheng Local", "Ma Shan Zheng", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-note-hand: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "Iris Handwriting Accent", "ELEYANG Plog", "PingFang SC", "Microsoft YaHei", cursive;
   --font-accent-hand: 'Iris Handwriting Accent', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', cursive;
   --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
 }
@@ -305,29 +306,30 @@ body {
 
 .grounding-banner p {
   margin: 0.32rem 0 0;
-  font-family: var(--font-quote-zh);
+  font-family: var(--font-note-hand);
   font-size: clamp(18px, 2.35vw, 24px);
   line-height: 1.72;
-  font-weight: 500;
-  letter-spacing: 0.045em;
+  font-weight: 400;
+  letter-spacing: 0.035em;
   color: #34251B;
   max-width: 620px;
   text-wrap: balance;
 }
 
 .grounding-banner .today-note-quote-cn {
-  font-family: "Ma Shan Zheng Local", "Ma Shan Zheng", "ELEYANG Plog", "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif !important;
-  font-size: clamp(2.25rem, 3.45vw, 3.65rem);
+  font-family: var(--font-note-hand) !important;
+  font-size: clamp(2.05rem, 3.25vw, 3.35rem);
   font-weight: 400 !important;
-  line-height: 1.42;
-  letter-spacing: 0.045em;
+  line-height: 1.48;
+  letter-spacing: 0.025em;
   color: #34251f;
   font-synthesis: none;
 }
 
 .grounding-banner .today-note-quote-en {
-  font-family: inherit;
-  font-size: 1.02rem;
+  font-family: var(--font-note-hand);
+  font-size: 1.04rem;
+  letter-spacing: 0.025em;
   color: rgba(80, 65, 75, 0.62);
 }
 

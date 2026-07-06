@@ -710,7 +710,7 @@ export default function DailyPlanView({
       </div>
 
       <div className="grounding-banner">
-        <p lang="zh-Hans">{IRIS_GROUNDING_LINE}</p>
+        <p className="today-note-quote-cn" lang="zh-Hans">{IRIS_GROUNDING_LINE}</p>
         {plan.dailyPlanBase === 'english-ai-cyber-growth' && (
           <span>
             {isEveningMode
