@@ -1122,7 +1122,10 @@ function TodayCommandCentre({
   function openComebackPanel() {
     setComebackOpen(true)
     window.requestAnimationFrame(() => {
-      comebackPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById('before-i-spiral')
+        ;(target ?? comebackPanelRef.current)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
     })
   }
 

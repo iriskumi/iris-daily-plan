@@ -997,7 +997,7 @@ export default function Iris365() {
                 </div>
               </section>
 
-              <section className="iris365-stimulus-card dopamine-swap-card">
+              <section id="before-i-spiral" className="iris365-stimulus-card dopamine-swap-card">
                 <div className="card-header">
                   <div>
                     <div className="section-label">Urge interruption</div>

@@ -10610,6 +10610,112 @@ textarea:focus,
   padding: 0.65rem 0.95rem;
 }
 
+.rescue-start-card {
+  gap: 1rem;
+  overflow: hidden;
+}
+
+.rescue-start-card .quick-start-heading {
+  align-items: flex-start;
+}
+
+.rescue-start-copy {
+  max-width: 44rem;
+  margin: 0.4rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.rescue-start-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(230, 201, 195, 0.22), rgba(255, 253, 248, 0.86) 58%),
+    rgba(255, 253, 248, 0.82);
+  padding: 0.9rem 1rem;
+}
+
+.rescue-start-row > div {
+  display: grid;
+  gap: 0.24rem;
+}
+
+.rescue-start-row strong {
+  color: var(--color-text);
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.rescue-start-row span {
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.quick-start-card .rescue-start-cta {
+  min-width: 9.5rem;
+  white-space: nowrap;
+}
+
+.quick-trace-details {
+  border-top: 1px solid rgba(166, 134, 114, 0.1);
+  padding-top: 0.2rem;
+}
+
+.quick-trace-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 500;
+  list-style: none;
+  padding: 0.65rem 0.15rem 0.15rem;
+}
+
+.quick-trace-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.quick-trace-details summary::after {
+  content: '+';
+  display: inline-grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(230, 201, 195, 0.22);
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.quick-trace-details[open] summary::after {
+  content: '-';
+}
+
+.quick-trace-details summary span {
+  color: var(--color-text);
+}
+
+.quick-trace-details summary small {
+  margin-left: auto;
+  color: var(--color-text-soft);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.quick-trace-details[open] .start-now-controls-panel {
+  margin-top: 0.75rem;
+}
+
 .today-counts-card,
 .start-now-counters-card {
   border-radius: 24px;
@@ -10727,6 +10833,7 @@ textarea:focus,
 @media (max-width: 760px) {
   .today-compact-status,
   .quick-start-heading,
+  .rescue-start-row,
   .today-minimum-card,
   .bedtime-shutdown-card {
     align-items: flex-start;
@@ -10749,6 +10856,18 @@ textarea:focus,
 
   .quick-start-card .duration-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .quick-start-card .rescue-start-cta {
+    width: 100%;
+  }
+
+  .quick-trace-details summary {
+    align-items: flex-start;
+  }
+
+  .quick-trace-details summary small {
+    display: none;
   }
 
   .today-counts-grid {

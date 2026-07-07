@@ -92,10 +92,14 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
     setRecords(getStartNowRecordsForDate())
   }
 
+  function openBeforeISpiral() {
+    onOpenComeback?.()
+    setMessage('Opened Before I Spiral. 把刺激降一级，10分钟后再说。')
+  }
+
   function startSession() {
     if (actionType === 'Before I Spiral') {
-      onOpenComeback?.()
-      setMessage('Opened Before I Spiral. 把刺激降一级，10分钟后再说。')
+      openBeforeISpiral()
       return
     }
     setCompletedSession(null)
@@ -179,55 +183,76 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
         </div>
       </div>
 
-      <div className="quick-start-card">
+      <div className="quick-start-card rescue-start-card">
         <div className="quick-start-heading">
           <div>
-            <div className="section-label">Quick Start</div>
-            <h3>Start small</h3>
+            <div className="section-label">Before I Spiral</div>
+            <h3>救我10分钟</h3>
+            <p className="rescue-start-copy">
+              短剧、网文、小红书、查价格、merge game、睡前找东西看？先不要开新坑。
+            </p>
           </div>
-          <small>{summary.statusMessage}</small>
+          <small>把刺激降一级，10分钟后再决定。</small>
         </div>
 
-        <div className="start-now-controls-panel">
-        <div className="start-now-control-block">
-          <span>Duration</span>
-          <div className="start-now-pill-grid duration-grid">
-            {START_NOW_DURATIONS.map(option => (
-              <button
-                key={option}
-                type="button"
-                className={duration === option ? 'active' : ''}
-                onClick={() => setDuration(option)}
-              >
-                {option} min
-              </button>
-            ))}
+        <div className="rescue-start-row">
+          <div>
+            <strong>不戒快乐，只是先别把今晚交给算法。</strong>
+            <span>Comfort is allowed. New rabbit holes are optional.</span>
           </div>
+          <button className="start-now-main-cta rescue-start-cta" type="button" onClick={openBeforeISpiral}>
+            <Play size={18} />
+            救我10分钟
+          </button>
         </div>
 
-        <div className="start-now-control-block">
-          <span>Action</span>
-          <div className="start-now-pill-grid action-grid">
-            {START_NOW_ACTIONS.map(action => (
-              <button
-                key={action}
-                type="button"
-                className={actionType === action ? 'active' : ''}
-                onClick={() => setActionType(action)}
-              >
-                {action}
-              </button>
-            ))}
-          </div>
-          <small>{actionHelper(actionType)}</small>
-          <small>Quick Start 会先保存今日痕迹。学习/英语/项目类完成后，可以选择同步到 Study Log。</small>
-        </div>
+        <details className="quick-trace-details">
+          <summary>
+            <span>Optional tiny trace / timer</span>
+            <small>{summary.statusMessage}</small>
+          </summary>
 
-        <button className="start-now-main-cta" type="button" onClick={startSession}>
-          <Play size={18} />
-          {actionType === 'Before I Spiral' ? '救我10分钟' : 'Start gentle session'}
-        </button>
-        </div>
+          <div className="start-now-controls-panel">
+            <div className="start-now-control-block">
+              <span>Duration</span>
+              <div className="start-now-pill-grid duration-grid">
+                {START_NOW_DURATIONS.map(option => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={duration === option ? 'active' : ''}
+                    onClick={() => setDuration(option)}
+                  >
+                    {option} min
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="start-now-control-block">
+              <span>Action</span>
+              <div className="start-now-pill-grid action-grid">
+                {START_NOW_ACTIONS.filter(action => action !== 'Before I Spiral').map(action => (
+                  <button
+                    key={action}
+                    type="button"
+                    className={actionType === action ? 'active' : ''}
+                    onClick={() => setActionType(action)}
+                  >
+                    {action}
+                  </button>
+                ))}
+              </div>
+              <small>{actionHelper(actionType)}</small>
+              <small>这里只记录一个小痕迹。学习/英语/项目类完成后，可以选择同步到 Study Log。</small>
+            </div>
+
+            <button className="start-now-main-cta" type="button" onClick={startSession}>
+              <Play size={18} />
+              Start timer
+            </button>
+          </div>
+        </details>
       </div>
 
       {message && <div className="start-now-message">{message}</div>}
