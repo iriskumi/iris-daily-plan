@@ -10533,6 +10533,14 @@ textarea:focus,
   font-size: 0.95rem;
 }
 
+.today-inline-note {
+  display: block;
+  margin-top: 0.28rem;
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .today-status-pills,
 .today-minimum-grid {
   display: flex;

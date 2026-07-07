@@ -431,9 +431,16 @@ function isRescueFriendlyTemplate(template: QuickAddTemplate): boolean {
 export default function HomeCommandCentre({
   currentEnergy,
   onOpenComeback,
+  todayNote,
+  eveningNote,
 }: {
   currentEnergy?: EnergyLevel
   onOpenComeback?: () => void
+  todayNote?: {
+    lines: string[]
+    caption: string
+  }
+  eveningNote?: string
 }) {
   const [queue, setQueue] = useState<DayBlockQueue>(() => loadDayBlockQueue(getLocalDateKey()))
   const [selectedGroup, setSelectedGroup] = useState<QuickAddGroup>('English Output')
@@ -637,7 +644,11 @@ export default function HomeCommandCentre({
 
   return (
     <section className="home-command-centre" aria-label="Today command centre">
-      <StartNowDashboard onOpenComeback={onOpenComeback} />
+      <StartNowDashboard
+        onOpenComeback={onOpenComeback}
+        todayNote={todayNote}
+        eveningNote={eveningNote}
+      />
 
       <details className="start-now-secondary-planning">
         <summary>

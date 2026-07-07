@@ -1076,24 +1076,10 @@ function TodayCommandCentre({
         <HomeCommandCentre
           currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
           onOpenComeback={() => setComebackOpen(true)}
+          todayNote={dailyNote}
+          eveningNote={isEvening ? 'Evening mode: quiet input and light review.' : ''}
         />
         <Iris365MomentumCompactCard />
-
-        <div className="grounding-banner grounding-banner-secondary" aria-label="Today note">
-          <div className="grounding-label">Today Note</div>
-          <p className="today-note-quote-cn" lang="zh-Hans">
-            {dailyNote.lines.map(line => (
-              <span key={line}>{line}</span>
-            ))}
-          </p>
-          {(dailyNote.caption || isEvening) && (
-            <small className="today-note-quote-en">
-              {dailyNote.caption}
-              {dailyNote.caption && isEvening ? ' · ' : ''}
-              {isEvening ? 'Evening mode: quiet input and light review.' : ''}
-            </small>
-          )}
-        </div>
         <Iris365HomeSummary onOpenIris365={() => setComebackOpen(true)} />
 
         <details

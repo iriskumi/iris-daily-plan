@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Moon, Pause, Play, X } from 'lucide-react'
-import { IRIS_365_START_DATE } from '../iris365Storage'
+import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
 import {
   addStartNowCounter,
   addStartNowSession,
@@ -16,6 +16,11 @@ import type { StartNowActionType, StartNowRecord } from '../startNowTypes'
 
 interface StartNowDashboardProps {
   onOpenComeback?: () => void
+  todayNote?: {
+    lines: string[]
+    caption: string
+  }
+  eveningNote?: string
 }
 
 function formatClock(seconds: number) {
@@ -35,7 +40,7 @@ function actionHelper(action: StartNowActionType) {
 }
 
 function getIris365DayNumber() {
-  const start = new Date(`${IRIS_365_START_DATE}T00:00:00`)
+  const start = new Date(`${IRIS365_MOMENTUM_START_DATE}T00:00:00`)
   const today = new Date()
   start.setHours(0, 0, 0, 0)
   today.setHours(0, 0, 0, 0)
@@ -43,7 +48,7 @@ function getIris365DayNumber() {
   return Math.max(1, Math.min(365, diff + 1))
 }
 
-export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardProps) {
+export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNote }: StartNowDashboardProps) {
   const [duration, setDuration] = useState<(typeof START_NOW_DURATIONS)[number]>(10)
   const [actionType, setActionType] = useState<StartNowActionType>('Study')
   const [records, setRecords] = useState<StartNowRecord[]>(() => getStartNowRecordsForDate())
@@ -131,7 +136,14 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
       <div className="today-compact-status">
         <div>
           <h2>Today</h2>
-          <p>One real thing counts.</p>
+          <p>{todayNote?.lines.join(' ') || 'One real thing counts.'}</p>
+          {(todayNote?.caption || eveningNote) && (
+            <small className="today-inline-note">
+              {todayNote?.caption}
+              {todayNote?.caption && eveningNote ? ' · ' : ''}
+              {eveningNote}
+            </small>
+          )}
         </div>
         <div className="today-status-pills" aria-label="Today status">
           <span>Day {irisDay} / 365</span>
