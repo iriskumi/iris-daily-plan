@@ -45,7 +45,6 @@ import type {
 import {
   loadBills,
   loadCheckin,
-  loadFocusSessions,
   loadOpportunities,
   loadPlan,
   loadTasks,
@@ -69,7 +68,7 @@ import {
   saveTasks,
   addFocusSession,
 } from './storage'
-import { getFocusStats, getLocalDateKey, localDateString } from './focus'
+import { getLocalDateKey, localDateString } from './focus'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
 import { getGoogleCalendarStatus, importCalendarCommitments } from './services/calendarService'
@@ -90,7 +89,6 @@ import HomeCommandCentre from './components/HomeCommandCentre'
 import AIAssistant from './components/AIAssistant'
 import RecurringTemplates from './components/RecurringTemplates'
 import Settings from './components/Settings'
-import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
 import Iris365 from './components/Iris365'
@@ -150,34 +148,6 @@ function getUrgentBills(bills: Bill[]): Bill[] {
 
 function getActiveWorkLeads(opportunities: WorkOpportunity[]): WorkOpportunity[] {
   return opportunities.filter(o => o.status !== 'ignore' && o.status !== 'later')
-}
-
-function minutesFromClock(value?: string): number | null {
-  if (!value) return null
-  const [hour, minute] = value.split(':').map(Number)
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
-  return hour * 60 + minute
-}
-
-function getNowContext(plan: GeneratedPlan | null): string {
-  const now = new Date()
-  const nowLabel = now.toLocaleTimeString('en-AU', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-  if (!plan) return `Now ${nowLabel} · Plan not generated yet`
-
-  const todayKey = localDateString(now)
-  if (plan.date !== todayKey) return `Now ${nowLabel} · Plan needs refresh`
-
-  const nowMinutes = now.getHours() * 60 + now.getMinutes()
-  const activeBlock = plan.timeBlocks.find(block => {
-    const start = minutesFromClock(block.startTime)
-    const end = minutesFromClock(block.endTime)
-    return start !== null && end !== null && nowMinutes >= start && nowMinutes <= end
-  })
-  if (!activeBlock) return `Now ${nowLabel} · Next block pending`
-  return `Now ${nowLabel} · ${activeBlock.type ? `${activeBlock.type} block` : 'Plan block'} active`
 }
 
 const START_NOW_STATES: StartNowState[] = [
@@ -417,7 +387,6 @@ export default function App() {
   const [plan, setPlan] = useState<GeneratedPlan | null>(() => loadPlan(getLocalDateKey()))
   const [urgentBills, setUrgentBills] = useState<Bill[]>([])
   const [activeWorkLeads, setActiveWorkLeads] = useState<WorkOpportunity[]>([])
-  const [focusStats, setFocusStats] = useState(() => getFocusStats(loadFocusSessions()))
   const [generatingPlan, setGeneratingPlan] = useState(false)
   const [generationMessage, setGenerationMessage] = useState<string | null>(null)
 
@@ -428,13 +397,11 @@ export default function App() {
   useEffect(() => {
     setUrgentBills(getUrgentBills(loadBills()))
     setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
-    setFocusStats(getFocusStats(loadFocusSessions()))
   }, [tab])
 
   function refreshReminders() {
     setUrgentBills(getUrgentBills(loadBills()))
     setActiveWorkLeads(getActiveWorkLeads(loadOpportunities()))
-    setFocusStats(getFocusStats(loadFocusSessions()))
   }
 
   const handleGeneratePlan = async (
@@ -668,7 +635,6 @@ export default function App() {
           <TodayCommandCentre
             urgentBills={urgentBills}
             activeWorkLeads={activeWorkLeads}
-            focusStats={focusStats}
             onGenerate={handleGeneratePlan}
             onRemindersChange={refreshReminders}
             currentPlan={plan}
@@ -678,7 +644,6 @@ export default function App() {
               if (appSettings.fullCommandHubMode) goToTab('plan')
             }}
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
-            onFocusBlocksChange={refreshReminders}
             showEmbeddedPlan={!appSettings.fullCommandHubMode}
             onOpenStudy={() => goToTab('study')}
             planSection={
@@ -912,7 +877,6 @@ function TaskWorkspace({
 interface TodayCommandCentreProps {
   urgentBills: Bill[]
   activeWorkLeads: WorkOpportunity[]
-  focusStats: ReturnType<typeof getFocusStats>
   onGenerate: () => Promise<GeneratePlanOutcome>
   onRemindersChange: () => void
   currentPlan: GeneratedPlan | null
@@ -920,7 +884,6 @@ interface TodayCommandCentreProps {
   generationMessage: string | null
   onViewPlan: () => void
   onSendStartPlanToTodayPlan: (startPlan: StartPlan) => string
-  onFocusBlocksChange: () => void
   showEmbeddedPlan: boolean
   planSection: ReactNode
   onStartToday: () => Promise<StartTodayResult>
@@ -957,7 +920,6 @@ function Iris365MomentumCompactCard() {
 function TodayCommandCentre({
   urgentBills,
   activeWorkLeads,
-  focusStats,
   onGenerate,
   onRemindersChange,
   currentPlan,
@@ -965,7 +927,6 @@ function TodayCommandCentre({
   generationMessage,
   onViewPlan,
   onSendStartPlanToTodayPlan,
-  onFocusBlocksChange,
   showEmbeddedPlan,
   planSection,
   onStartToday,
@@ -975,7 +936,6 @@ function TodayCommandCentre({
   const [startSteps, setStartSteps] = useState<string[]>([])
   const [carryOverSuggestions, setCarryOverSuggestions] = useState<CarryOverSuggestion[]>([])
   const [starting, setStarting] = useState(false)
-  const [showNextFocus, setShowNextFocus] = useState(false)
   const [startNowState, setStartNowState] = useState<StartNowState>('Afternoon slump')
   const [startNowEnergy, setStartNowEnergy] = useState(3)
   const [startNowTime, setStartNowTime] = useState<StartNowTimeAvailable>(15)
@@ -993,8 +953,6 @@ function TodayCommandCentre({
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const workReminders = getTodayWorkReminders(activeWorkLeads)
   const billReminders = getTodayBillReminders(urgentBills)
-  const nextAction = getNextAction(currentPlan)
-  const nowContext = getNowContext(currentPlan)
   const dailyNote = dailyNoteForDate()
   const isEvening = new Date().getHours() >= 17
 
@@ -1313,62 +1271,6 @@ function TodayCommandCentre({
             </div>
           )}
         </section>
-        </details>
-
-        <details className="home-secondary-panel">
-          <summary>
-            <span>Focus tools</span>
-            <small>Pomodoro, Focus Garden, legacy next action</small>
-          </summary>
-
-          <FocusBlockWorkflow onFocusBlocksChange={onFocusBlocksChange} />
-
-          <section className="today-focus-section">
-            <div className="today-focus-section-header">
-              <div>
-                <div className="section-label">Focus</div>
-                <h3>Focus Garden</h3>
-              </div>
-            </div>
-            <FocusGarden stats={focusStats} />
-          </section>
-
-          <div className="next-action-card">
-            <div className="next-action-main">
-              <div className="plan-section-title">Legacy plan next action</div>
-              <h3>{nextAction.title}</h3>
-              <p>{nextAction.detail}</p>
-              {(nextAction.startTime || nextAction.endTime) && (
-                <div className="next-action-time">
-                  {nextAction.startTime ?? '--'}-{nextAction.endTime ?? '--'}
-                </div>
-              )}
-              <div className="next-action-now">{nowContext}</div>
-            </div>
-            {nextAction.canStartFocus && (
-              <div className="next-action-focus">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowNextFocus(value => !value)}
-                >
-                  {showNextFocus ? 'Hide focus' : 'Open timeline focus'}
-                </button>
-                <button className="btn btn-secondary" onClick={handleViewPlan}>
-                  View plan
-                </button>
-                {showNextFocus && (
-                  <PomodoroTimer
-                    pomodoroLength={nextAction.focusMinutes ?? 25}
-                    breakLength={5}
-                    sessions={1}
-                    taskId={nextAction.taskId}
-                    taskTitle={nextAction.taskTitle ?? nextAction.title}
-                    category={nextAction.category ?? 'cyber-study'}
-                  />
-                )}
-              </div>
-            )}
-          </div>
         </details>
 
         <details className="home-secondary-panel">
@@ -1808,8 +1710,8 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
     <section className="focus-block-card" aria-label="Focus Block workflow">
       <div className="focus-block-header">
         <div>
-          <div className="section-label">Focus tools</div>
-          <h3>Focus block</h3>
+          <div className="section-label">Legacy block builder</div>
+          <h3>Block builder</h3>
           <p>Choose one inbox task and start a timer when you need it.</p>
         </div>
         <span className="focus-block-soft-pill">{pendingTasks.length} active</span>
@@ -2007,3 +1909,6 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
     </section>
   )
 }
+
+// Preserve the legacy focus block workflow implementation without exposing it in the main UI.
+void FocusBlockWorkflow

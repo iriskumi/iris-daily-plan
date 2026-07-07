@@ -1,4 +1,4 @@
-import { Dumbbell, Play, RotateCcw } from 'lucide-react'
+import { Dumbbell, Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { addExerciseEntry, loadExerciseLog } from '../exerciseStorage'
 import { getLocalDateKey } from '../focus'
@@ -10,18 +10,9 @@ import * as timerEngine from '../timerEngine'
 import type { DayBlock } from '../types'
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
-const RESET_RECORDS_KEY = 'iris-today-reset-records'
 
-type StartKind = 'study' | 'english-output' | 'english-input' | 'admin'
+type StartKind = 'study' | 'english-output' | 'english-input'
 type MovementKind = 'Walk' | 'Strength' | 'Dance' | 'Stretch' | 'Recovery'
-type ResetKind = 'breathe' | 'water' | 'stretch' | 'tidy desk' | 'short walk'
-
-interface ResetRecord {
-  id: string
-  date: string
-  kind: ResetKind
-  createdAt: string
-}
 
 interface StartNowDashboardProps {
   onOpenStudy?: () => void
@@ -48,38 +39,6 @@ function getIris365DayNumber() {
   return Math.max(1, Math.min(365, diff + 1))
 }
 
-function loadResetRecords(date = getLocalDateKey()): ResetRecord[] {
-  if (typeof localStorage === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(RESET_RECORDS_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as ResetRecord[]
-    return Array.isArray(parsed) ? parsed.filter(record => record.date === date) : []
-  } catch {
-    return []
-  }
-}
-
-function saveResetRecord(kind: ResetKind): ResetRecord[] {
-  const date = getLocalDateKey()
-  const existing = (() => {
-    try {
-      return JSON.parse(localStorage.getItem(RESET_RECORDS_KEY) ?? '[]') as ResetRecord[]
-    } catch {
-      return []
-    }
-  })()
-  const record: ResetRecord = {
-    id: makeId('reset'),
-    date,
-    kind,
-    createdAt: new Date().toISOString(),
-  }
-  const next = [record, ...existing]
-  localStorage.setItem(RESET_RECORDS_KEY, JSON.stringify(next))
-  return next.filter(item => item.date === date)
-}
-
 function timeLabel(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -89,14 +48,12 @@ function timeLabel(value: string) {
 function startTitle(kind: StartKind) {
   if (kind === 'english-output') return 'English Output Session'
   if (kind === 'english-input') return 'English Input Session'
-  if (kind === 'admin') return 'Admin / Life Session'
   return 'Study Session'
 }
 
 function startCategory(kind: StartKind): StudyCategory {
   if (kind === 'english-output') return 'English Output'
   if (kind === 'english-input') return 'English Input'
-  if (kind === 'admin') return 'Admin / Life'
   return 'Review / NotebookLM'
 }
 
@@ -130,10 +87,8 @@ export default function StartNowDashboard({
   const [message, setMessage] = useState<string | null>(null)
   const [englishChoiceOpen, setEnglishChoiceOpen] = useState(false)
   const [exerciseChoiceOpen, setExerciseChoiceOpen] = useState(false)
-  const [resetChoiceOpen, setResetChoiceOpen] = useState(false)
   const [studySessions, setStudySessions] = useState(() => loadStudySessionRecordsForDate(today))
   const [exerciseEntries, setExerciseEntries] = useState(() => loadExerciseLog().entries.filter(entry => entry.date === today))
-  const [resetRecords, setResetRecords] = useState(() => loadResetRecords(today))
   const activeStudySession = loadActiveStudySession()
   const irisDay = useMemo(() => getIris365DayNumber(), [])
   const summary = studyDoneSummary(studySessions)
@@ -151,18 +106,11 @@ export default function StartNowDashboard({
       title: `${entry.movementType} movement`,
       meta: `${entry.durationMinutes} min · Movement`,
     })),
-    ...resetRecords.map(record => ({
-      id: record.id,
-      time: timeLabel(record.createdAt),
-      title: record.kind,
-      meta: 'Reset',
-    })),
   ].sort((a, b) => b.time.localeCompare(a.time))
 
   function refreshDone() {
     setStudySessions(loadStudySessionRecordsForDate(today))
     setExerciseEntries(loadExerciseLog().entries.filter(entry => entry.date === today))
-    setResetRecords(loadResetRecords(today))
   }
 
   function startStudy(kind: StartKind) {
@@ -228,12 +176,6 @@ export default function StartNowDashboard({
     setExerciseChoiceOpen(false)
   }
 
-  function logReset(kind: ResetKind) {
-    setResetRecords(saveResetRecord(kind))
-    setMessage(`Reset saved: ${kind}.`)
-    setResetChoiceOpen(false)
-  }
-
   function handleNextUsefulThing() {
     if (activeStudySession) {
       onOpenStudy?.()
@@ -272,14 +214,12 @@ export default function StartNowDashboard({
           <div className="section-label">Start Panel</div>
           <h3>Start Now</h3>
           <p>不用先规划完整一天。先开始一个小块。</p>
-          <small>统计只计算完成的 Study Session。Queue 是今日菜单，不是压力清单。</small>
+          <small>只保留最常用入口：学习、英语、运动。</small>
         </div>
         <div className="today-start-actions">
           <button type="button" className="btn btn-primary" onClick={() => startStudy('study')}><Play size={15} />Start Study</button>
           <button type="button" className="btn btn-secondary" onClick={() => setEnglishChoiceOpen(value => !value)}>Start English</button>
           <button type="button" className="btn btn-secondary" onClick={() => setExerciseChoiceOpen(value => !value)}><Dumbbell size={15} />Start Exercise</button>
-          <button type="button" className="btn btn-secondary" onClick={() => startStudy('admin')}>Start Admin</button>
-          <button type="button" className="btn btn-secondary" onClick={() => setResetChoiceOpen(value => !value)}><RotateCcw size={15} />Start Reset</button>
         </div>
         {englishChoiceOpen && (
           <div className="today-start-choice-row">
@@ -291,13 +231,6 @@ export default function StartNowDashboard({
           <div className="today-start-choice-row">
             {(['Walk', 'Strength', 'Dance', 'Stretch', 'Recovery'] as MovementKind[]).map(item => (
               <button key={item} type="button" onClick={() => logMovement(item)}>{item}</button>
-            ))}
-          </div>
-        )}
-        {resetChoiceOpen && (
-          <div className="today-start-choice-row">
-            {(['breathe', 'water', 'stretch', 'tidy desk', 'short walk'] as ResetKind[]).map(item => (
-              <button key={item} type="button" onClick={() => logReset(item)}>{item}</button>
             ))}
           </div>
         )}
@@ -335,7 +268,6 @@ export default function StartNowDashboard({
           <div><strong>{summary.englishOutputMinutes}/{summary.englishInputMinutes}</strong><span>English output/input min</span></div>
           <div><strong>{movementMinutes}</strong><span>Movement min</span></div>
           <div><strong>{summary.adminMinutes}</strong><span>Admin min</span></div>
-          <div><strong>{resetRecords.length}</strong><span>Reset sessions</span></div>
         </div>
         <div className="today-done-list">
           {doneItems.length > 0 ? doneItems.slice(0, 8).map(item => (
@@ -345,7 +277,7 @@ export default function StartNowDashboard({
               <small>{item.meta}</small>
             </div>
           )) : (
-            <p>No completed items yet. Finish one session or log one reset to start the list.</p>
+            <p>No completed items yet. Finish one Study Session or log one movement to start the list.</p>
           )}
         </div>
       </section>

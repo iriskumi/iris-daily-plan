@@ -99,9 +99,10 @@
   --control-pad-x: 16px;
 
   --font-cjk: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-cn-soft: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "Noto Serif SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-quote-zh: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "ELEYANG Plog", "Ma Shan Zheng Local", "Ma Shan Zheng", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-note-hand: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "Iris Handwriting Accent", "ELEYANG Plog", "PingFang SC", "Microsoft YaHei", cursive;
+  --font-note-hand: var(--font-cn-soft);
   --font-accent-hand: 'Iris Handwriting Accent', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', cursive;
   --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
 }
@@ -132,6 +133,34 @@ body {
 :lang(zh-Hant),
 .font-cjk {
   font-family: var(--font-cjk);
+}
+
+.cn-soft,
+.today-note-quote-cn,
+.exercise-mission-cn,
+.gentle-cn-copy {
+  font-family: var(--font-cn-soft);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.65;
+}
+
+.gentle-cn-copy,
+.movement-mission-card p {
+  font-family: var(--font-cn-soft);
+  font-size: clamp(1.05rem, 1.28vw, 1.28rem);
+  line-height: 1.8;
+  color: rgba(59, 43, 37, 0.82);
+}
+
+/* Legacy focus systems are preserved in code/storage, but hidden from the main UI. */
+.focus-garden,
+.pomo-box,
+.pomo-toggle-row,
+.pomo-form-section,
+.template-pomo-badge,
+.pomo-badge-inline {
+  display: none !important;
 }
 
 /* ── App Shell ─────────────────────────────────────────── */
@@ -317,12 +346,12 @@ body {
 }
 
 .grounding-banner .today-note-quote-cn {
-  font-family: var(--font-note-hand) !important;
-  font-size: clamp(2.05rem, 3.25vw, 3.35rem);
+  font-family: var(--font-cn-soft) !important;
+  font-size: clamp(2rem, 3.4vw, 3.7rem);
   font-weight: 400 !important;
-  line-height: 1.48;
-  letter-spacing: 0.025em;
-  color: #34251f;
+  line-height: 1.65;
+  letter-spacing: 0.03em;
+  color: #3B2B25;
   font-synthesis: none;
 }
 
@@ -10800,13 +10829,13 @@ textarea:focus,
 
 .today-start-actions {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.55rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .today-start-actions .btn {
-  min-height: 44px;
-  padding-inline: 0.7rem;
+  min-height: 48px;
+  padding-inline: 0.9rem;
 }
 
 .today-start-choice-row {
@@ -10847,7 +10876,7 @@ textarea:focus,
 
 .today-done-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem;
   margin-top: 1rem;
 }
