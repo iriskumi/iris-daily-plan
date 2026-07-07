@@ -135,8 +135,6 @@ const FOLLOW_UP_OPTIONS = [
   { value: 'changed', label: 'Changed' },
 ] as const
 
-const IRIS_GROUNDING_LINE = '不要把今天和理想中的自己比较，只要把今天和半年前的自己比较。'
-
 function getPlanSourceLabel(plan: GeneratedPlan): string {
   if (plan.aiUsed && plan.provider === 'gemini') return 'Gemini'
   if (plan.aiUsed && plan.provider === 'deepseek') return 'DeepSeek'
@@ -683,7 +681,6 @@ export default function DailyPlanView({
   const focusStats = getFocusStats(loadFocusSessions())
   const realityCheck = getRealityCheck(plan)
   const morningPriorities = morningPriorityLines(plan.date)
-  const isEveningMode = new Date().getHours() >= 17
   const notionTimeStats = calculateDailyTimeStatistics({
     plan,
     focusBlocks: focusBlocksToday,
@@ -707,17 +704,6 @@ export default function DailyPlanView({
           <Sparkles size={11} />
           {sourceLabel}
         </div>
-      </div>
-
-      <div className="grounding-banner">
-        <p className="today-note-quote-cn" lang="zh-Hans">{IRIS_GROUNDING_LINE}</p>
-        {plan.dailyPlanBase === 'english-ai-cyber-growth' && (
-          <span>
-            {isEveningMode
-              ? 'Evening mode: quiet input and light review.'
-              : 'This is your default growth-day scaffold. Add today’s real tasks into the blocks.'}
-          </span>
-        )}
       </div>
 
       {/* Header */}

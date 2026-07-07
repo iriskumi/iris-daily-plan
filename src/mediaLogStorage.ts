@@ -20,7 +20,7 @@ export interface MediaLogStore {
 const STORAGE_KEY = 'iris-media-log'
 
 export const MEDIA_TYPES = ['Audiobook', 'Book', 'TV Show', 'Movie', 'Variety Show', 'Podcast', 'Course / Learning Clip', 'YouTube / Clip', 'Other']
-export const MEDIA_LANGUAGES = ['English', 'Japanese', 'Chinese', 'Mixed']
+export const MEDIA_LANGUAGES = ['English', 'Japanese', 'Chinese', 'Mixed', 'Other']
 export const MEDIA_STATUSES = ['Want to try', 'In progress', 'Finished', 'Dropped', 'Revisit']
 export const MEDIA_MOODS = ['low-angst', 'funny', 'cozy', 'useful', 'background', 'intense', 'not for low-energy days']
 export const MEDIA_USEFULNESS = ['English input', 'English output material', 'Japanese maintenance', 'Career / AI / Cyber', 'Relaxation', 'Not useful']

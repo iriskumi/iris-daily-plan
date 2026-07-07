@@ -12,9 +12,11 @@ import type {
   EnergyLevel,
 } from '../types'
 import { DAY_MODE_CONFIGS, minimumViableBlock, queueOverview, suggestNextBlock, targetBlocksForMode } from '../blockQueue'
+import { queueSessionTitle, startStudySessionFromQueueBlock } from '../blockQueueStudySession'
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
-import { writeQuickAddBlockToTaskStore } from '../taskStore'
+import { loadStudySessionRecordsForDate } from '../studyStorage'
+import { clearBlockQueueScheduleInTaskStore, writeQuickAddBlockToTaskStore } from '../taskStore'
 import StartNowDashboard from './StartNowDashboard'
 
 interface QuickAddTemplate {
@@ -433,6 +435,7 @@ export default function HomeCommandCentre({
   onOpenComeback,
   todayNote,
   eveningNote,
+  onOpenStudy,
 }: {
   currentEnergy?: EnergyLevel
   onOpenComeback?: () => void
@@ -441,6 +444,7 @@ export default function HomeCommandCentre({
     caption: string
   }
   eveningNote?: string
+  onOpenStudy?: () => void
 }) {
   const [queue, setQueue] = useState<DayBlockQueue>(() => loadDayBlockQueue(getLocalDateKey()))
   const [selectedGroup, setSelectedGroup] = useState<QuickAddGroup>('English Output')
@@ -460,9 +464,13 @@ export default function HomeCommandCentre({
   const [subtaskDrafts, setSubtaskDrafts] = useState<Record<string, string>>({})
   const [dismissedCompletionPrompts, setDismissedCompletionPrompts] = useState<Record<string, boolean>>({})
 
-  const blocks = useMemo(
+  const sortedBlocks = useMemo(
     () => [...queue.blocks].sort((a, b) => a.order - b.order),
     [queue.blocks],
+  )
+  const blocks = useMemo(
+    () => sortedBlocks.filter(block => !block.hiddenToday),
+    [sortedBlocks],
   )
   const dynamicAreaFilters = useMemo<Array<BlockTaskArea>>(
     () => [...new Set(blocks.map(block => block.area))].sort((a, b) => labelFromToken(a).localeCompare(labelFromToken(b))),
@@ -475,6 +483,12 @@ export default function HomeCommandCentre({
   const isEveningMode = new Date().getHours() >= 17
   const isRescueMode = queue.mode === 'rescue-day'
   const overview = queueOverview(queueForDisplay)
+  const completedStudyMinutes = useMemo(
+    () => loadStudySessionRecordsForDate(queue.date)
+      .filter(session => session.status === 'completed')
+      .reduce((sum, session) => sum + session.actualMinutes, 0),
+    [queue.date, message],
+  )
   const filterCount = activeFilterCount(filters)
   const nextBlock = suggestNextBlock(queueForDisplay, new Date(), {
     currentEnergy: selectedEnergy,
@@ -492,7 +506,7 @@ export default function HomeCommandCentre({
     const now = new Date().toISOString()
     persist({
       ...queue,
-      blocks: blocks.map(block => block.id === blockId ? { ...block, ...patch, updatedAt: now } : block),
+      blocks: queue.blocks.map(block => block.id === blockId ? { ...block, ...patch, updatedAt: now } : block),
       updatedAt: now,
     }, nextMessage)
   }
@@ -500,7 +514,7 @@ export default function HomeCommandCentre({
   function patchBlock(blockId: string, recipe: (block: DayBlock) => DayBlock, nextMessage: string) {
     persist({
       ...queue,
-      blocks: blocks.map(block => block.id === blockId ? recipe(block) : block),
+      blocks: queue.blocks.map(block => block.id === blockId ? recipe(block) : block),
       updatedAt: new Date().toISOString(),
     }, nextMessage)
   }
@@ -533,7 +547,10 @@ export default function HomeCommandCentre({
   function moveBlock(index: number, direction: -1 | 1) {
     persist({
       ...queue,
-      blocks: reorderBlocks(blocks, index, direction),
+      blocks: [
+        ...reorderBlocks(blocks, index, direction),
+        ...sortedBlocks.filter(block => block.hiddenToday),
+      ],
       updatedAt: new Date().toISOString(),
     }, 'Queue order updated.')
   }
@@ -556,6 +573,45 @@ export default function HomeCommandCentre({
 
   function convertBlock(block: DayBlock) {
     updateBlock(block.id, minimumViableBlock(block), 'Made it a 25-minute version.')
+  }
+
+  function startQueueBlock(block: DayBlock, durationMinutes: 25 | 50) {
+    const result = startStudySessionFromQueueBlock(block, durationMinutes)
+    if (!result.success) {
+      setMessage(result.message)
+      return
+    }
+    updateBlock(block.id, { status: 'in_progress' }, result.message)
+    onOpenStudy?.()
+  }
+
+  function hideBlockForToday(block: DayBlock, reason: 'later' | 'removed') {
+    const now = new Date().toISOString()
+    clearBlockQueueScheduleInTaskStore(block, 'todo')
+    persist({
+      ...queue,
+      blocks: queue.blocks.map(item => item.id === block.id
+        ? {
+            ...item,
+            hiddenToday: true,
+            hiddenTodayReason: reason,
+            hiddenTodayAt: now,
+            updatedAt: now,
+          }
+        : item,
+      ),
+      updatedAt: now,
+    }, reason === 'later'
+      ? 'Moved out of today. It stays in your task store for later.'
+      : 'Removed from today. It stays saved, but no longer belongs to today’s queue.')
+  }
+
+  function skipBlock(block: DayBlock) {
+    updateBlock(block.id, { status: 'skipped', skippedReason: 'Skipped for today.' }, 'Skipped for today. No focus minutes added.')
+  }
+
+  function completeWithoutTimer(block: DayBlock) {
+    updateBlock(block.id, { status: 'done', completedAt: new Date().toISOString() }, 'Marked done without timer. No focus minutes were added.')
   }
 
   function beginEdit(block: DayBlock) {
@@ -664,7 +720,7 @@ export default function HomeCommandCentre({
         </div>
         <div className="home-status-grid">
           <div><strong>{overview.completedBlocks}/{queue.targetBlocks}</strong><span>blocks</span></div>
-          <div><strong>{overview.completedFocusMinutes}</strong><span>focus min</span></div>
+          <div><strong>{completedStudyMinutes}</strong><span>session min</span></div>
           <div><strong>{overview.mustDone}/{overview.mustTotal}</strong><span>must-do</span></div>
           <div><strong>{overview.remainingBlocks}</strong><span>left</span></div>
         </div>
@@ -720,7 +776,7 @@ export default function HomeCommandCentre({
       <div className="next-best-block-card">
         <div className="next-best-block-copy">
           <div className="section-label">Next best block</div>
-          <h2>{nextBlock?.title ?? 'Choose one useful block'}</h2>
+          <h2>{nextBlock ? queueSessionTitle(nextBlock, 25) : 'Choose one useful block'}</h2>
           <p>{reason}</p>
           {nextBlock && (
             <div className="next-best-meta">
@@ -728,25 +784,20 @@ export default function HomeCommandCentre({
               {nextBlock.project && <span>{nextBlock.project}</span>}
               <span>{nextBlock.priority}</span>
               <span>{nextBlock.estimatedMinutes} min</span>
+              {nextBlock.estimatedMinutes >= 90 && <span className="home-large-task-label">Large task</span>}
             </div>
+          )}
+          {nextBlock && nextBlock.estimatedMinutes >= 90 && (
+            <p className="next-best-original-title">Original: {nextBlock.title}</p>
           )}
         </div>
         {nextBlock && (
           <div className="next-best-actions">
-            <button className="btn btn-primary" type="button" onClick={() => updateBlock(nextBlock.id, { status: 'in_progress' }, 'Started next block.')}>
+            <button className="btn btn-primary" type="button" onClick={() => startQueueBlock(nextBlock, 25)}>
               <Play size={14} />
-              Begin next block
+              Start 25-min
             </button>
-            <span className="next-best-helper">Start the queue item. Timer optional.</span>
-            <button className="btn btn-secondary" type="button" onClick={() => convertBlock(nextBlock)}>
-              Make it 25 min
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={() => updateBlock(nextBlock.id, { status: 'skipped' }, 'Skipped. The next block is ready.')}>
-              Skip
-            </button>
-            <button className="btn btn-secondary" type="button" onClick={() => moveBlock(blocks.findIndex(block => block.id === nextBlock.id), 1)}>
-              Change block
-            </button>
+            <span className="next-best-helper">Creates a Study timer. Minutes count only after you complete the session.</span>
           </div>
         )}
       </div>
@@ -758,6 +809,10 @@ export default function HomeCommandCentre({
           <div>
             <div className="section-label">Block queue</div>
             <h3>Today’s queue</h3>
+            <p className="queue-counting-helper">
+              Only completed focus sessions count toward study time. The queue is just today’s menu.
+              <span> 统计只计算完成的专注 session。这里是今日候选任务，不是压力清单。</span>
+            </p>
           </div>
           <div className="queue-filter-actions">
             <span>{filterCount > 0 ? `${filterCount} active` : 'All blocks'}</span>
@@ -853,24 +908,30 @@ export default function HomeCommandCentre({
             return (
             <article key={block.id} className={`home-block-card home-block-card-${block.status}`}>
               <div className="home-block-main">
-                <h4>{block.title}</h4>
+                <h4>{block.estimatedMinutes >= 90 ? queueSessionTitle(block, 25) : block.title}</h4>
                 <div className="home-block-meta">
                   <span className={`home-priority home-priority-${block.priority}`}>{block.priority}</span>
                   <span>{labelFromToken(block.area)}</span>
                   {block.project && <span>{block.project}</span>}
                   <span>{block.estimatedMinutes}m</span>
+                  {block.estimatedMinutes >= 90 && <span className="home-large-task-label">Large task</span>}
                   <span>{statusLabel(block.status)}</span>
                   {dueBucket(block) !== 'none' && (
                     <span className={`home-due-label home-due-${dueBucket(block)}`}>{dueLabel(block)}</span>
                   )}
                   {subtaskProgress(block) && <span>{subtaskProgress(block)} subtasks</span>}
                 </div>
+                {block.estimatedMinutes >= 90 && (
+                  <p className="home-block-note">Original task: {block.title}. Start with one 25-minute pass; the whole task does not need to be finished today.</p>
+                )}
                 {block.notes && <p className="home-block-note">{block.notes}</p>}
               </div>
               <div className="home-block-actions">
-                <button type="button" onClick={() => updateBlock(block.id, { status: 'in_progress' }, 'Block started.')}><Play size={13} />Start</button>
-                <button type="button" onClick={() => updateBlock(block.id, { status: 'done', completedAt: new Date().toISOString() }, 'Block completed.')}><Check size={13} />Done</button>
-                <button type="button" onClick={() => updateBlock(block.id, { status: 'skipped' }, 'Block skipped.')}>Skip</button>
+                <button type="button" className="home-block-primary-action" onClick={() => startQueueBlock(block, 25)}><Play size={13} />Start 25-min</button>
+                <button type="button" onClick={() => startQueueBlock(block, 50)}>Start 50-min</button>
+                <button type="button" onClick={() => completeWithoutTimer(block)}><Check size={13} />Done without timer</button>
+                <button type="button" onClick={() => hideBlockForToday(block, 'later')}>Later</button>
+                <button type="button" onClick={() => skipBlock(block)}>Skip</button>
                 <button type="button" className="home-icon-action" onClick={() => beginEdit(block)} aria-label={`Edit ${block.title}`}><Pencil size={13} /></button>
                 <button type="button" className="home-more-action" onClick={() => setExpandedBlockId(isExpanded ? null : block.id)}>
                   {isExpanded ? 'Less' : 'More'}
@@ -879,9 +940,10 @@ export default function HomeCommandCentre({
               {isExpanded && (
                 <div className="home-block-details">
                   <div className="home-tertiary-actions" aria-label={`More actions for ${block.title}`}>
-                    <button type="button" onClick={() => convertBlock(block)}>25 min</button>
+                    <button type="button" onClick={() => convertBlock(block)}>Convert to 25-min version</button>
                     <button type="button" onClick={() => moveBlock(index, -1)} disabled={index === 0} aria-label={`Move ${block.title} up`}><ArrowUp size={13} /></button>
                     <button type="button" onClick={() => moveBlock(index, 1)} disabled={index === blocks.length - 1} aria-label={`Move ${block.title} down`}><ArrowDown size={13} /></button>
+                    <button type="button" onClick={() => hideBlockForToday(block, 'removed')}>Remove from today</button>
                   </div>
                   {isEditing ? (
                     <div className="compact-edit-grid">
@@ -956,7 +1018,7 @@ export default function HomeCommandCentre({
                         <div className="home-subtask-complete-hint">
                           <span>All subtasks done — mark this block complete?</span>
                           <div>
-                            <button type="button" onClick={() => updateBlock(block.id, { status: 'done', completedAt: new Date().toISOString() }, 'Block completed.')}>
+                            <button type="button" onClick={() => completeWithoutTimer(block)}>
                               Yes, complete it
                             </button>
                             <button type="button" onClick={() => setDismissedCompletionPrompts(prev => ({ ...prev, [block.id]: true }))}>

@@ -112,6 +112,9 @@ export interface DayBlock {
   updatedAt: string
   completedAt?: string
   skippedReason?: string
+  hiddenToday?: boolean
+  hiddenTodayReason?: 'later' | 'removed'
+  hiddenTodayAt?: string
 }
 
 export interface DayBlockQueue {

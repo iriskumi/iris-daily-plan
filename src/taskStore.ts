@@ -295,6 +295,28 @@ export function writeQuickAddBlockToTaskStore(block: DayBlock): string {
   return taskId
 }
 
+export function clearBlockQueueScheduleInTaskStore(block: DayBlock, status: 'todo' | 'abandoned' = 'todo'): void {
+  const store = mutableTaskStore()
+  const taskId = block.unifiedTaskId ?? (block.sourceTaskId ? block.sourceTaskId : quickAddBlockTaskId(block))
+  const existing = store.tasks.find(task =>
+    task.id === taskId ||
+    task.scheduledBlockId === block.id ||
+    task.oldSourceId === block.sourceTaskId ||
+    task.oldSourceId === block.id,
+  )
+  if (!existing) return
+  saveTaskStore({
+    ...store,
+    tasks: upsertById(store.tasks, {
+      ...existing,
+      status,
+      scheduledDate: undefined,
+      scheduledBlockId: undefined,
+      updatedAt: new Date().toISOString(),
+    }),
+  })
+}
+
 export function writeInboxTaskToTaskStore(task: Task): string {
   const store = mutableTaskStore()
   const createdAt = task.createdAt || new Date().toISOString()

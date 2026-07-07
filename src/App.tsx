@@ -679,6 +679,7 @@ export default function App() {
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
             onFocusBlocksChange={refreshReminders}
             showEmbeddedPlan={!appSettings.fullCommandHubMode}
+            onOpenStudy={() => goToTab('study')}
             planSection={
               <PlanWorkspace
                 plan={plan}
@@ -878,6 +879,7 @@ interface TodayCommandCentreProps {
   showEmbeddedPlan: boolean
   planSection: ReactNode
   onStartToday: () => Promise<StartTodayResult>
+  onOpenStudy: () => void
 }
 
 function Iris365MomentumCompactCard() {
@@ -922,6 +924,7 @@ function TodayCommandCentre({
   showEmbeddedPlan,
   planSection,
   onStartToday,
+  onOpenStudy,
 }: TodayCommandCentreProps) {
   const [expanded, setExpanded] = useState<'bills' | 'work' | null>(null)
   const [startSteps, setStartSteps] = useState<string[]>([])
@@ -1086,6 +1089,7 @@ function TodayCommandCentre({
           onOpenComeback={openComebackPanel}
           todayNote={dailyNote}
           eveningNote={isEvening ? 'Evening mode: quiet input and light review.' : ''}
+          onOpenStudy={onOpenStudy}
         />
         <Iris365MomentumCompactCard />
         <Iris365HomeSummary onOpenIris365={openComebackPanel} />

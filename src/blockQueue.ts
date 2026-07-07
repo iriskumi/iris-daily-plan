@@ -232,8 +232,9 @@ export function mergeQueueWithTasks(queue: DayBlockQueue, tasks: Task[]): DayBlo
   const migratedBlocks = tasks
     .map(normalizeTask)
     .filter(isActiveTask)
-    .map((task, index) => {
+    .map((task, index): DayBlock | null => {
       const existing = existingByTaskId.get(task.id)
+      if (existing?.hiddenToday) return existing
       const migrated = dayBlockFromTask(task, queue.date, existing ? existing.order : nextOrder + index)
       return existing
         ? {
@@ -244,6 +245,7 @@ export function mergeQueueWithTasks(queue: DayBlockQueue, tasks: Task[]): DayBlo
           }
         : migrated
     })
+    .filter((block): block is DayBlock => Boolean(block))
 
   const manualBlocks = queue.blocks.filter(block => !block.sourceTaskId)
   return {
@@ -342,12 +344,14 @@ export function queueOverview(queue: DayBlockQueue): {
   mustDone: number
   mustTotal: number
 } {
-  const doneBlocks = queue.blocks.filter(block => block.status === 'done')
-  const mustBlocks = queue.blocks.filter(block => block.priority === 'must')
+  const visibleBlocks = queue.blocks.filter(block => !block.hiddenToday)
+  const doneBlocks = visibleBlocks.filter(block => block.status === 'done')
+  const mustBlocks = visibleBlocks.filter(block => block.priority === 'must')
   return {
     completedBlocks: doneBlocks.length,
-    remainingBlocks: queue.blocks.filter(block => block.status !== 'done' && block.status !== 'skipped').length,
-    completedFocusMinutes: doneBlocks.reduce((sum, block) => sum + block.estimatedMinutes, 0),
+    remainingBlocks: visibleBlocks.filter(block => block.status !== 'done' && block.status !== 'skipped').length,
+    // Queue blocks are candidates only. Focus minutes are counted from completed Study/Timer sessions.
+    completedFocusMinutes: 0,
     mustDone: mustBlocks.filter(block => block.status === 'done').length,
     mustTotal: mustBlocks.length,
   }

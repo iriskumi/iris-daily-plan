@@ -8,8 +8,11 @@ import {
   suggestNextBlock,
   targetBlocksForMode,
 } from '../blockQueue'
+import { queueSessionTitle, startStudySessionFromQueueBlock } from '../blockQueueStudySession'
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
+import { loadStudySessionRecordsForDate } from '../studyStorage'
+import { clearBlockQueueScheduleInTaskStore } from '../taskStore'
 
 function labelFromToken(value: string): string {
   return value
@@ -58,11 +61,21 @@ export default function BlockQueueView() {
   const [queue, setQueue] = useState<DayBlockQueue>(() => loadDayBlockQueue(getLocalDateKey()))
   const [message, setMessage] = useState<string | null>(null)
 
-  const blocks = useMemo(
+  const sortedBlocks = useMemo(
     () => [...queue.blocks].sort((a, b) => a.order - b.order),
     [queue.blocks],
   )
+  const blocks = useMemo(
+    () => sortedBlocks.filter(block => !block.hiddenToday),
+    [sortedBlocks],
+  )
   const overview = queueOverview({ ...queue, blocks })
+  const completedStudyMinutes = useMemo(
+    () => loadStudySessionRecordsForDate(queue.date)
+      .filter(session => session.status === 'completed')
+      .reduce((sum, session) => sum + session.actualMinutes, 0),
+    [queue.date, message],
+  )
   const nextBlock = suggestNextBlock({ ...queue, blocks })
   const modeConfig = DAY_MODES.find(mode => mode.id === queue.mode)
 
@@ -76,7 +89,7 @@ export default function BlockQueueView() {
     const now = new Date().toISOString()
     persist({
       ...queue,
-      blocks: blocks.map(block =>
+      blocks: queue.blocks.map(block =>
         block.id === blockId
           ? { ...block, ...patch, updatedAt: now }
           : block,
@@ -99,7 +112,10 @@ export default function BlockQueueView() {
     const now = new Date().toISOString()
     persist({
       ...queue,
-      blocks: reorderBlocks(blocks, index, direction),
+      blocks: [
+        ...reorderBlocks(blocks, index, direction),
+        ...sortedBlocks.filter(block => block.hiddenToday),
+      ],
       updatedAt: now,
     }, 'Block order updated.')
   }
@@ -109,6 +125,40 @@ export default function BlockQueueView() {
     updateBlock(block.id, compact, 'Converted to a 25-minute version.')
   }
 
+  function startQueueBlock(block: DayBlock, durationMinutes: 25 | 50) {
+    const result = startStudySessionFromQueueBlock(block, durationMinutes)
+    if (!result.success) {
+      setMessage(result.message)
+      return
+    }
+    updateBlock(block.id, { status: 'in_progress' }, `${result.message} Open Study to finish the session.`)
+  }
+
+  function completeWithoutTimer(block: DayBlock) {
+    updateBlock(block.id, { status: 'done', completedAt: new Date().toISOString() }, 'Marked done without timer. No focus minutes were added.')
+  }
+
+  function hideBlockForToday(block: DayBlock, reason: 'later' | 'removed') {
+    const now = new Date().toISOString()
+    clearBlockQueueScheduleInTaskStore(block, 'todo')
+    persist({
+      ...queue,
+      blocks: queue.blocks.map(item => item.id === block.id
+        ? {
+            ...item,
+            hiddenToday: true,
+            hiddenTodayReason: reason,
+            hiddenTodayAt: now,
+            updatedAt: now,
+          }
+        : item,
+      ),
+      updatedAt: now,
+    }, reason === 'later'
+      ? 'Moved out of today. It stays in your task store for later.'
+      : 'Removed from today. It stays saved, but no longer belongs to today’s queue.')
+  }
+
   return (
     <section className="block-queue-section" aria-label="Block Queue">
       <div className="block-queue-header">
@@ -116,7 +166,7 @@ export default function BlockQueueView() {
           <div className="section-label">Block Queue</div>
           <h3>Today’s flexible blocks</h3>
           <p>
-            Use this queue when the timetable bends. Complete useful blocks and move on.
+            Only completed Study/Timer sessions count toward focus time. The queue is just today’s menu.
           </p>
         </div>
         <div className="block-queue-mode">
@@ -153,8 +203,8 @@ export default function BlockQueueView() {
           <small>remaining</small>
         </div>
         <div className="block-queue-stat">
-          <span>{overview.completedFocusMinutes}</span>
-          <small>focus minutes</small>
+          <span>{completedStudyMinutes}</span>
+          <small>session minutes</small>
         </div>
         <div className="block-queue-stat">
           <span>{overview.mustDone}/{overview.mustTotal}</span>
@@ -165,10 +215,10 @@ export default function BlockQueueView() {
       <div className="block-queue-next">
         <div>
           <div className="section-label">Suggested next block</div>
-          <strong>{nextBlock?.title ?? 'No active blocks left'}</strong>
+          <strong>{nextBlock ? queueSessionTitle(nextBlock, 25) : 'No active blocks left'}</strong>
           <span>
             {nextBlock
-              ? `${labelFromToken(nextBlock.priority)} · ${nextBlock.estimatedMinutes} min · ${labelFromToken(nextBlock.energyLevel)} energy`
+              ? `${labelFromToken(nextBlock.priority)} · ${nextBlock.estimatedMinutes} min · ${labelFromToken(nextBlock.energyLevel)} energy${nextBlock.estimatedMinutes >= 90 ? ' · Large task' : ''}`
               : 'Add a task or reopen a skipped block when needed.'}
           </span>
         </div>
@@ -176,10 +226,10 @@ export default function BlockQueueView() {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => updateBlock(nextBlock.id, { status: 'in_progress' }, 'Suggested block started.')}
+            onClick={() => startQueueBlock(nextBlock, 25)}
           >
             <Play size={14} />
-            Start
+            Start 25-min
           </button>
         )}
       </div>
@@ -199,7 +249,7 @@ export default function BlockQueueView() {
               <article key={block.id} className={`block-queue-card block-queue-card-${block.status}`}>
                 <div className="block-queue-card-main">
                   <div className="block-queue-title-row">
-                    <h4>{block.title}</h4>
+                    <h4>{block.estimatedMinutes >= 90 ? queueSessionTitle(block, 25) : block.title}</h4>
                     <span className={`block-queue-status block-queue-status-${block.status}`}>
                       {statusLabel(block.status)}
                     </span>
@@ -215,26 +265,43 @@ export default function BlockQueueView() {
                     <span className="queue-badge">{labelFromToken(block.area)}</span>
                     {block.project && <span className="queue-badge">{block.project}</span>}
                     <span className="queue-badge">{block.estimatedMinutes} min</span>
+                    {block.estimatedMinutes >= 90 && <span className="queue-badge">Large task</span>}
                     {due && <span className="queue-badge">Due {due}</span>}
                     <span className="queue-badge">{subtaskProgress(block)}</span>
                     <span className="queue-badge">{labelFromToken(block.energyLevel)} energy</span>
                   </div>
                 </div>
 
+                {block.estimatedMinutes >= 90 && (
+                  <p>Original task: {block.title}. Start with one 25-minute pass; the whole task does not need to be finished today.</p>
+                )}
+
                 <div className="block-queue-actions" aria-label={`Actions for ${block.title}`}>
                   <button
                     type="button"
-                    onClick={() => updateBlock(block.id, { status: 'in_progress' }, 'Block started.')}
+                    onClick={() => startQueueBlock(block, 25)}
                   >
                     <Play size={13} />
-                    Start
+                    Start 25-min
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateBlock(block.id, { status: 'done', completedAt: new Date().toISOString() }, 'Block completed.')}
+                    onClick={() => startQueueBlock(block, 50)}
+                  >
+                    Start 50-min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => completeWithoutTimer(block)}
                   >
                     <Check size={13} />
-                    Complete
+                    Done without timer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => hideBlockForToday(block, 'later')}
+                  >
+                    Later
                   </button>
                   <button
                     type="button"
@@ -244,7 +311,10 @@ export default function BlockQueueView() {
                   </button>
                   <button type="button" onClick={() => convertBlock(block)}>
                     <RotateCcw size={13} />
-                    25-min
+                    Convert to 25-min version
+                  </button>
+                  <button type="button" onClick={() => hideBlockForToday(block, 'removed')}>
+                    Remove from today
                   </button>
                   <button
                     type="button"
