@@ -201,6 +201,8 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
         </div>
       </div>
 
+      {message && <div className="start-now-message">{message}</div>}
+
       <VisibleEffortStrip records={records} />
 
       {activeSession && (
@@ -306,7 +308,6 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
         <WeeklyEffortWall records={weekRecords} />
       </details>
 
-      {message && <div className="start-now-message">{message}</div>}
     </section>
   )
 }

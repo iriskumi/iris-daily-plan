@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useRef, useState, useEffect, type ReactNode } from 'react'
 import {
   ClipboardList,
   BookOpen,
@@ -940,6 +940,7 @@ function TodayCommandCentre({
   const [startNowCopied, setStartNowCopied] = useState(false)
   const [planSectionOpen, setPlanSectionOpen] = useState(false)
   const [comebackOpen, setComebackOpen] = useState(false)
+  const comebackPanelRef = useRef<HTMLDetailsElement | null>(null)
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const workReminders = getTodayWorkReminders(activeWorkLeads)
@@ -1070,19 +1071,27 @@ function TodayCommandCentre({
     setStartNowMessage(onSendStartPlanToTodayPlan(startNowPlan))
   }
 
+  function openComebackPanel() {
+    setComebackOpen(true)
+    window.requestAnimationFrame(() => {
+      comebackPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
   return (
     <>
       <div className="page command-page">
         <HomeCommandCentre
           currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
-          onOpenComeback={() => setComebackOpen(true)}
+          onOpenComeback={openComebackPanel}
           todayNote={dailyNote}
           eveningNote={isEvening ? 'Evening mode: quiet input and light review.' : ''}
         />
         <Iris365MomentumCompactCard />
-        <Iris365HomeSummary onOpenIris365={() => setComebackOpen(true)} />
+        <Iris365HomeSummary onOpenIris365={openComebackPanel} />
 
         <details
+          ref={comebackPanelRef}
           className="home-secondary-panel"
           open={comebackOpen}
           onToggle={event => setComebackOpen(event.currentTarget.open)}
