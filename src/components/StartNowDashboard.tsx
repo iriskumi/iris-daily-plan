@@ -11,6 +11,11 @@ import {
   START_NOW_DURATIONS,
   summarizeStartNow,
 } from '../startNowStorage'
+import {
+  isQuickStartStudyEligible,
+  syncQuickStartToStudyLog,
+  type QuickStartStudySyncChoice,
+} from '../quickStartStudySync'
 import { EffortReceipt, VisibleEffortStrip, WeeklyEffortWall } from './VisibleEffort'
 import type { StartNowActionType, StartNowRecord } from '../startNowTypes'
 
@@ -57,6 +62,8 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
   const [tinyWin, setTinyWin] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [latestReceipt, setLatestReceipt] = useState<StartNowRecord | null>(null)
+  const [pendingStudySync, setPendingStudySync] = useState<StartNowRecord | null>(null)
+  const [studySyncMessage, setStudySyncMessage] = useState<string | null>(null)
 
   const summary = useMemo(() => summarizeStartNow(records), [records])
   const weekRecords = useMemo(() => getStartNowWeekRecords(), [records])
@@ -119,7 +126,28 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
     setTinyWin('')
     refreshRecords()
     setLatestReceipt(record)
-    setMessage('One small session saved. Today counted a little more.')
+    setStudySyncMessage(null)
+    if (isQuickStartStudyEligible(record)) {
+      setPendingStudySync(record)
+      setMessage('Today trace saved. You can also sync this to Study Log.')
+    } else {
+      setPendingStudySync(null)
+      setMessage('One small session saved. Today counted a little more.')
+    }
+  }
+
+  function handleStudySync(choice: QuickStartStudySyncChoice) {
+    if (!pendingStudySync) return
+    if (choice === 'trace-only') {
+      setPendingStudySync(null)
+      setStudySyncMessage('Trace only saved. Study Log unchanged.')
+      setMessage('Trace only saved.')
+      return
+    }
+    const result = syncQuickStartToStudyLog(pendingStudySync, choice)
+    setPendingStudySync(null)
+    setStudySyncMessage(result.message)
+    setMessage(result.message)
   }
 
   function saveCounter(label: string) {
@@ -192,6 +220,7 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
             ))}
           </div>
           <small>{actionHelper(actionType)}</small>
+          <small>Quick Start 会先保存今日痕迹。学习/英语/项目类完成后，可以选择同步到 Study Log。</small>
         </div>
 
         <button className="start-now-main-cta" type="button" onClick={startSession}>
@@ -243,6 +272,42 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
       )}
 
       {latestReceipt && <EffortReceipt record={latestReceipt} />}
+
+      {pendingStudySync && (
+        <div className="start-now-complete-card">
+          <div>
+            <span>也同步到 Study Log 吗？</span>
+            <h3>Save to Study Log too?</h3>
+            <p>今日痕迹已经保存。同步后会计入 Study Sessions 和学习统计。</p>
+          </div>
+          {pendingStudySync.actionType === 'English' ? (
+            <div className="start-now-complete-actions">
+              <button className="btn-primary" type="button" onClick={() => handleStudySync('english-output')}>
+                English Output Rep
+              </button>
+              <button className="btn-secondary" type="button" onClick={() => handleStudySync('english-input')}>
+                English Input only
+              </button>
+              <button className="btn-secondary" type="button" onClick={() => handleStudySync('trace-only')}>
+                只留今日痕迹
+              </button>
+            </div>
+          ) : (
+            <div className="start-now-complete-actions">
+              <button className="btn-primary" type="button" onClick={() => handleStudySync('study-log')}>
+                同步到 Study Log
+              </button>
+              <button className="btn-secondary" type="button" onClick={() => handleStudySync('trace-only')}>
+                只留今日痕迹
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {studySyncMessage && !pendingStudySync && (
+        <div className="start-now-message">{studySyncMessage}</div>
+      )}
 
       <div className="today-counts-card">
         <div className="today-counts-header">
