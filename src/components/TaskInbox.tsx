@@ -264,6 +264,7 @@ export default function TaskInbox() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [timerOpenId, setTimerOpenId] = useState<string | null>(null)
+  const [timerDurations, setTimerDurations] = useState<Record<string, number>>({})
 
   function persist(updated: Task[]) {
     setTasks(updated)
@@ -361,6 +362,9 @@ export default function TaskInbox() {
             <p className="page-subtitle">
               {pendingCount} pending · {doneCount} done
             </p>
+            <p className="page-subtitle">
+              Pomodoro sessions are separate from Study Sessions unless started from Study.
+            </p>
           </div>
           <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button
@@ -449,6 +453,9 @@ export default function TaskInbox() {
           {filtered.map(task => {
             const dl = deadlineTag(task.deadline)
             const timerOpen = timerOpenId === task.id
+            const isLargeTask = task.estimatedMinutes >= 90
+            const totalEstimateLabel = `${task.estimatedMinutes} min total`
+            const timerDuration = timerDurations[task.id] ?? task.pomodoroLength ?? task.estimatedMinutes ?? 50
 
             return (
               <div key={task.id}>
@@ -479,16 +486,23 @@ export default function TaskInbox() {
                         <span className="badge">
                           {task.status ?? (task.done ? 'Done' : 'Inbox')}
                         </span>
+                        {isLargeTask && (
+                          <span className="badge">
+                            Large task
+                          </span>
+                        )}
                         {task.pomodoroEnabled && (
                           <span className="pomo-badge-inline">
-                            {task.pomodoroLength ?? task.estimatedMinutes}m
+                            {isLargeTask ? totalEstimateLabel : `${task.pomodoroLength ?? task.estimatedMinutes}m`}
                           </span>
                         )}
                         {dl && (
                           <span className={`task-deadline ${dl.cls}`}>{dl.text}</span>
                         )}
                         <span className="text-xs text-muted">
-                          {task.estimatedMinutes < 60
+                          {isLargeTask
+                            ? totalEstimateLabel
+                            : task.estimatedMinutes < 60
                             ? `${task.estimatedMinutes}m`
                             : `${(task.estimatedMinutes / 60).toFixed(1)}h`}
                         </span>
@@ -509,19 +523,44 @@ export default function TaskInbox() {
                       {/* Pomodoro timer section */}
                       {task.pomodoroEnabled && isActiveTask(task) && (
                         <div className="pomo-toggle-row">
-                          <button
-                            className={`pomo-toggle-btn pomo-toggle-primary ${timerOpen ? 'active' : ''}`}
-                            onClick={() => setTimerOpenId(timerOpen ? null : task.id)}
-                          >
-                            <Timer size={12} />
-                            {timerOpen ? 'Hide timer' : 'Start focus'}
-                          </button>
+                          {isLargeTask ? (
+                            <>
+                              <button
+                                className={`pomo-toggle-btn pomo-toggle-primary ${timerOpen && timerDuration === 25 ? 'active' : ''}`}
+                                onClick={() => {
+                                  setTimerDurations(prev => ({ ...prev, [task.id]: 25 }))
+                                  setTimerOpenId(timerOpen && timerDuration === 25 ? null : task.id)
+                                }}
+                              >
+                                <Timer size={12} />
+                                {timerOpen && timerDuration === 25 ? 'Hide Pomodoro' : 'Start 25-min Pomodoro'}
+                              </button>
+                              <button
+                                className={`pomo-toggle-btn ${timerOpen && timerDuration === 50 ? 'active' : ''}`}
+                                onClick={() => {
+                                  setTimerDurations(prev => ({ ...prev, [task.id]: 50 }))
+                                  setTimerOpenId(timerOpen && timerDuration === 50 ? null : task.id)
+                                }}
+                              >
+                                <Timer size={12} />
+                                {timerOpen && timerDuration === 50 ? 'Hide Pomodoro' : 'Start 50-min Pomodoro'}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className={`pomo-toggle-btn pomo-toggle-primary ${timerOpen ? 'active' : ''}`}
+                              onClick={() => setTimerOpenId(timerOpen ? null : task.id)}
+                            >
+                              <Timer size={12} />
+                              {timerOpen ? 'Hide Pomodoro' : 'Start Pomodoro'}
+                            </button>
+                          )}
                         </div>
                       )}
 
                       {timerOpen && task.pomodoroEnabled && isActiveTask(task) && (
                         <PomodoroTimer
-                          pomodoroLength={task.pomodoroLength ?? task.estimatedMinutes ?? 50}
+                          pomodoroLength={timerDuration}
                           breakLength={task.breakLength ?? 10}
                           sessions={task.pomodoroSessions ?? 1}
                           taskId={task.id}

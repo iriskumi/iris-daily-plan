@@ -122,7 +122,7 @@ import {
 import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
-type Tab = 'today' | 'study' | 'plan' | 'exercise' | 'media' | 'integrations' | 'settings'
+type Tab = 'today' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
 
 interface StartTodayResult {
@@ -130,10 +130,11 @@ interface StartTodayResult {
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'exercise' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
   { id: 'study', label: 'Study', icon: <BookOpen /> },
   { id: 'plan', label: 'Plan', icon: <Zap /> },
+  { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
   { id: 'exercise', label: 'Exercise', icon: <Sparkles /> },
   { id: 'media', label: 'Media', icon: <Heart /> },
   { id: 'integrations', label: 'Integrations', icon: <Plug /> },
@@ -693,6 +694,7 @@ export default function App() {
                 }}
                 taskView={taskView}
                 onTaskViewChange={setTaskView}
+                onOpenTasks={() => goToTab('tasks')}
               />
             }
             onStartToday={async () => {
@@ -788,6 +790,14 @@ export default function App() {
             }}
             taskView={taskView}
             onTaskViewChange={setTaskView}
+            onOpenTasks={() => goToTab('tasks')}
+          />
+        )}
+        {tab === 'tasks' && (
+          <TaskWorkspace
+            taskView={taskView}
+            onTaskViewChange={setTaskView}
+            standalone
           />
         )}
         {tab === 'exercise' && <ExerciseTab />}
@@ -808,6 +818,7 @@ interface PlanWorkspaceProps {
   onPlanChange: (plan: GeneratedPlan) => void
   taskView: TaskView
   onTaskViewChange: (view: TaskView) => void
+  onOpenTasks: () => void
 }
 
 function PlanWorkspace({
@@ -819,6 +830,7 @@ function PlanWorkspace({
   onPlanChange,
   taskView,
   onTaskViewChange,
+  onOpenTasks,
 }: PlanWorkspaceProps) {
   return (
     <>
@@ -834,33 +846,66 @@ function PlanWorkspace({
         onPlanChange={onPlanChange}
       />
       <div className="page plan-task-tools">
-        <details className="home-secondary-panel">
-          <summary>
-            <span>Task inbox / templates</span>
-            <small>Daily task tools moved here from the old top-level Tasks tab.</small>
-          </summary>
-          <div className="subnav-shell">
-            <div className="segmented-control" aria-label="Task section">
-              <button
-                className={taskView === 'tasks' ? 'active' : ''}
-                onClick={() => onTaskViewChange('tasks')}
-              >
-                <CheckSquare />
-                Tasks
-              </button>
-              <button
-                className={taskView === 'templates' ? 'active' : ''}
-                onClick={() => onTaskViewChange('templates')}
-              >
-                <LayoutTemplate />
-                Templates
-              </button>
-            </div>
+        <section className="home-secondary-panel plan-open-tasks-card">
+          <div>
+            <span>Need to manage tasks?</span>
+            <small>Task Inbox and Templates now live in the top-level Tasks area.</small>
           </div>
-          {taskView === 'tasks' ? <TaskInbox /> : <RecurringTemplates />}
-        </details>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              onTaskViewChange(taskView)
+              onOpenTasks()
+            }}
+          >
+            Open Tasks
+          </button>
+        </section>
       </div>
     </>
+  )
+}
+
+function TaskWorkspace({
+  taskView,
+  onTaskViewChange,
+  standalone = false,
+}: {
+  taskView: TaskView
+  onTaskViewChange: (view: TaskView) => void
+  standalone?: boolean
+}) {
+  const content = (
+    <>
+      <div className="subnav-shell">
+        <div className="segmented-control" aria-label="Task section">
+          <button
+            className={taskView === 'tasks' ? 'active' : ''}
+            onClick={() => onTaskViewChange('tasks')}
+          >
+            <CheckSquare />
+            Tasks
+          </button>
+          <button
+            className={taskView === 'templates' ? 'active' : ''}
+            onClick={() => onTaskViewChange('templates')}
+          >
+            <LayoutTemplate />
+            Templates
+          </button>
+        </div>
+      </div>
+      {taskView === 'tasks' ? <TaskInbox /> : <RecurringTemplates />}
+    </>
+  )
+
+  if (!standalone) return content
+
+  return (
+    <div className="page tasks-page">
+      {content}
+    </div>
   )
 }
 
@@ -1242,11 +1287,11 @@ function TodayCommandCentre({
               <div className="start-plan-actions">
                 <button className="btn btn-primary" type="button" onClick={() => handleStartNowTimer(5)}>
                   <Clock size={14} />
-                  Start 5 min
+                  Start 5-min rescue timer
                 </button>
                 <button className="btn btn-primary" type="button" onClick={() => handleStartNowTimer(15)}>
                   <Clock size={14} />
-                  Start 15 min
+                  Start 15-min rescue timer
                 </button>
                 <button className="btn btn-secondary" type="button" onClick={handleSendStartPlan}>
                   Send to Today’s Plan
@@ -1887,7 +1932,7 @@ function FocusBlockWorkflow({ onFocusBlocksChange }: { onFocusBlocksChange: () =
           <div className="start-plan-actions">
             <button className="btn btn-primary" type="button" onClick={handleStartBlock}>
               <Play size={14} />
-              Start block
+              Create timeline focus block
             </button>
             <button className="btn btn-secondary" type="button" onClick={handlePickForMe}>
               <Sparkles size={14} />

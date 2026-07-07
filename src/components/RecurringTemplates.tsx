@@ -164,7 +164,7 @@ function TemplateCard({ template, onAddInbox, onAddToday, onStart }: TemplateCar
         </button>
         <button className="btn btn-secondary" type="button" onClick={() => onStart(template)}>
           <Play size={13} />
-          Start as Focus Block
+          Create focus block
         </button>
       </div>
     </div>

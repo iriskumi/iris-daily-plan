@@ -851,7 +851,7 @@ export default function DailyPlanView({
                 <button type="button" onClick={() => moveBlock(i, -1)} disabled={i === 0} aria-label="Move block up"><ArrowUp size={13} /></button>
                 <button type="button" onClick={() => moveBlock(i, 1)} disabled={i === plan.timeBlocks.length - 1} aria-label="Move block down"><ArrowDown size={13} /></button>
                 <button type="button" onClick={() => addBlockAfter(i)}><Plus size={13} /> Add after</button>
-                <button type="button" onClick={() => startBlockAsFocus(block)}><Play size={13} /> Start focus</button>
+                <button type="button" onClick={() => startBlockAsFocus(block)}><Play size={13} /> Start timeline focus</button>
               </div>
               {draftBlock ? (
                 <div className="time-block-edit-form">

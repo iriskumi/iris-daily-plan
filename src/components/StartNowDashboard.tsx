@@ -196,7 +196,7 @@ export default function StartNowDashboard({ onOpenComeback, todayNote, eveningNo
 
         <button className="start-now-main-cta" type="button" onClick={startSession}>
           <Play size={18} />
-          {actionType === 'Before I Spiral' ? '救我10分钟' : 'Start'}
+          {actionType === 'Before I Spiral' ? '救我10分钟' : 'Start gentle session'}
         </button>
         </div>
       </div>

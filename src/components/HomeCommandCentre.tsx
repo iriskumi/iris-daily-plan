@@ -795,7 +795,7 @@ export default function HomeCommandCentre({
           <div className="next-best-actions">
             <button className="btn btn-primary" type="button" onClick={() => startQueueBlock(nextBlock, 25)}>
               <Play size={14} />
-              Start 25-min
+              Start 25-min Study
             </button>
             <span className="next-best-helper">Creates a Study timer. Minutes count only after you complete the session.</span>
           </div>
@@ -927,8 +927,8 @@ export default function HomeCommandCentre({
                 {block.notes && <p className="home-block-note">{block.notes}</p>}
               </div>
               <div className="home-block-actions">
-                <button type="button" className="home-block-primary-action" onClick={() => startQueueBlock(block, 25)}><Play size={13} />Start 25-min</button>
-                <button type="button" onClick={() => startQueueBlock(block, 50)}>Start 50-min</button>
+                <button type="button" className="home-block-primary-action" onClick={() => startQueueBlock(block, 25)}><Play size={13} />Start 25-min Study</button>
+                <button type="button" onClick={() => startQueueBlock(block, 50)}>Start 50-min Study</button>
                 <button type="button" onClick={() => completeWithoutTimer(block)}><Check size={13} />Done without timer</button>
                 <button type="button" onClick={() => hideBlockForToday(block, 'later')}>Later</button>
                 <button type="button" onClick={() => skipBlock(block)}>Skip</button>

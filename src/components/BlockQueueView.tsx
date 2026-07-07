@@ -229,7 +229,7 @@ export default function BlockQueueView() {
             onClick={() => startQueueBlock(nextBlock, 25)}
           >
             <Play size={14} />
-            Start 25-min
+            Start 25-min Study
           </button>
         )}
       </div>
@@ -282,13 +282,13 @@ export default function BlockQueueView() {
                     onClick={() => startQueueBlock(block, 25)}
                   >
                     <Play size={13} />
-                    Start 25-min
+                    Start 25-min Study
                   </button>
                   <button
                     type="button"
                     onClick={() => startQueueBlock(block, 50)}
                   >
-                    Start 50-min
+                    Start 50-min Study
                   </button>
                   <button
                     type="button"

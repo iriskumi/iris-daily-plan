@@ -1138,11 +1138,11 @@ export default function StudyDashboard() {
           <div className="study-timer-controls">
             <button type="button" className="btn btn-primary" onClick={() => startTemplateSession(25)}>
               <Play size={14} />
-              Start 25
+              Start 25-min Study
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => startTemplateSession(50)}>
               <Play size={14} />
-              Start 50
+              Start 50-min Study
             </button>
             <div className="study-timer-custom">
               <input
@@ -1154,7 +1154,7 @@ export default function StudyDashboard() {
                 onChange={event => setCustomTimerMinutes(event.target.value)}
               />
               <button type="button" className="btn btn-secondary" onClick={startCustomDurationSession}>
-                Start custom
+                Start custom Study
               </button>
             </div>
           </div>
