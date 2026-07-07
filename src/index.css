@@ -6026,6 +6026,16 @@ textarea {
   background: color-mix(in srgb, var(--accent-bg) 36%, #FFFCF9 64%);
 }
 
+/* Legacy proof UI is preserved in storage but hidden from the main daily flow. */
+.study-proof-prompt,
+.study-proof-draft-card,
+.study-proof-today-panel,
+.study-session-proof-actions,
+.iris365-proof-card,
+.iris365-real-thing-proof-prompt {
+  display: none !important;
+}
+
 .study-proof-prompt {
   display: flex;
   gap: 0.85rem;
@@ -6317,7 +6327,7 @@ textarea {
 /* ── Iris 365 ─────────────────────────────────────────── */
 
 .iris365-page {
-  max-width: 980px;
+  max-width: 1240px;
 }
 
 .iris365-countdown-card,
@@ -6434,7 +6444,7 @@ textarea {
 
 .iris365-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -6452,6 +6462,18 @@ textarea {
 .iris365-main-stack {
   display: grid;
   gap: 1rem;
+}
+
+.iris365-stats-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.iris365-stats-card > h3,
+.iris365-stats-card > .card-title-row {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 
 .iris365-foundation-card {
@@ -6535,7 +6557,7 @@ textarea {
   display: flex;
   gap: 0.62rem;
   align-items: flex-start;
-  padding: 0.72rem 0.75rem;
+  padding: 0.68rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: #FFFCF9;
@@ -6543,8 +6565,8 @@ textarea {
 
 .iris365-growth-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
   margin-top: 1rem;
 }
 
@@ -6555,22 +6577,23 @@ textarea {
 .iris365-check-row strong {
   display: block;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .iris365-check-row small {
   display: block;
-  margin-top: 0.1rem;
+  margin-top: 0.18rem;
   color: var(--text-3);
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 10.5px;
+  line-height: 1.42;
 }
 
 .iris365-rating-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 1rem;
   margin-top: 1rem;
 }
 
@@ -6589,12 +6612,14 @@ textarea {
 
 .iris365-rating div {
   display: flex;
+  flex-wrap: nowrap;
   gap: 0.35rem;
 }
 
 .iris365-rating button {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
@@ -6611,6 +6636,7 @@ textarea {
 
 .iris365-form-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   gap: 0.75rem;
   margin-top: 1rem;
 }
@@ -6618,7 +6644,7 @@ textarea {
 .iris365-detail-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.85rem;
   margin-top: 1rem;
 }
 
@@ -6746,7 +6772,8 @@ textarea {
 
 .dopamine-swap-grid {
   display: grid;
-  gap: 0.8rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.9rem;
 }
 
 .dopamine-swap-step {
@@ -6766,7 +6793,7 @@ textarea {
 .dopamine-outcome-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.5rem;
 }
 
 .dopamine-chip-grid button,
@@ -6779,7 +6806,7 @@ textarea {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.35;
-  padding: 0.46rem 0.7rem;
+  padding: 0.5rem 0.78rem;
 }
 
 .dopamine-chip-grid button.active,
@@ -7337,8 +7364,10 @@ textarea {
   .iris365-checkbox-grid,
   .iris365-growth-grid,
   .iris365-detail-grid,
+  .iris365-form-grid,
   .iris365-stimulus-row,
   .dopamine-swap-footer,
+  .dopamine-swap-grid,
   .iris365-rating-grid,
   .iris365-recent-row,
   .iris365-weekly-grid,
@@ -10714,6 +10743,166 @@ textarea:focus,
 
 .quick-trace-details[open] .start-now-controls-panel {
   margin-top: 0.75rem;
+  grid-template-columns: minmax(9rem, 0.45fr) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  padding-top: 0.2rem;
+}
+
+.quick-trace-details[open] .start-now-main-cta {
+  align-self: end;
+}
+
+.today-start-flow {
+  display: grid;
+  gap: 1rem;
+}
+
+.today-start-panel,
+.today-next-useful-card,
+.today-done-card {
+  background: rgba(255, 253, 248, 0.78);
+  border: 1px solid rgba(166, 134, 114, 0.12);
+  border-radius: 24px;
+  padding: 1rem;
+}
+
+.today-start-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.today-start-panel-copy h3,
+.today-next-useful-card h3,
+.today-done-header h3 {
+  margin: 0.25rem 0 0;
+  color: var(--color-text);
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.today-start-panel-copy p,
+.today-next-useful-card p {
+  margin: 0.38rem 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.today-start-panel-copy small {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--color-text-soft);
+  line-height: 1.5;
+}
+
+.today-start-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.today-start-actions .btn {
+  min-height: 44px;
+  padding-inline: 0.7rem;
+}
+
+.today-start-choice-row {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-top: 1px solid rgba(166, 134, 114, 0.1);
+  padding-top: 0.85rem;
+}
+
+.today-start-choice-row button {
+  min-height: 40px;
+  border: 1px solid rgba(166, 134, 114, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.86);
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0.48rem 0.75rem;
+}
+
+.today-next-useful-card,
+.today-done-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.today-next-useful-card > div {
+  min-width: 0;
+}
+
+.today-next-useful-card .btn {
+  flex: 0 0 auto;
+}
+
+.today-done-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.today-done-grid div {
+  min-height: 4.4rem;
+  border-radius: 18px;
+  background: rgba(246, 239, 235, 0.62);
+  padding: 0.7rem;
+}
+
+.today-done-grid strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.today-done-grid span {
+  display: block;
+  margin-top: 0.28rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.today-done-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.today-done-list div {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  border-top: 1px solid rgba(166, 134, 114, 0.1);
+  padding-top: 0.45rem;
+}
+
+.today-done-list span,
+.today-done-list small,
+.today-done-list p {
+  color: var(--color-text-muted);
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.today-done-list strong {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .today-counts-card,
@@ -10825,6 +11014,12 @@ textarea:focus,
     grid-template-columns: 1fr;
   }
 
+  .today-start-panel,
+  .today-start-actions,
+  .today-done-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .today-counts-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -10862,6 +11057,22 @@ textarea:focus,
     width: 100%;
   }
 
+  .today-next-useful-card,
+  .today-done-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .today-next-useful-card .btn,
+  .today-done-header .btn {
+    width: 100%;
+  }
+
+  .today-done-list div {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
   .quick-trace-details summary {
     align-items: flex-start;
   }
@@ -10891,7 +11102,10 @@ textarea:focus,
 
 @media (max-width: 420px) {
   .quick-start-card .action-grid,
-  .today-counts-grid {
+  .today-counts-grid,
+  .today-start-panel,
+  .today-start-actions,
+  .today-done-grid {
     grid-template-columns: 1fr;
   }
 

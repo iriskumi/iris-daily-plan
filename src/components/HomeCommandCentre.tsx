@@ -432,13 +432,11 @@ function isRescueFriendlyTemplate(template: QuickAddTemplate): boolean {
 
 export default function HomeCommandCentre({
   currentEnergy,
-  onOpenComeback,
   todayNote,
   eveningNote,
   onOpenStudy,
 }: {
   currentEnergy?: EnergyLevel
-  onOpenComeback?: () => void
   todayNote?: {
     lines: string[]
     caption: string
@@ -701,7 +699,9 @@ export default function HomeCommandCentre({
   return (
     <section className="home-command-centre" aria-label="Today command centre">
       <StartNowDashboard
-        onOpenComeback={onOpenComeback}
+        onOpenStudy={onOpenStudy}
+        nextBlock={nextBlock}
+        onStartNextBlock={nextBlock ? () => startQueueBlock(nextBlock, 25) : undefined}
         todayNote={todayNote}
         eveningNote={eveningNote}
       />

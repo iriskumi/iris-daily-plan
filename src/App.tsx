@@ -93,7 +93,7 @@ import Settings from './components/Settings'
 import FocusGarden from './components/FocusGarden'
 import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
-import Iris365, { Iris365HomeSummary } from './components/Iris365'
+import Iris365 from './components/Iris365'
 import MediaTab from './components/MediaTab'
 import ExerciseTab from './components/ExerciseTab'
 import irisBearIcon from './assets/iris-bear-icon.svg'
@@ -1119,29 +1119,15 @@ function TodayCommandCentre({
     setStartNowMessage(onSendStartPlanToTodayPlan(startNowPlan))
   }
 
-  function openComebackPanel() {
-    setComebackOpen(true)
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        const target = document.getElementById('before-i-spiral')
-        ;(target ?? comebackPanelRef.current)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      })
-    })
-  }
-
   return (
     <>
       <div className="page command-page">
         <HomeCommandCentre
           currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
-          onOpenComeback={openComebackPanel}
           todayNote={dailyNote}
           eveningNote={isEvening ? 'Evening mode: quiet input and light review.' : ''}
           onOpenStudy={onOpenStudy}
         />
-        <Iris365MomentumCompactCard />
-        <Iris365HomeSummary onOpenIris365={openComebackPanel} />
-
         <details
           ref={comebackPanelRef}
           className="home-secondary-panel"
@@ -1149,9 +1135,10 @@ function TodayCommandCentre({
           onToggle={event => setComebackOpen(event.currentTarget.open)}
         >
           <summary>
-            <span>Proof / Comeback tools</span>
-            <small>Before I Spiral, Proof I’m Not Stuck, and older Iris365 tools.</small>
+            <span>Legacy data preserved</span>
+            <small>Focus Garden, Proof Vault, Quick Start, and older Iris365 tools are preserved here, not part of today’s main flow.</small>
           </summary>
+          <Iris365MomentumCompactCard />
           <Iris365 />
         </details>
 
