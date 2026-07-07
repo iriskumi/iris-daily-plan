@@ -5,11 +5,13 @@ import {
   addStartNowCounter,
   addStartNowSession,
   getStartNowRecordsForDate,
+  getStartNowWeekRecords,
   START_NOW_ACTIONS,
   START_NOW_COUNTERS,
   START_NOW_DURATIONS,
   summarizeStartNow,
 } from '../startNowStorage'
+import { EffortReceipt, VisibleEffortStrip, WeeklyEffortWall } from './VisibleEffort'
 import type { StartNowActionType, StartNowRecord } from '../startNowTypes'
 
 interface StartNowDashboardProps {
@@ -49,8 +51,10 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
   const [completedSession, setCompletedSession] = useState<{ actionType: StartNowActionType; duration: number } | null>(null)
   const [tinyWin, setTinyWin] = useState('')
   const [message, setMessage] = useState<string | null>(null)
+  const [latestReceipt, setLatestReceipt] = useState<StartNowRecord | null>(null)
 
   const summary = useMemo(() => summarizeStartNow(records), [records])
+  const weekRecords = useMemo(() => getStartNowWeekRecords(), [records])
   const irisDay = useMemo(() => getIris365DayNumber(), [])
   const isBedtimeMode = new Date().getHours() >= 21
   const visibleCounters = START_NOW_COUNTERS.filter(option =>
@@ -101,7 +105,7 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
 
   function saveCompletedSession() {
     if (!completedSession) return
-    addStartNowSession({
+    const record = addStartNowSession({
       actionType: completedSession.actionType,
       durationMinutes: completedSession.duration,
       tinyWin,
@@ -109,14 +113,16 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
     setCompletedSession(null)
     setTinyWin('')
     refreshRecords()
+    setLatestReceipt(record)
     setMessage('One small session saved. Today counted a little more.')
   }
 
   function saveCounter(label: string) {
     const option = START_NOW_COUNTERS.find(item => item.label === label)
     if (!option) return
-    addStartNowCounter(option)
+    const record = addStartNowCounter(option)
     refreshRecords()
+    setLatestReceipt(record)
     setMessage(`${label} saved. Done counts.`)
   }
 
@@ -183,6 +189,8 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
         </div>
       </div>
 
+      <VisibleEffortStrip records={records} />
+
       {activeSession && (
         <div className="start-now-timer-card" role="timer" aria-live="polite">
           <div>
@@ -219,6 +227,8 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
           </div>
         </div>
       )}
+
+      {latestReceipt && <EffortReceipt record={latestReceipt} />}
 
       <div className="today-counts-card">
         <div className="today-counts-header">
@@ -275,6 +285,14 @@ export default function StartNowDashboard({ onOpenComeback }: StartNowDashboardP
           ))}
         </div>
       </div>
+
+      <details className="home-secondary-panel">
+        <summary>
+          <span>Weekly effort wall</span>
+          <small>This week’s traces</small>
+        </summary>
+        <WeeklyEffortWall records={weekRecords} />
+      </details>
 
       {message && <div className="start-now-message">{message}</div>}
     </section>

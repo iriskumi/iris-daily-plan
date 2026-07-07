@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Clock, Sparkles } from 'lucide-react'
 import { getLocalDateKey } from '../focus'
 import { getStartNowWeekRecords, loadStartNowRecords, summarizeStartNow } from '../startNowStorage'
+import { WeeklyEffortWall } from './VisibleEffort'
 import type { StartNowActionType, StartNowRecord } from '../startNowTypes'
 
 type SessionFilter = 'Today' | 'This week' | StartNowActionType | 'Body' | 'Reset'
@@ -33,9 +34,10 @@ function matchesFilter(record: StartNowRecord, filter: SessionFilter) {
 
 export default function StartSessionsPage() {
   const [filter, setFilter] = useState<SessionFilter>('Today')
+  const weekRecords = useMemo(() => getStartNowWeekRecords(), [])
   const records = useMemo(
-    () => filter === 'This week' ? getStartNowWeekRecords() : loadStartNowRecords().filter(record => matchesFilter(record, filter)),
-    [filter],
+    () => filter === 'This week' ? weekRecords : loadStartNowRecords().filter(record => matchesFilter(record, filter)),
+    [filter, weekRecords],
   )
   const todaySummary = useMemo(() => summarizeStartNow(loadStartNowRecords().filter(record => record.date === getLocalDateKey())), [])
 
@@ -62,6 +64,8 @@ export default function StartSessionsPage() {
           <span><strong>{todaySummary.spiralsDelayed}</strong> spirals delayed</span>
         </div>
       </section>
+
+      <WeeklyEffortWall records={weekRecords} />
 
       <div className="start-session-filter-row" aria-label="Session filters">
         {SESSION_FILTERS.map(item => (
