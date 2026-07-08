@@ -14,6 +14,10 @@ import {
 } from '../englishListeningDraw'
 import { pushStudyDailyLogToNotion } from '../services/notionService'
 import {
+  clearActiveSession as clearGlobalActiveSession,
+  startActiveSession,
+} from '../activeSessionStore'
+import {
   addIris365ProofFromStudySession,
   buildProofDraftFromStudySession,
   findIris365ProofByStudySession,
@@ -184,6 +188,19 @@ function categoryBreakdown(records: StudySessionRecord[]): Record<StudyCategory,
 function canSaveSessionAsProof(record: StudySessionRecord): boolean {
   if (record.status !== 'completed') return false
   return isProofWorthyStudySession(record) || studySessionHasProofArtifact(record)
+}
+
+function activeSessionKindForStudy(category: StudyCategory): 'study' | 'english-output' | 'english-input' {
+  if (category === 'English Output') return 'english-output'
+  if (category === 'English Input') return 'english-input'
+  return 'study'
+}
+
+function activeSessionOriginForStudy(session: StudyActiveSession): 'today-start-panel' | 'study' | 'english-listening-draw' | 'block-queue' {
+  if (session.source === 'today-start-panel') return 'today-start-panel'
+  if (session.source === 'english-listening-draw') return 'english-listening-draw'
+  if (session.source === 'block-queue') return 'block-queue'
+  return 'study'
 }
 
 function proofSessionMicrocopy(record: StudySessionRecord): string {
@@ -360,6 +377,19 @@ export default function StudyDashboard() {
   }, [])
 
   useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return
+    const target = sessionStorage.getItem('iris-study-focus-target')
+    if (target !== 'english') return
+    sessionStorage.removeItem('iris-study-focus-target')
+    window.setTimeout(() => {
+      document.getElementById('english-listening-draw')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 80)
+  }, [])
+
+  useEffect(() => {
     if (!activeSession || !activeTimer || activeSession.status !== 'running') return
     if (!timerEngine.isFinished(activeTimer, nowMs)) return
     completeSession('completed', timerEngine.expectedEndTime(activeTimer, nowMs))
@@ -461,9 +491,23 @@ export default function StudyDashboard() {
     if (session) {
       saveActiveStudySession(session)
       timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerFromStudySession(session))
+      startActiveSession({
+        id: session.id,
+        origin: activeSessionOriginForStudy(session),
+        kind: activeSessionKindForStudy(session.category),
+        category: session.category,
+        title: session.title,
+        startedAt: new Date(session.sessionStartTime).toISOString(),
+        plannedMinutes: session.durationMinutes,
+        linkedTaskId: session.customTaskId ?? session.taskTemplateId,
+        linkedQueueBlockId: session.source === 'block-queue' ? session.sourceImportId : undefined,
+        targetTab: 'study',
+        status: session.status === 'paused' ? 'paused' : 'active',
+      })
     } else {
       clearActiveStudySession()
       timerEngine.clear(STUDY_TIMER_ENGINE_KEY)
+      clearGlobalActiveSession()
     }
   }
 
@@ -949,7 +993,7 @@ export default function StudyDashboard() {
         </div>
       </section>
 
-      <section className="english-listening-draw-card">
+      <section className="english-listening-draw-card" id="english-listening-draw">
         <div className="english-listening-draw-header">
           <div>
             <div className="section-label">今日英语抽签</div>

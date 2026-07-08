@@ -435,6 +435,7 @@ export default function HomeCommandCentre({
   todayNote,
   eveningNote,
   onOpenStudy,
+  onOpenExercise,
 }: {
   currentEnergy?: EnergyLevel
   todayNote?: {
@@ -443,6 +444,7 @@ export default function HomeCommandCentre({
   }
   eveningNote?: string
   onOpenStudy?: () => void
+  onOpenExercise?: () => void
 }) {
   const [queue, setQueue] = useState<DayBlockQueue>(() => loadDayBlockQueue(getLocalDateKey()))
   const [selectedGroup, setSelectedGroup] = useState<QuickAddGroup>('English Output')
@@ -700,6 +702,7 @@ export default function HomeCommandCentre({
     <section className="home-command-centre" aria-label="Today command centre">
       <StartNowDashboard
         onOpenStudy={onOpenStudy}
+        onOpenExercise={onOpenExercise}
         nextBlock={nextBlock}
         onStartNextBlock={nextBlock ? () => startQueueBlock(nextBlock, 25) : undefined}
         todayNote={todayNote}

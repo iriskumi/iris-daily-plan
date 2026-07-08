@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Copy, Plus } from 'lucide-react'
+import { clearActiveSession, startActiveSession } from '../activeSessionStore'
 import { getLocalDateKey } from '../focus'
 import {
   addExerciseEntry,
@@ -45,11 +46,35 @@ export default function ExerciseTab() {
   const monthKey = getLocalDateKey().slice(0, 7)
   const challenge = MONTHLY_MOVEMENT_CHALLENGES[monthKey] ?? MONTHLY_MOVEMENT_CHALLENGES['2026-07']
 
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return
+    const target = sessionStorage.getItem('iris-exercise-focus-target')
+    if (target !== 'movement-log') return
+    sessionStorage.removeItem('iris-exercise-focus-target')
+    window.setTimeout(() => {
+      document.getElementById('exercise-movement-log')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 80)
+  }, [])
+
   function saveMovement() {
+    startActiveSession({
+      origin: 'exercise',
+      kind: 'exercise',
+      category: draft.movementType,
+      title: `${draft.movementType} movement`,
+      startedAt: new Date().toISOString(),
+      plannedMinutes: draft.durationMinutes,
+      targetTab: 'exercise',
+      status: 'active',
+    })
     const result = addExerciseEntry(draft, store)
     setStore(result.store)
     setDraft({ ...initialDraft, date: getLocalDateKey() })
     setMessage('Movement saved. 不要连续两天缺席。')
+    clearActiveSession()
   }
 
   async function copyMovement(entry?: ExerciseLogEntry) {
@@ -83,7 +108,7 @@ export default function ExerciseTab() {
         <div><strong>{stats.monthlyChallengeProgress}</strong><span>monthly 10m days</span></div>
       </section>
 
-      <section className="life-system-card">
+      <section className="life-system-card" id="exercise-movement-log">
         <div className="life-card-heading">
           <div>
             <div className="section-label">Never miss twice</div>

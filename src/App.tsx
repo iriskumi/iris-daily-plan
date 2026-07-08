@@ -69,6 +69,11 @@ import {
   addFocusSession,
 } from './storage'
 import { getLocalDateKey, localDateString } from './focus'
+import {
+  ACTIVE_SESSION_CHANGED_EVENT,
+  restoreActiveSession,
+  type ActiveSession,
+} from './activeSessionStore'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
 import { getGoogleCalendarStatus, importCalendarCommitments } from './services/calendarService'
@@ -646,6 +651,7 @@ export default function App() {
             onSendStartPlanToTodayPlan={handleSendStartPlanToTodayPlan}
             showEmbeddedPlan={!appSettings.fullCommandHubMode}
             onOpenStudy={() => goToTab('study')}
+            onOpenExercise={() => goToTab('exercise')}
             planSection={
               <PlanWorkspace
                 plan={plan}
@@ -888,6 +894,7 @@ interface TodayCommandCentreProps {
   planSection: ReactNode
   onStartToday: () => Promise<StartTodayResult>
   onOpenStudy: () => void
+  onOpenExercise: () => void
 }
 
 function Iris365MomentumCompactCard() {
@@ -917,6 +924,59 @@ function Iris365MomentumCompactCard() {
   )
 }
 
+function ActiveSessionMiniBanner({
+  onOpenStudy,
+  onOpenExercise,
+}: {
+  onOpenStudy: () => void
+  onOpenExercise: () => void
+}) {
+  const [activeSession, setActiveSession] = useState<ActiveSession | null>(() => restoreActiveSession())
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const refresh = () => setActiveSession(restoreActiveSession())
+    const interval = window.setInterval(() => {
+      setNow(Date.now())
+      refresh()
+    }, 30_000)
+    window.addEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+
+  if (!activeSession) return null
+
+  const startedAt = new Date(activeSession.startedAt).getTime()
+  const elapsedMinutes = Number.isFinite(startedAt)
+    ? Math.max(0, Math.floor((now - startedAt) / 60_000))
+    : 0
+
+  function openSession() {
+    if (activeSession?.targetTab === 'exercise') {
+      onOpenExercise()
+      return
+    }
+    onOpenStudy()
+  }
+
+  return (
+    <section className="active-session-mini-banner" aria-label="Current active session">
+      <div>
+        <span>正在进行：{activeSession.title} · {elapsedMinutes} min</span>
+        <small>{activeSession.category} · {activeSession.status === 'paused' ? 'paused' : 'active'}</small>
+      </div>
+      <button type="button" className="btn btn-primary" onClick={openSession}>
+        Open session
+      </button>
+    </section>
+  )
+}
+
 function TodayCommandCentre({
   urgentBills,
   activeWorkLeads,
@@ -931,6 +991,7 @@ function TodayCommandCentre({
   planSection,
   onStartToday,
   onOpenStudy,
+  onOpenExercise,
 }: TodayCommandCentreProps) {
   const [expanded, setExpanded] = useState<'bills' | 'work' | null>(null)
   const [startSteps, setStartSteps] = useState<string[]>([])
@@ -1080,11 +1141,16 @@ function TodayCommandCentre({
   return (
     <>
       <div className="page command-page">
+        <ActiveSessionMiniBanner
+          onOpenStudy={onOpenStudy}
+          onOpenExercise={onOpenExercise}
+        />
         <HomeCommandCentre
           currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
           todayNote={dailyNote}
           eveningNote={isEvening ? 'Evening mode: quiet input and light review.' : ''}
           onOpenStudy={onOpenStudy}
+          onOpenExercise={onOpenExercise}
         />
         <details
           ref={comebackPanelRef}

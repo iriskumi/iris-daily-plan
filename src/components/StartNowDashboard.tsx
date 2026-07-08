@@ -1,6 +1,7 @@
 import { Dumbbell, Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { addExerciseEntry, loadExerciseLog } from '../exerciseStorage'
+import { startActiveSession } from '../activeSessionStore'
+import { loadExerciseLog } from '../exerciseStorage'
 import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
 import { loadActiveStudySession, loadStudySessionRecordsForDate, saveActiveStudySession } from '../studyStorage'
@@ -12,10 +13,10 @@ import type { DayBlock } from '../types'
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 
 type StartKind = 'study' | 'english-output' | 'english-input'
-type MovementKind = 'Walk' | 'Strength' | 'Dance' | 'Stretch' | 'Recovery'
 
 interface StartNowDashboardProps {
   onOpenStudy?: () => void
+  onOpenExercise?: () => void
   nextBlock?: DayBlock | null
   onStartNextBlock?: () => void
   todayNote?: {
@@ -78,6 +79,7 @@ function studyDoneSummary(sessions: StudySessionRecord[]) {
 
 export default function StartNowDashboard({
   onOpenStudy,
+  onOpenExercise,
   nextBlock,
   onStartNextBlock,
   todayNote,
@@ -86,7 +88,6 @@ export default function StartNowDashboard({
   const today = getLocalDateKey()
   const [message, setMessage] = useState<string | null>(null)
   const [englishChoiceOpen, setEnglishChoiceOpen] = useState(false)
-  const [exerciseChoiceOpen, setExerciseChoiceOpen] = useState(false)
   const [studySessions, setStudySessions] = useState(() => loadStudySessionRecordsForDate(today))
   const [exerciseEntries, setExerciseEntries] = useState(() => loadExerciseLog().entries.filter(entry => entry.date === today))
   const activeStudySession = loadActiveStudySession()
@@ -148,6 +149,18 @@ export default function StartNowDashboard({
     }
     saveActiveStudySession(session)
     timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerSession)
+    startActiveSession({
+      id: session.id,
+      origin: 'today-start-panel',
+      kind,
+      category,
+      title: session.title,
+      startedAt: new Date(start).toISOString(),
+      plannedMinutes: 25,
+      linkedTaskId: customTaskId,
+      targetTab: 'study',
+      status: 'active',
+    })
     ensureCustomStudyTaskInTaskStore({
       customTaskId,
       title: session.title,
@@ -161,19 +174,29 @@ export default function StartNowDashboard({
     onOpenStudy?.()
   }
 
-  function logMovement(movementType: MovementKind) {
-    const result = addExerciseEntry({
-      date: today,
-      movementType,
-      durationMinutes: movementType === 'Recovery' ? 10 : 20,
-      intensity: movementType === 'Strength' ? 'medium' : 'gentle',
-      energyBefore: 'medium',
-      energyAfter: 'better',
-      notes: 'Logged from Today Start Panel.',
+  function openEnglishStart() {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('iris-study-focus-target', 'english')
+    }
+    setEnglishChoiceOpen(value => !value)
+    onOpenStudy?.()
+  }
+
+  function openExerciseLog() {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('iris-exercise-focus-target', 'movement-log')
+    }
+    startActiveSession({
+      origin: 'exercise',
+      kind: 'exercise',
+      category: 'Movement',
+      title: 'Movement log draft',
+      startedAt: new Date().toISOString(),
+      targetTab: 'exercise',
+      status: 'active',
     })
-    setExerciseEntries(result.store.entries.filter(entry => entry.date === today))
-    setMessage(`${movementType} logged. Movement minutes now show in Today Done.`)
-    setExerciseChoiceOpen(false)
+    setMessage('Exercise log opened. Movement counts only after you save it.')
+    onOpenExercise?.()
   }
 
   function handleNextUsefulThing() {
@@ -218,20 +241,13 @@ export default function StartNowDashboard({
         </div>
         <div className="today-start-actions">
           <button type="button" className="btn btn-primary" onClick={() => startStudy('study')}><Play size={15} />Start Study</button>
-          <button type="button" className="btn btn-secondary" onClick={() => setEnglishChoiceOpen(value => !value)}>Start English</button>
-          <button type="button" className="btn btn-secondary" onClick={() => setExerciseChoiceOpen(value => !value)}><Dumbbell size={15} />Start Exercise</button>
+          <button type="button" className="btn btn-secondary" onClick={openEnglishStart}>Start English</button>
+          <button type="button" className="btn btn-secondary" onClick={openExerciseLog}><Dumbbell size={15} />Start Exercise</button>
         </div>
         {englishChoiceOpen && (
           <div className="today-start-choice-row">
             <button type="button" onClick={() => startStudy('english-output')}>English Output</button>
             <button type="button" onClick={() => startStudy('english-input')}>English Input</button>
-          </div>
-        )}
-        {exerciseChoiceOpen && (
-          <div className="today-start-choice-row">
-            {(['Walk', 'Strength', 'Dance', 'Stretch', 'Recovery'] as MovementKind[]).map(item => (
-              <button key={item} type="button" onClick={() => logMovement(item)}>{item}</button>
-            ))}
           </div>
         )}
       </section>

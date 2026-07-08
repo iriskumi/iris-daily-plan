@@ -7384,6 +7384,15 @@ textarea {
 }
 
 @media (max-width: 760px) {
+  .active-session-mini-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .active-session-mini-banner .btn {
+    width: 100%;
+  }
+
   .study-hero-card,
   .english-output-journey-card,
   .expression-hub-import-card,
@@ -10107,6 +10116,36 @@ textarea:focus,
 }
 
 /* Start Now action launcher */
+.active-session-mini-banner {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border) 62%);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, rgba(247, 193, 203, 0.28), transparent 42%),
+    var(--surface);
+  box-shadow: var(--cream-shadow);
+}
+
+.active-session-mini-banner span {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.active-session-mini-banner small {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .start-now-dashboard,
 .start-sessions-page {
   display: flex;

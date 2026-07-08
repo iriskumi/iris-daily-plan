@@ -1,5 +1,6 @@
 import type { DayBlock } from './types'
 import type { StudyActiveSession, StudyCategory } from './studyTypes'
+import { startActiveSession } from './activeSessionStore'
 import { loadActiveStudySession, saveActiveStudySession } from './studyStorage'
 import { ensureCustomStudyTaskInTaskStore } from './taskStore'
 import * as timerEngine from './timerEngine'
@@ -73,6 +74,23 @@ export function startStudySessionFromQueueBlock(block: DayBlock, durationMinutes
 
   saveActiveStudySession(session)
   timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerSession)
+  startActiveSession({
+    id: session.id,
+    origin: 'block-queue',
+    kind: session.category === 'English Output'
+      ? 'english-output'
+      : session.category === 'English Input'
+        ? 'english-input'
+        : 'study',
+    category: session.category,
+    title: session.title,
+    startedAt: new Date(start).toISOString(),
+    plannedMinutes: durationMinutes,
+    linkedTaskId: customTaskId,
+    linkedQueueBlockId: block.id,
+    targetTab: 'study',
+    status: 'active',
+  })
   ensureCustomStudyTaskInTaskStore({
     customTaskId,
     title,
