@@ -11203,8 +11203,11 @@ textarea:focus,
 .movement-mission-card h3 {
   margin: 0.3rem 0 0.45rem;
   color: var(--color-text);
+  font-family: var(--font-cn-soft);
   font-size: 1rem;
   font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.55;
 }
 
 .life-system-card p,
@@ -11212,7 +11215,25 @@ textarea:focus,
 .life-log-card p,
 .life-mini-card span {
   color: var(--color-text-muted);
+  font-family: var(--font-cn-soft);
   line-height: 1.65;
+}
+
+.exercise-tab-page .life-card-heading h3,
+.exercise-tab-page .life-mini-card strong,
+.exercise-tab-page .recommendation-card h3 {
+  font-family: var(--font-cn-soft);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.exercise-tab-page .life-mini-card span,
+.exercise-tab-page .recommendation-card li,
+.exercise-tab-page .movement-mission-card p {
+  font-family: var(--font-cn-soft);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.75;
 }
 
 .life-card-heading {
@@ -11314,6 +11335,7 @@ textarea:focus,
   margin: 0.6rem 0 0;
   padding-left: 1.1rem;
   color: var(--color-text-muted);
+  font-family: var(--font-cn-soft);
   line-height: 1.65;
 }
 
