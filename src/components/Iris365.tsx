@@ -878,7 +878,7 @@ export default function Iris365() {
             {preStart ? (
               <div className="iris365-prestart-note">
                 <strong>Starts tomorrow</strong>
-                <p>Get ready: choose your first tiny proof. The daily check-in unlocks on 6 Jul 2026.</p>
+                <p>Get ready: choose your first tiny proof. The daily check-in unlocks on {formatDate(IRIS_365_START_DATE)}.</p>
               </div>
             ) : (
               <>

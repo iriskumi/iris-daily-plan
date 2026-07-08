@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import {
   ClipboardList,
   BookOpen,
@@ -19,6 +19,7 @@ import {
   Clock,
   Sparkles,
   Plus,
+  CalendarDays,
 } from 'lucide-react'
 import type {
   GeneratedPlan,
@@ -117,15 +118,10 @@ import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
 import * as timerEngine from './timerEngine'
 import { writeFocusBlockSessionToTaskStore, writeInboxTaskToTaskStore } from './taskStore'
 import { consumeExpressionHubUrlImport } from './expressionHubImport'
-import {
-  iris365DayInfo,
-  loadIris365Momentum,
-  MONTHLY_MOMENTUM_PLAN,
-} from './iris365MomentumStorage'
 import type { TimerSession } from './timerEngineTypes'
 import './index.css'
 
-type Tab = 'today' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations' | 'settings'
+type Tab = 'today' | 'iris365' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations' | 'settings'
 type TaskView = 'tasks' | 'templates'
 
 interface StartTodayResult {
@@ -133,8 +129,9 @@ interface StartTodayResult {
   carryOverSuggestions: CarryOverSuggestion[]
 }
 
-const TABS: { id: Extract<Tab, 'today' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'iris365' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
+  { id: 'iris365', label: 'Iris 365', icon: <CalendarDays /> },
   { id: 'study', label: 'Study', icon: <BookOpen /> },
   { id: 'plan', label: 'Plan', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
@@ -747,6 +744,7 @@ export default function App() {
             }}
           />
         )}
+        {tab === 'iris365' && <Iris365 />}
         {tab === 'study' && <StudyDashboard />}
         {tab === 'plan' && (
           <PlanWorkspace
@@ -897,33 +895,6 @@ interface TodayCommandCentreProps {
   onOpenExercise: () => void
 }
 
-function Iris365MomentumCompactCard() {
-  const today = getLocalDateKey()
-  const { dayNumber, daysRemaining } = iris365DayInfo(today)
-  const store = loadIris365Momentum()
-  const entry = store.entries[today]
-  const month = MONTHLY_MOMENTUM_PLAN[today.slice(0, 7)] ?? MONTHLY_MOMENTUM_PLAN['2026-07']
-  const movedToday = Boolean(entry?.movementDone)
-  const yesterday = new Date(`${today}T12:00:00`)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const movedYesterday = Boolean(store.entries[getLocalDateKey(yesterday)]?.movementDone)
-  const neverMissTwice = movedToday || movedYesterday ? 'On track' : 'Restart today'
-
-  return (
-    <section className="iris365-compact-card" aria-label="Iris365 Momentum">
-      <div>
-        <div className="section-label">Iris365 Momentum</div>
-        <h3>Day {dayNumber} / 365</h3>
-        <p>{month.theme} · {daysRemaining} days remaining</p>
-      </div>
-      <div className="iris365-compact-grid">
-        <span><strong>{neverMissTwice}</strong><small>never miss twice</small></span>
-        <span><strong>{entry?.tomorrowRestartStep || 'One small step'}</strong><small>today’s smallest step</small></span>
-      </div>
-    </section>
-  )
-}
-
 function ActiveSessionMiniBanner({
   onOpenStudy,
   onOpenExercise,
@@ -1008,8 +979,6 @@ function TodayCommandCentre({
   const [startNowMessage, setStartNowMessage] = useState<string | null>(null)
   const [startNowCopied, setStartNowCopied] = useState(false)
   const [planSectionOpen, setPlanSectionOpen] = useState(false)
-  const [comebackOpen, setComebackOpen] = useState(false)
-  const comebackPanelRef = useRef<HTMLDetailsElement | null>(null)
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const workReminders = getTodayWorkReminders(activeWorkLeads)
@@ -1152,20 +1121,6 @@ function TodayCommandCentre({
           onOpenStudy={onOpenStudy}
           onOpenExercise={onOpenExercise}
         />
-        <details
-          ref={comebackPanelRef}
-          className="home-secondary-panel"
-          open={comebackOpen}
-          onToggle={event => setComebackOpen(event.currentTarget.open)}
-        >
-          <summary>
-            <span>Legacy data preserved</span>
-            <small>Focus Garden, Proof Vault, Quick Start, and older Iris365 tools are preserved here, not part of today’s main flow.</small>
-          </summary>
-          <Iris365MomentumCompactCard />
-          <Iris365 />
-        </details>
-
         {showEmbeddedPlan && (
           <details
             className="home-secondary-panel"

@@ -24,8 +24,8 @@ import type { StudySessionRecord } from './studyTypes'
 const STORAGE_KEY = 'iris-365'
 const SCHEMA_VERSION = 1
 const JOURNEY_DAYS = 365
-export const IRIS_365_START_DATE = '2026-07-06'
-export const IRIS_365_END_DATE = '2027-07-05'
+export const IRIS_365_START_DATE = '2026-07-08'
+export const IRIS_365_END_DATE = '2027-07-07'
 
 const DEFAULT_DOPAMINE_SWAP_LIBRARY: Array<Omit<Iris365DopamineSwapLibraryItem, 'id' | 'createdAt' | 'updatedAt' | 'timesUsed'>> = [
   { text: 'Brownian noise with rain and thunder', status: 'works' },
