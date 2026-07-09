@@ -17,7 +17,7 @@ import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
 import { loadStudySessionRecordsForDate } from '../studyStorage'
 import { clearBlockQueueScheduleInTaskStore, writeQuickAddBlockToTaskStore } from '../taskStore'
-import StartNowDashboard from './StartNowDashboard'
+import StartNowDashboard, { type TodayStartModule } from './StartNowDashboard'
 
 interface QuickAddTemplate {
   title: string
@@ -463,6 +463,7 @@ export default function HomeCommandCentre({
   const [editingSubtask, setEditingSubtask] = useState<{ blockId: string; subtaskId: string } | null>(null)
   const [subtaskDrafts, setSubtaskDrafts] = useState<Record<string, string>>({})
   const [dismissedCompletionPrompts, setDismissedCompletionPrompts] = useState<Record<string, boolean>>({})
+  const [expandedTodayModule, setExpandedTodayModule] = useState<TodayStartModule | null>(null)
 
   const sortedBlocks = useMemo(
     () => [...queue.blocks].sort((a, b) => a.order - b.order),
@@ -705,15 +706,15 @@ export default function HomeCommandCentre({
         onOpenExercise={onOpenExercise}
         nextBlock={nextBlock}
         onStartNextBlock={nextBlock ? () => startQueueBlock(nextBlock, 25) : undefined}
+        queueCount={blocks.length}
+        expandedModule={expandedTodayModule}
+        onExpandedModuleChange={setExpandedTodayModule}
         todayNote={todayNote}
         eveningNote={eveningNote}
       />
 
-      <details className="start-now-secondary-planning">
-        <summary>
-          <span>Planning queue / habit blocks</span>
-          <small>Open when you want to choose or adjust the queue.</small>
-        </summary>
+      {expandedTodayModule === 'queue' && (
+        <section className="today-module-panel today-queue-panel" aria-label="Today block queue">
 
       <div className="home-status-card">
         <div className="home-status-summary">
@@ -1093,7 +1094,8 @@ export default function HomeCommandCentre({
           ))}
         </div>
       </div>
-      </details>
+        </section>
+      )}
     </section>
   )
 }

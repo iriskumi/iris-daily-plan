@@ -1,6 +1,11 @@
-import { Dumbbell, Play } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { startActiveSession } from '../activeSessionStore'
+import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, ListChecks, Mic, Play, StickyNote } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  ACTIVE_SESSION_CHANGED_EVENT,
+  restoreActiveSession,
+  startActiveSession,
+  type ActiveSession,
+} from '../activeSessionStore'
 import { loadExerciseLog } from '../exerciseStorage'
 import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
@@ -13,12 +18,16 @@ import type { DayBlock } from '../types'
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 
 type StartKind = 'study' | 'english-output' | 'english-input'
+export type TodayStartModule = 'note' | 'done' | 'queue'
 
 interface StartNowDashboardProps {
   onOpenStudy?: () => void
   onOpenExercise?: () => void
   nextBlock?: DayBlock | null
   onStartNextBlock?: () => void
+  queueCount?: number
+  expandedModule?: TodayStartModule | null
+  onExpandedModuleChange?: (module: TodayStartModule | null) => void
   todayNote?: {
     lines: string[]
     caption: string
@@ -44,6 +53,14 @@ function timeLabel(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   return date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+}
+
+function labelFromToken(value: string): string {
+  return value
+    .split(/[_-]/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
 }
 
 function startTitle(kind: StartKind) {
@@ -82,14 +99,18 @@ export default function StartNowDashboard({
   onOpenExercise,
   nextBlock,
   onStartNextBlock,
+  queueCount = 0,
+  expandedModule = null,
+  onExpandedModuleChange,
   todayNote,
   eveningNote,
 }: StartNowDashboardProps) {
   const today = getLocalDateKey()
   const [message, setMessage] = useState<string | null>(null)
-  const [englishChoiceOpen, setEnglishChoiceOpen] = useState(false)
   const [studySessions, setStudySessions] = useState(() => loadStudySessionRecordsForDate(today))
   const [exerciseEntries, setExerciseEntries] = useState(() => loadExerciseLog().entries.filter(entry => entry.date === today))
+  const [activeSession, setActiveSession] = useState<ActiveSession | null>(() => restoreActiveSession())
+  const [now, setNow] = useState(() => Date.now())
   const activeStudySession = loadActiveStudySession()
   const irisDay = useMemo(() => getIris365DayNumber(), [])
   const summary = studyDoneSummary(studySessions)
@@ -113,6 +134,21 @@ export default function StartNowDashboard({
     setStudySessions(loadStudySessionRecordsForDate(today))
     setExerciseEntries(loadExerciseLog().entries.filter(entry => entry.date === today))
   }
+
+  useEffect(() => {
+    const refresh = () => setActiveSession(restoreActiveSession())
+    const interval = window.setInterval(() => {
+      setNow(Date.now())
+      refresh()
+    }, 30_000)
+    window.addEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
 
   function startStudy(kind: StartKind) {
     const existing = loadActiveStudySession()
@@ -178,7 +214,6 @@ export default function StartNowDashboard({
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem('iris-study-focus-target', 'english')
     }
-    setEnglishChoiceOpen(value => !value)
     onOpenStudy?.()
   }
 
@@ -202,94 +237,179 @@ export default function StartNowDashboard({
     startStudy('study')
   }
 
+  function toggleModule(module: TodayStartModule) {
+    onExpandedModuleChange?.(expandedModule === module ? null : module)
+  }
+
+  function openActiveSession() {
+    if (activeSession?.targetTab === 'exercise') {
+      onOpenExercise?.()
+      return
+    }
+    onOpenStudy?.()
+  }
+
+  const activeStartedAt = activeSession ? new Date(activeSession.startedAt).getTime() : Number.NaN
+  const activeElapsedMinutes = activeSession && Number.isFinite(activeStartedAt)
+    ? Math.max(0, Math.floor((now - activeStartedAt) / 60_000))
+    : 0
+  const doneCount = summary.completed.length + exerciseEntries.length
+  const progressItems = [
+    { label: 'Study', value: `${summary.studyMinutes}m` },
+    { label: 'English', value: `${summary.englishReps} rep${summary.englishReps === 1 ? '' : 's'}` },
+    { label: 'Move', value: `${movementMinutes}m` },
+    { label: 'Sessions', value: String(summary.completed.length) },
+  ]
+
+  const moduleRows = [
+    { id: 'note' as const, icon: <StickyNote size={16} />, label: 'Note', badge: 'today' },
+    { id: 'done' as const, icon: <CheckCircle2 size={16} />, label: 'Done', badge: `${doneCount} completed` },
+    { id: 'queue' as const, icon: <ListChecks size={16} />, label: 'Queue', badge: `${queueCount} block${queueCount === 1 ? '' : 's'}` },
+  ]
+
+  const nextTitle = activeStudySession?.title ?? (nextBlock ? nextBlock.title : 'Start one 25-min Study Session')
+  const nextCategory = activeStudySession?.category ?? (nextBlock ? labelFromToken(nextBlock.area) : 'Study')
+  const nextDuration = activeStudySession?.durationMinutes ?? (nextBlock ? Math.min(nextBlock.estimatedMinutes, 50) : 25)
+
   return (
     <section className="start-now-dashboard today-start-flow" aria-label="Today start flow">
-      <div className="today-compact-status">
-        <div>
-          <div className="section-label">Today Note</div>
-          <h2>Today</h2>
-          <p>{todayNote?.lines.join(' ') || '不用先规划完整一天。先开始一个小块。'}</p>
+      {activeSession ? (
+        <section className="today-active-surface" aria-label="Current session">
+          <div className="today-active-copy">
+            <span className="today-soft-label">正在进行</span>
+            <h2>{activeSession.title}</h2>
+            <div className="today-active-meta">
+              <span>{activeSession.category}</span>
+              <span>{activeElapsedMinutes} min</span>
+              {activeSession.status === 'paused' && <span>paused</span>}
+            </div>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={openActiveSession}>
+            <Play size={16} />
+            Open session
+          </button>
+        </section>
+      ) : (
+        <>
+          <section className="today-start-panel">
+            <div className="today-start-panel-copy">
+              <span className="today-soft-label">Today</span>
+              <h2>Start</h2>
+              <p>先开始一个小块。</p>
+            </div>
+            <div className="today-start-actions">
+              <button type="button" className="today-start-action-card primary" onClick={() => startStudy('study')}>
+                <BookOpen size={18} />
+                <span>Study</span>
+              </button>
+              <button type="button" className="today-start-action-card" onClick={openEnglishStart}>
+                <Mic size={18} />
+                <span>English</span>
+              </button>
+              <button type="button" className="today-start-action-card" onClick={openExerciseLog}>
+                <Dumbbell size={18} />
+                <span>Log Exercise</span>
+              </button>
+            </div>
+          </section>
+
+          <div className="today-progress-strip" aria-label="Today progress">
+            {progressItems.map(item => (
+              <span key={item.label} className="today-progress-pill">
+                <strong>{item.label}</strong>
+                {item.value}
+              </span>
+            ))}
+            <span className="today-progress-pill muted">Day {irisDay}</span>
+          </div>
+        </>
+      )}
+
+      {!activeSession && (
+        <section className="today-next-useful-card">
+          <div>
+            <span className="today-soft-label">Next</span>
+            <h3>{nextTitle}</h3>
+            <div className="today-next-chips">
+              <span>{nextCategory}</span>
+              <span>{nextDuration} min</span>
+            </div>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={handleNextUsefulThing}>
+            <Play size={15} />
+            {activeStudySession ? 'Open' : 'Start'}
+          </button>
+        </section>
+      )}
+
+      <div className="today-module-row" aria-label="Today modules">
+        {moduleRows.map(row => (
+          <button
+            key={row.id}
+            type="button"
+            className={`today-module-chip ${expandedModule === row.id ? 'active' : ''}`}
+            onClick={() => toggleModule(row.id)}
+          >
+            {row.icon}
+            <span>{row.label}</span>
+            <small>{row.badge}</small>
+            <ChevronDown size={15} />
+          </button>
+        ))}
+      </div>
+
+      {expandedModule === 'note' && (
+        <section className="today-module-panel today-note-module">
+          <div className="today-note-lines">
+            {(todayNote?.lines?.length ? todayNote.lines : ['不用先规划完整一天。先开始一个小块。']).map(line => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
           {(todayNote?.caption || eveningNote) && (
-            <small className="today-inline-note">
+            <small>
               {todayNote?.caption}
               {todayNote?.caption && eveningNote ? ' · ' : ''}
               {eveningNote}
             </small>
           )}
-        </div>
-        <div className="today-status-pills" aria-label="Today status">
-          <span>Day {irisDay} / 365</span>
-          <span>Done counts</span>
-        </div>
-      </div>
+        </section>
+      )}
 
-      <section className="today-start-panel">
-        <div className="today-start-panel-copy">
-          <div className="section-label">Start Panel</div>
-          <h3>Start Now</h3>
-          <p>不用先规划完整一天。先开始一个小块。</p>
-          <small>只保留最常用入口：学习、英语、运动。</small>
-        </div>
-        <div className="today-start-actions">
-          <button type="button" className="btn btn-primary" onClick={() => startStudy('study')}><Play size={15} />Start Study</button>
-          <button type="button" className="btn btn-secondary" onClick={openEnglishStart}>Start English</button>
-          <button type="button" className="btn btn-secondary" onClick={openExerciseLog}><Dumbbell size={15} />Start Exercise</button>
-        </div>
-        {englishChoiceOpen && (
-          <div className="today-start-choice-row">
-            <button type="button" onClick={() => startStudy('english-output')}>English Output</button>
-            <button type="button" onClick={() => startStudy('english-input')}>English Input</button>
-          </div>
-        )}
-      </section>
-
-      <section className="today-next-useful-card">
-        <div>
-          <div className="section-label">Next Useful Thing</div>
-          <h3>{activeStudySession?.title ?? (nextBlock ? nextBlock.title : 'Start one 25-min Study Session')}</h3>
-          <p>
-            {activeStudySession
-              ? `${activeStudySession.category} · ${activeStudySession.durationMinutes} min already active`
-              : nextBlock
-                ? `${nextBlock.priority} · ${nextBlock.estimatedMinutes >= 90 ? 'Large task, start with 25 min' : `${nextBlock.estimatedMinutes} min suggested`}`
-                : 'No queue item needed. Start small.'}
-          </p>
-        </div>
-        <button type="button" className="btn btn-primary" onClick={handleNextUsefulThing}>
-          <Play size={15} />
-          {activeStudySession ? 'Open Study Session' : nextBlock ? 'Start Study Session' : 'Start Study Session'}
-        </button>
-      </section>
-
-      <section className="today-done-card">
-        <div className="today-done-header">
-          <div>
-            <div className="section-label">Today Done</div>
-            <h3>看得见的进展，不用证明给任何人。</h3>
-          </div>
-          <button type="button" className="btn btn-secondary" onClick={refreshDone}>Refresh</button>
-        </div>
-        <div className="today-done-grid">
-          <div><strong>{summary.studyMinutes}</strong><span>Study min</span></div>
-          <div><strong>{summary.englishReps}</strong><span>English reps</span></div>
-          <div><strong>{summary.englishOutputMinutes}/{summary.englishInputMinutes}</strong><span>English output/input min</span></div>
-          <div><strong>{movementMinutes}</strong><span>Movement min</span></div>
-          <div><strong>{summary.adminMinutes}</strong><span>Admin min</span></div>
-        </div>
-        <div className="today-done-list">
-          {doneItems.length > 0 ? doneItems.slice(0, 8).map(item => (
-            <div key={item.id}>
-              <span>{item.time}</span>
-              <strong>{item.title}</strong>
-              <small>{item.meta}</small>
+      {expandedModule === 'done' && (
+        <section className="today-module-panel today-done-card">
+          <div className="today-done-header">
+            <div>
+              <span className="today-soft-label">Done</span>
+              <h3>看得见的进展。</h3>
             </div>
-          )) : (
-            <p>No completed items yet. Finish one Study Session or log one movement to start the list.</p>
-          )}
-        </div>
-      </section>
+            <button type="button" className="btn btn-secondary" onClick={refreshDone}>Refresh</button>
+          </div>
+          <div className="today-done-grid">
+            <div><strong>{summary.studyMinutes}</strong><span>Study min</span></div>
+            <div><strong>{summary.englishReps}</strong><span>English reps</span></div>
+            <div><strong>{summary.englishOutputMinutes}/{summary.englishInputMinutes}</strong><span>English out/in</span></div>
+            <div><strong>{movementMinutes}</strong><span>Move min</span></div>
+            <div><strong>{summary.adminMinutes}</strong><span>Admin min</span></div>
+          </div>
+          <div className="today-done-list">
+            {doneItems.length > 0 ? doneItems.slice(0, 8).map(item => (
+              <div key={item.id}>
+                <span>{item.time}</span>
+                <strong>{item.title}</strong>
+                <small>{item.meta}</small>
+              </div>
+            )) : (
+              <p>完成后才会记录。</p>
+            )}
+          </div>
+        </section>
+      )}
 
-      {message && <div className="start-now-message">{message}</div>}
+      {message && (
+        <div className="start-now-message">
+          {message}
+        </div>
+      )}
     </section>
   )
 }

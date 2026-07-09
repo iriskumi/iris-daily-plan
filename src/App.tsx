@@ -70,11 +70,6 @@ import {
   addFocusSession,
 } from './storage'
 import { getLocalDateKey, localDateString } from './focus'
-import {
-  ACTIVE_SESSION_CHANGED_EVENT,
-  restoreActiveSession,
-  type ActiveSession,
-} from './activeSessionStore'
 import { getDaysUntil, planAssembly } from './planner'
 import { generatePlanWithAI } from './services/aiService'
 import { getGoogleCalendarStatus, importCalendarCommitments } from './services/calendarService'
@@ -895,59 +890,6 @@ interface TodayCommandCentreProps {
   onOpenExercise: () => void
 }
 
-function ActiveSessionMiniBanner({
-  onOpenStudy,
-  onOpenExercise,
-}: {
-  onOpenStudy: () => void
-  onOpenExercise: () => void
-}) {
-  const [activeSession, setActiveSession] = useState<ActiveSession | null>(() => restoreActiveSession())
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    const refresh = () => setActiveSession(restoreActiveSession())
-    const interval = window.setInterval(() => {
-      setNow(Date.now())
-      refresh()
-    }, 30_000)
-    window.addEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
-    window.addEventListener('storage', refresh)
-    return () => {
-      window.clearInterval(interval)
-      window.removeEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
-      window.removeEventListener('storage', refresh)
-    }
-  }, [])
-
-  if (!activeSession) return null
-
-  const startedAt = new Date(activeSession.startedAt).getTime()
-  const elapsedMinutes = Number.isFinite(startedAt)
-    ? Math.max(0, Math.floor((now - startedAt) / 60_000))
-    : 0
-
-  function openSession() {
-    if (activeSession?.targetTab === 'exercise') {
-      onOpenExercise()
-      return
-    }
-    onOpenStudy()
-  }
-
-  return (
-    <section className="active-session-mini-banner" aria-label="Current active session">
-      <div>
-        <span>正在进行：{activeSession.title} · {elapsedMinutes} min</span>
-        <small>{activeSession.category} · {activeSession.status === 'paused' ? 'paused' : 'active'}</small>
-      </div>
-      <button type="button" className="btn btn-primary" onClick={openSession}>
-        Open session
-      </button>
-    </section>
-  )
-}
-
 function TodayCommandCentre({
   urgentBills,
   activeWorkLeads,
@@ -1110,10 +1052,6 @@ function TodayCommandCentre({
   return (
     <>
       <div className="page command-page">
-        <ActiveSessionMiniBanner
-          onOpenStudy={onOpenStudy}
-          onOpenExercise={onOpenExercise}
-        />
         <HomeCommandCentre
           currentEnergy={loadCheckin(getLocalDateKey())?.energyLevel}
           todayNote={dailyNote}
