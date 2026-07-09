@@ -1096,8 +1096,8 @@ textarea {
 }
 
 .badge-exercise {
-  background: #E3EBDD;
-  color: #4A7C59;
+  background: #EEE7DE;
+  color: #6F543B;
 }
 
 .badge-recovery {
@@ -11662,6 +11662,189 @@ textarea:focus,
   }
 }
 
+/* Oat editorial visual pass */
+.active-session-mini-banner,
+.today-compact-status,
+.quick-start-card,
+.today-minimum-card,
+.bedtime-shutdown-card,
+.today-start-panel,
+.today-next-useful-card,
+.today-done-card,
+.today-active-surface,
+.life-system-card,
+.movement-mission-card,
+.visible-effort-strip-card,
+.effort-receipt,
+.weekly-effort-wall,
+.iris365-countdown-card,
+.iris365-checkin-card,
+.iris365-daily-system-card,
+.iris365-daily-proof-card,
+.iris365-foundation-card,
+.iris365-growth-card,
+.iris365-details-card,
+.iris365-stimulus-card,
+.iris365-stats-card,
+.iris365-recent-card {
+  background: rgba(251, 247, 241, 0.82);
+  border: 1px solid rgba(205, 187, 168, 0.38);
+  border-radius: 2px;
+  box-shadow: 0 26px 68px rgba(92, 74, 56, 0.045);
+}
+
+.today-compact-status {
+  min-height: 11rem;
+  align-items: center;
+  padding: clamp(1.4rem, 3vw, 2.4rem);
+}
+
+.today-compact-status h2 {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 0.86;
+}
+
+.today-compact-status p {
+  max-width: 600px;
+  color: var(--text-2);
+  font-size: 1.02rem;
+  line-height: 1.85;
+}
+
+.today-status-pills span,
+.badge,
+.today-progress-pill,
+.life-tag-row span,
+.start-session-metrics span,
+.visible-effort-tile span,
+.iris365-save-pill,
+.iris365-home-proof span,
+.iris365-recent-pills span {
+  border: 1px solid rgba(205, 187, 168, 0.42);
+  background: rgba(244, 237, 229, 0.74);
+  color: var(--text-2);
+  border-radius: 999px;
+}
+
+.today-start-panel {
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
+  align-items: center;
+  padding: clamp(1.3rem, 2.4vw, 2rem);
+}
+
+.today-start-panel-copy h3,
+.today-next-useful-card h3,
+.today-done-card h3,
+.life-system-card h3,
+.movement-mission-card h3,
+.card-title {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.today-start-panel-copy h3,
+.today-next-useful-card h3,
+.life-system-card h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2.3vw, 2.35rem);
+  line-height: 1.05;
+}
+
+.today-start-panel-copy p,
+.today-start-panel-copy small,
+.today-next-useful-card p,
+.today-done-card p,
+.life-system-card p,
+.movement-mission-card p {
+  color: var(--text-2);
+}
+
+.today-start-actions,
+.today-start-choice-row,
+.life-chip-group,
+.life-filter-row {
+  gap: 0.62rem;
+}
+
+.today-start-actions .btn,
+.today-start-choice-row button,
+.life-chip-group button,
+.life-filter-row button,
+.life-log-actions button {
+  border-radius: 999px;
+  border-color: rgba(205, 187, 168, 0.52);
+  background: rgba(251, 247, 241, 0.62);
+  color: var(--text-2);
+}
+
+.today-start-actions .btn-primary {
+  background: var(--accent);
+  color: #fffdf8;
+}
+
+.today-next-useful-card,
+.active-session-mini-banner {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: clamp(1.2rem, 2.2vw, 1.8rem);
+}
+
+.today-done-grid div,
+.today-counts-grid div,
+.visible-effort-marks div,
+.life-stat-grid div,
+.iris365-countdown-stats div,
+.iris365-stat-grid div {
+  background: rgba(244, 237, 229, 0.48);
+  border: 1px solid rgba(205, 187, 168, 0.26);
+  border-radius: 2px;
+}
+
+.recommendation-card,
+.life-mini-card,
+.life-log-card,
+.visible-effort-tile,
+.weekly-effort-grid article,
+.iris365-proof-anchor,
+.iris365-skill-roadmap-card article {
+  background: rgba(251, 247, 241, 0.72);
+  border: 1px solid rgba(205, 187, 168, 0.34);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    border: 0;
+  }
+
+  .app-header {
+    padding: 0 1rem;
+  }
+
+  .nav-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .page {
+    padding: 2rem 1rem 4.5rem;
+  }
+
+  .today-compact-status,
+  .today-start-panel,
+  .today-next-useful-card,
+  .active-session-mini-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 /* Life-system tabs: Media, Exercise, Iris365 */
 .media-tab-page,
 .exercise-tab-page,
@@ -11672,14 +11855,14 @@ textarea:focus,
 }
 
 .media-tab-page {
-  --media-bg: #faf6f1;
-  --media-surface: #f7f0e8;
-  --media-surface-warm: #f2e6d8;
-  --media-border: #eadfd6;
-  --media-text: #3b2b25;
-  --media-muted: #7a645a;
-  --media-accent: #b8947a;
-  --media-accent-soft: #efe3d5;
+  --media-bg: #fbf7f1;
+  --media-surface: #f4ede5;
+  --media-surface-warm: #efe5d9;
+  --media-border: #e3d7ca;
+  --media-text: #342a24;
+  --media-muted: #6c5a4e;
+  --media-accent: #8a6a4d;
+  --media-accent-soft: #efe5d9;
 }
 
 .media-tab-page .page-subtitle,
@@ -11826,6 +12009,21 @@ textarea:focus,
   background: rgba(242, 230, 216, 0.72);
   border: 1px solid rgba(234, 223, 214, 0.88);
   color: rgba(87, 70, 60, 0.76);
+}
+
+.media-optional-learning {
+  margin-top: 0.85rem;
+  border-top: 1px solid rgba(205, 187, 168, 0.28);
+  padding-top: 0.75rem;
+}
+
+.media-optional-learning summary {
+  cursor: pointer;
+  color: var(--media-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 760px) {

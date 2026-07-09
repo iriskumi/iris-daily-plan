@@ -19,22 +19,17 @@ export interface MediaLogStore {
 
 const STORAGE_KEY = 'iris-media-log'
 
-export const MEDIA_TYPES = ['Audiobook', 'Book', 'TV Show', 'Movie', 'Variety Show', 'Podcast', 'Course / Learning Clip', 'YouTube / Clip', 'Other']
+export const MEDIA_TYPES = ['Audiobook', 'Book', 'TV Show', 'Drama', 'Variety Show', 'Movie', 'Podcast', 'YouTube / Clip', 'Course / Learning Clip', 'Other']
 export const MEDIA_LANGUAGES = ['English', 'Japanese', 'Chinese', 'Mixed', 'Other']
-export const MEDIA_STATUSES = ['Want to try', 'In progress', 'Finished', 'Dropped', 'Revisit']
-export const MEDIA_MOODS = ['low-angst', 'funny', 'cozy', 'useful', 'background', 'intense', 'not for low-energy days']
-export const MEDIA_USEFULNESS = ['English input', 'English output material', 'Japanese maintenance', 'Career / AI / Cyber', 'Relaxation', 'Not useful']
+export const MEDIA_STATUSES = ['Want to try', 'In progress', 'Finished', 'Dropped', 'Rewatch / Relisten', 'Comfort pick']
+export const MEDIA_MOODS = ['low-angst', 'funny', 'cozy', 'comfort', 'background', 'bingeable', 'easy English', 'easy Japanese', 'too intense', 'not for low-energy days', 'favourite', 'boring', 'dropped']
+export const MEDIA_USEFULNESS = ['good for English', 'good for Japanese', 'good for expressions', 'good for shadowing']
 export const MEDIA_PLATFORMS = ['Libby', 'Hoopla', 'Audible', 'Coursera', 'ABC iview', 'Netflix', 'YouTube', 'Podcast app', 'Other']
 
 export const MEDIA_RECOMMENDATION_POOLS = [
   {
-    title: 'English / Shadowing candidates',
+    title: 'Comfort watching',
     items: [
-      'WorkLife with Adam Grant',
-      'No Stupid Questions',
-      'Luke’s English Podcast',
-      'The Assembly',
-      'Gruen',
       'Utopia',
       'Fisk',
       'Rosehaven',
@@ -45,12 +40,12 @@ export const MEDIA_RECOMMENDATION_POOLS = [
     ],
   },
   {
-    title: 'Low-angst English comfort media',
+    title: 'Low-angst listening',
     items: ['M/M audiobook', 'Puckboy / Eden Finley / Saxon James audiobook', 'Libby audiobook', 'easy audiobook', 'light sitcom / comedy', 'cozy podcast episode'],
   },
   {
-    title: 'Japanese maintenance',
-    items: ['Japanese variety show', 'Japanese drama', 'Japanese YouTube', 'casual Japanese input'],
+    title: 'Light Japanese shelf',
+    items: ['Japanese variety show', 'Japanese drama', 'Japanese YouTube', 'casual Japanese input', 'one short episode, no pressure'],
   },
 ]
 
