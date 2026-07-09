@@ -1,4 +1,25 @@
 export type Iris365PhaseId = 1 | 2 | 3 | 4
+export type Iris365DayType = 'normal' | 'drift' | 'recovery' | 'push'
+export type Iris365ProofKey = 'body' | 'english' | 'realWorld'
+export type Iris365SkillKey =
+  | 'english'
+  | 'aiAutomation'
+  | 'data'
+  | 'cyber'
+  | 'japanese'
+  | 'career'
+  | 'lifeSystem'
+
+export interface Iris365DailyProof {
+  key: Iris365ProofKey
+  label: string
+  description: string
+  minimum: string
+  standard: string
+  push: string
+  completed: boolean
+  note?: string
+}
 
 export interface Iris365Phase {
   id: Iris365PhaseId
@@ -10,6 +31,18 @@ export interface Iris365Phase {
 
 export interface Iris365Entry {
   date: string
+  dayNumber: number
+  dayType: Iris365DayType
+  energyLevel: 'low' | 'medium' | 'high'
+  mainFocus: Iris365SkillKey | 'foundation'
+  proofs: Record<Iris365ProofKey, Iris365DailyProof>
+  todayIProved: string
+  englishOutputDetail: {
+    topic?: string
+    usefulExpression?: string
+    confidence?: number
+  }
+  skillTouches: Partial<Record<Iris365SkillKey, boolean>>
   lowEnergyDay: boolean
   sleepRhythmProtected: boolean
   bodyMoved: boolean
@@ -170,15 +203,45 @@ export interface Iris365WeeklyReview {
   bestReturnHabit: string
   makeEasierNextWeek: string
   nextWeekPriority: string
+  scores: {
+    sleep?: number
+    body?: number
+    english?: number
+    realTasks?: number
+    skills?: number
+    mood?: number
+  }
   updatedAt: string
+}
+
+export interface Iris365MonthlyReview {
+  monthId: string
+  phase: string
+  whatChanged: string
+  whatBecameEasier: string
+  stillHard: string
+  whatIAvoided: string
+  proudOf: string
+  stopForcing: string
+  nextSmallUpgrade: string
+  visibleOutput: string
+  updatedAt: string
+}
+
+export interface Iris365Settings {
+  startDate: string
+  endDate: string
+  motto: string
 }
 
 export interface Iris365Store {
   schemaVersion: number
   startDate: string
+  settings: Iris365Settings
   entries: Record<string, Iris365Entry>
   proofItems: Iris365ProofItem[]
   weeklyReviews: Record<string, Iris365WeeklyReview>
+  monthlyReviews: Record<string, Iris365MonthlyReview>
   dopamineSwapLogs: Iris365DopamineSwapLog[]
   dopamineSwapLibrary: Iris365DopamineSwapLibraryItem[]
 }

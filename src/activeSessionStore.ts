@@ -69,7 +69,16 @@ function makeId() {
 
 export function getActiveSession(): ActiveSession | null {
   if (typeof localStorage === 'undefined') return null
-  return safeParse(localStorage.getItem(STORAGE_KEY))
+  const session = safeParse(localStorage.getItem(STORAGE_KEY))
+  if (
+    session?.origin === 'exercise' &&
+    session.kind === 'exercise' &&
+    session.title === 'Movement log draft'
+  ) {
+    localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+  return session
 }
 
 export function restoreActiveSession(): ActiveSession | null {

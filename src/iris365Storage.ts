@@ -1,6 +1,8 @@
 import { getLocalDateKey } from './focus'
 import type {
   Iris365Entry,
+  Iris365DailyProof,
+  Iris365DayType,
   Iris365DopamineOutcome,
   Iris365DopamineFeedbackReason,
   Iris365DopamineState,
@@ -11,9 +13,13 @@ import type {
   Iris365FoundationStatus,
   Iris365HighStimulusPatternKey,
   Iris365HighStimulusPatternStatus,
+  Iris365MonthlyReview,
   Iris365Phase,
+  Iris365ProofKey,
   Iris365ProofCategory,
   Iris365ProofItem,
+  Iris365Settings,
+  Iris365SkillKey,
   Iris365Stats,
   Iris365Store,
   Iris365Streaks,
@@ -26,6 +32,65 @@ const SCHEMA_VERSION = 1
 const JOURNEY_DAYS = 365
 export const IRIS_365_START_DATE = '2026-07-08'
 export const IRIS_365_END_DATE = '2027-07-07'
+
+export const IRIS_365_DEFAULT_MOTTO = 'Build the foundation first. Small daily proof, not perfection.'
+
+export const IRIS_365_PROOF_BLUEPRINTS: Record<Iris365ProofKey, Omit<Iris365DailyProof, 'completed' | 'note'>> = {
+  body: {
+    key: 'body',
+    label: 'Body moved',
+    description: 'Support the body that has to carry study, work, English, and AI projects.',
+    minimum: '3-10 minutes of walking, stretching, chores, or mobility.',
+    standard: '20-30 minutes of walk, dance, gym, or strength.',
+    push: 'A planned workout, longer walk, or strength session without turning it into punishment.',
+  },
+  english: {
+    key: 'english',
+    label: 'English output',
+    description: 'One active attempt at producing English, not passive input.',
+    minimum: 'One spoken sentence, short voice note, or 5 minutes of output.',
+    standard: '25 minutes of speaking, shadowing with output, writing, or oral summary.',
+    push: '50 minutes with reusable expressions, recording, or interview/workplace practice.',
+  },
+  realWorld: {
+    key: 'realWorld',
+    label: 'One real thing done',
+    description: 'A practical action that makes life, study, career, or Australia stability more real.',
+    minimum: 'One email, one form, one bill/admin step, one task opened.',
+    standard: 'A complete small task or one clear progress block.',
+    push: 'A visible deliverable, application, portfolio note, or solved blocker.',
+  },
+}
+
+function defaultProofs(): Record<Iris365ProofKey, Iris365DailyProof> {
+  return {
+    body: { ...IRIS_365_PROOF_BLUEPRINTS.body, completed: false },
+    english: { ...IRIS_365_PROOF_BLUEPRINTS.english, completed: false },
+    realWorld: { ...IRIS_365_PROOF_BLUEPRINTS.realWorld, completed: false },
+  }
+}
+
+function defaultSettings(): Iris365Settings {
+  return {
+    startDate: IRIS_365_START_DATE,
+    endDate: IRIS_365_END_DATE,
+    motto: IRIS_365_DEFAULT_MOTTO,
+  }
+}
+
+function normaliseDayType(value: unknown): Iris365DayType {
+  return ['normal', 'drift', 'recovery', 'push'].includes(String(value)) ? value as Iris365DayType : 'normal'
+}
+
+function normaliseEnergyLevel(value: unknown): 'low' | 'medium' | 'high' {
+  return ['low', 'medium', 'high'].includes(String(value)) ? value as 'low' | 'medium' | 'high' : 'medium'
+}
+
+function normaliseSkillKey(value: unknown): Iris365SkillKey | 'foundation' {
+  return ['english', 'aiAutomation', 'data', 'cyber', 'japanese', 'career', 'lifeSystem', 'foundation'].includes(String(value))
+    ? value as Iris365SkillKey | 'foundation'
+    : 'foundation'
+}
 
 const DEFAULT_DOPAMINE_SWAP_LIBRARY: Array<Omit<Iris365DopamineSwapLibraryItem, 'id' | 'createdAt' | 'updatedAt' | 'timesUsed'>> = [
   { text: 'Brownian noise with rain and thunder', status: 'works' },
@@ -178,6 +243,14 @@ export function determineCurrentPhase(dayNumber: number): Iris365Phase {
 export function emptyIris365Entry(date = getLocalDateKey()): Iris365Entry {
   return {
     date,
+    dayNumber: calculateCurrentDayNumber(IRIS_365_START_DATE, date),
+    dayType: 'normal',
+    energyLevel: 'medium',
+    mainFocus: 'foundation',
+    proofs: defaultProofs(),
+    todayIProved: '',
+    englishOutputDetail: {},
+    skillTouches: {},
     lowEnergyDay: false,
     sleepRhythmProtected: false,
     bodyMoved: false,
@@ -212,9 +285,11 @@ function fallbackStore(): Iris365Store {
   return {
     schemaVersion: SCHEMA_VERSION,
     startDate: IRIS_365_START_DATE,
+    settings: defaultSettings(),
     entries: {},
     proofItems: [],
     weeklyReviews: {},
+    monthlyReviews: {},
     dopamineSwapLogs: [],
     dopamineSwapLibrary: DEFAULT_DOPAMINE_SWAP_LIBRARY.map((item, index) => ({
       ...item,
@@ -230,6 +305,12 @@ function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entr
   const sleepRhythmProtected = value.sleepRhythmProtected ?? value.sleepProtected ?? false
   const bodyMoved = value.bodyMoved ?? value.movement ?? false
   const oneRealThingDone = value.oneRealThingDone ?? value.realityTask ?? false
+  const baseProofs = defaultProofs()
+  const proofs: Record<Iris365ProofKey, Iris365DailyProof> = {
+    body: { ...baseProofs.body, ...(value.proofs?.body ?? {}), completed: value.proofs?.body?.completed ?? bodyMoved },
+    english: { ...baseProofs.english, ...(value.proofs?.english ?? {}), completed: value.proofs?.english?.completed ?? value.englishOutput ?? false },
+    realWorld: { ...baseProofs.realWorld, ...(value.proofs?.realWorld ?? {}), completed: value.proofs?.realWorld?.completed ?? oneRealThingDone },
+  }
   const highStimulusPatterns = {
     ...defaultHighStimulusPatterns(),
     ...(value.highStimulusPatterns ?? {}),
@@ -238,6 +319,14 @@ function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entr
     ...emptyIris365Entry(date),
     ...value,
     date,
+    dayNumber: calculateCurrentDayNumber(IRIS_365_START_DATE, date),
+    dayType: normaliseDayType(value.dayType),
+    energyLevel: normaliseEnergyLevel(value.energyLevel),
+    mainFocus: normaliseSkillKey(value.mainFocus),
+    proofs,
+    todayIProved: value.todayIProved ?? value.tinyWin ?? '',
+    englishOutputDetail: value.englishOutputDetail ?? {},
+    skillTouches: value.skillTouches ?? {},
     sleepRhythmProtected,
     bodyMoved,
     oneRealThingDone,
@@ -287,7 +376,32 @@ function normaliseWeeklyReview(value: Partial<Iris365WeeklyReview>, weekStartDat
     bestReturnHabit: value.bestReturnHabit ?? '',
     makeEasierNextWeek: value.makeEasierNextWeek ?? '',
     nextWeekPriority: value.nextWeekPriority ?? '',
+    scores: value.scores ?? {},
     updatedAt: value.updatedAt ?? new Date().toISOString(),
+  }
+}
+
+function normaliseMonthlyReview(value: Partial<Iris365MonthlyReview>, monthId: string): Iris365MonthlyReview {
+  return {
+    monthId,
+    phase: value.phase ?? '',
+    whatChanged: value.whatChanged ?? '',
+    whatBecameEasier: value.whatBecameEasier ?? '',
+    stillHard: value.stillHard ?? '',
+    whatIAvoided: value.whatIAvoided ?? '',
+    proudOf: value.proudOf ?? '',
+    stopForcing: value.stopForcing ?? '',
+    nextSmallUpgrade: value.nextSmallUpgrade ?? '',
+    visibleOutput: value.visibleOutput ?? '',
+    updatedAt: value.updatedAt ?? new Date().toISOString(),
+  }
+}
+
+function normaliseSettings(value: Partial<Iris365Settings> | undefined): Iris365Settings {
+  return {
+    startDate: value?.startDate ?? IRIS_365_START_DATE,
+    endDate: value?.endDate ?? IRIS_365_END_DATE,
+    motto: value?.motto ?? IRIS_365_DEFAULT_MOTTO,
   }
 }
 
@@ -399,6 +513,10 @@ function normaliseStore(value: unknown): Iris365Store {
     if (review && typeof review === 'object') acc[weekStartDate] = normaliseWeeklyReview(review as Partial<Iris365WeeklyReview>, weekStartDate)
     return acc
   }, {})
+  const monthlyReviews = Object.entries(parsed.monthlyReviews ?? {}).reduce<Record<string, Iris365MonthlyReview>>((acc, [monthId, review]) => {
+    if (review && typeof review === 'object') acc[monthId] = normaliseMonthlyReview(review as Partial<Iris365MonthlyReview>, monthId)
+    return acc
+  }, {})
   const dopamineSwapLogs = Array.isArray(parsed.dopamineSwapLogs)
     ? parsed.dopamineSwapLogs.map(normaliseSwapLog).filter((item): item is Iris365DopamineSwapLog => Boolean(item))
     : []
@@ -421,9 +539,11 @@ function normaliseStore(value: unknown): Iris365Store {
   return {
     schemaVersion: SCHEMA_VERSION,
     startDate: IRIS_365_START_DATE,
+    settings: normaliseSettings(parsed.settings),
     entries,
     proofItems,
     weeklyReviews,
+    monthlyReviews,
     dopamineSwapLogs,
     dopamineSwapLibrary,
   }
@@ -574,6 +694,7 @@ export function emptyIris365WeeklyReview(weekStartDate = getIris365WeekStart()):
     bestReturnHabit: '',
     makeEasierNextWeek: '',
     nextWeekPriority: '',
+    scores: {},
     updatedAt: new Date().toISOString(),
   }
 }
@@ -584,6 +705,27 @@ export function saveIris365WeeklyReview(review: Iris365WeeklyReview, store = loa
     weeklyReviews: {
       ...store.weeklyReviews,
       [review.weekStartDate]: {
+        ...review,
+        updatedAt: new Date().toISOString(),
+      },
+    },
+  })
+}
+
+export function getIris365MonthId(date = getLocalDateKey()): string {
+  return date.slice(0, 7)
+}
+
+export function emptyIris365MonthlyReview(monthId = getIris365MonthId()): Iris365MonthlyReview {
+  return normaliseMonthlyReview({}, monthId)
+}
+
+export function saveIris365MonthlyReview(review: Iris365MonthlyReview, store = loadIris365Store()): Iris365Store {
+  return saveIris365Store({
+    ...store,
+    monthlyReviews: {
+      ...store.monthlyReviews,
+      [review.monthId]: {
         ...review,
         updatedAt: new Date().toISOString(),
       },

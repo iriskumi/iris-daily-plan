@@ -6361,6 +6361,8 @@ textarea {
 
 .iris365-countdown-card,
 .iris365-checkin-card,
+.iris365-daily-system-card,
+.iris365-daily-proof-card,
 .iris365-foundation-card,
 .iris365-growth-card,
 .iris365-details-card,
@@ -6479,6 +6481,8 @@ textarea {
 }
 
 .iris365-checkin-card,
+.iris365-daily-system-card,
+.iris365-daily-proof-card,
 .iris365-foundation-card,
 .iris365-growth-card,
 .iris365-details-card,
@@ -6491,6 +6495,140 @@ textarea {
 .iris365-main-stack {
   display: grid;
   gap: 1rem;
+}
+
+.iris365-daily-system-card,
+.iris365-daily-proof-card {
+  margin-bottom: 1rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.iris365-daily-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(150px, 0.45fr) minmax(220px, 0.65fr);
+  gap: 0.8rem;
+  margin-top: 1rem;
+  align-items: end;
+}
+
+.iris365-daily-controls > div,
+.iris365-daily-controls label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--section-label);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iris365-daily-controls select,
+.iris365-today-proved-field input,
+.iris365-proof-anchor input[type="text"],
+.iris365-proof-anchor > input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0.62rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: #FFFCF9;
+  color: var(--text);
+  font-family: var(--font-cjk);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.iris365-pill-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.iris365-pill-options button {
+  display: grid;
+  gap: 0.08rem;
+  padding: 0.45rem 0.62rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.iris365-pill-options button small {
+  color: var(--text-3);
+  font-size: 10px;
+}
+
+.iris365-pill-options button.active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border) 55%);
+  background: var(--accent-bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.iris365-daytype-copy {
+  margin-top: 0.85rem;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.iris365-daily-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.iris365-proof-anchor {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #FFFCF9;
+}
+
+.iris365-proof-anchor.done {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border) 56%);
+  background: var(--accent-bg);
+}
+
+.iris365-proof-anchor label {
+  display: flex;
+  gap: 0.52rem;
+  align-items: center;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.iris365-proof-anchor p,
+.iris365-proof-anchor li {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.iris365-proof-anchor details {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.iris365-proof-anchor summary {
+  cursor: pointer;
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.iris365-proof-anchor ul {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.45rem;
+  padding-left: 1rem;
 }
 
 .iris365-stats-card {
@@ -7199,6 +7337,99 @@ textarea {
   background: var(--surface);
 }
 
+.iris365-progressive-details {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.iris365-progressive-details > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.iris365-progressive-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.iris365-progressive-details > summary span {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.iris365-progressive-details > summary small {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.iris365-progressive-details .iris365-weekly-card {
+  margin-top: 0;
+  border-width: 1px 0 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.iris365-skill-roadmap-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0 1.15rem 1.15rem;
+}
+
+.iris365-skill-roadmap-card article {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #FFFCF9;
+}
+
+.iris365-skill-roadmap-card article.touched {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border) 62%);
+  background: var(--accent-bg);
+}
+
+.iris365-skill-roadmap-card span {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.iris365-skill-roadmap-card p,
+.iris365-skill-roadmap-card li {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.iris365-skill-roadmap-card ul {
+  display: grid;
+  gap: 0.28rem;
+  padding-left: 1rem;
+}
+
+.iris365-english-output-details {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.iris365-english-output-details summary {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .iris365-weekly-card .card-header > span {
   color: var(--text-3);
   font-size: 12px;
@@ -7399,6 +7630,8 @@ textarea {
   .english-listening-draw-controls,
   .iris365-countdown-card,
   .iris365-layout,
+  .iris365-daily-controls,
+  .iris365-daily-proof-grid,
   .iris365-checkbox-grid,
   .iris365-growth-grid,
   .iris365-detail-grid,
@@ -7409,6 +7642,7 @@ textarea {
   .iris365-rating-grid,
   .iris365-recent-row,
   .iris365-weekly-grid,
+  .iris365-skill-roadmap-card,
   .iris365-proof-form,
   .english-output-journey-stats,
   .english-output-manual-row,
@@ -11189,6 +11423,170 @@ textarea:focus,
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.media-tab-page {
+  --media-bg: #faf6f1;
+  --media-surface: #f7f0e8;
+  --media-surface-warm: #f2e6d8;
+  --media-border: #eadfd6;
+  --media-text: #3b2b25;
+  --media-muted: #7a645a;
+  --media-accent: #b8947a;
+  --media-accent-soft: #efe3d5;
+}
+
+.media-tab-page .page-subtitle,
+.media-helper,
+.media-subtitle,
+.media-description {
+  color: rgba(87, 70, 60, 0.68);
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+.media-helper {
+  margin: 0.2rem 0 0;
+  max-width: 42rem;
+  font-size: 0.9rem;
+}
+
+.media-helper-cn {
+  font-family: var(--font-cn-soft);
+  letter-spacing: 0.02em;
+}
+
+.media-section-title,
+.media-form-title,
+.media-tab-page .life-system-card h3,
+.media-tab-page .recommendation-card h3,
+.media-tab-page .life-log-card h3 {
+  color: var(--media-text);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.media-form-title {
+  font-family: var(--font-cn-soft);
+  font-size: clamp(1.18rem, 1.5vw, 1.42rem);
+  line-height: 1.45;
+}
+
+.media-tab-page .life-system-card {
+  background:
+    linear-gradient(135deg, rgba(250, 246, 241, 0.98), rgba(247, 240, 232, 0.82));
+  border-color: var(--media-border);
+  box-shadow: 0 18px 46px rgba(93, 70, 54, 0.045);
+}
+
+.media-tab-page .media-form-card {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(242, 230, 216, 0.48), transparent 34%),
+    linear-gradient(135deg, rgba(250, 246, 241, 0.98), rgba(247, 240, 232, 0.84));
+}
+
+.media-tab-page .media-links-card {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.media-tab-page .life-link-row a {
+  background: rgba(250, 246, 241, 0.92);
+  border-color: var(--media-border);
+  color: var(--media-muted);
+  box-shadow: 0 10px 28px rgba(93, 70, 54, 0.04);
+}
+
+.media-tab-page .life-link-row a:hover {
+  background: var(--media-accent-soft);
+  border-color: rgba(184, 148, 122, 0.42);
+  color: var(--media-text);
+}
+
+.media-tab-page .life-field {
+  color: rgba(87, 70, 60, 0.72);
+  letter-spacing: 0.075em;
+}
+
+.media-tab-page .life-field input,
+.media-tab-page .life-field select,
+.media-tab-page .life-field textarea {
+  background: rgba(250, 246, 241, 0.94);
+  border: 1px solid var(--media-border);
+  color: var(--media-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.media-tab-page .life-field textarea {
+  min-height: 5.1rem;
+}
+
+.media-tab-page .life-field input::placeholder,
+.media-tab-page .life-field textarea::placeholder {
+  color: rgba(122, 100, 90, 0.62);
+}
+
+.media-tab-page .life-field input:focus,
+.media-tab-page .life-field select:focus,
+.media-tab-page .life-field textarea:focus {
+  border-color: rgba(184, 148, 122, 0.72);
+  box-shadow: 0 0 0 3px rgba(239, 227, 213, 0.82);
+  outline: none;
+}
+
+.media-tab-page .btn-primary,
+.media-tab-page .life-card-heading .btn-primary {
+  background: linear-gradient(180deg, #c3a086, #aa826b);
+  border: 1px solid rgba(127, 94, 74, 0.18);
+  border-radius: 999px;
+  color: #fffaf4;
+  box-shadow: 0 14px 30px rgba(93, 70, 54, 0.14);
+}
+
+.media-tab-page .life-filter-row button,
+.media-tab-page .life-chip-group button,
+.media-tab-page .life-log-actions button {
+  background: rgba(250, 246, 241, 0.86);
+  border-color: var(--media-border);
+  color: var(--media-muted);
+}
+
+.media-tab-page .life-filter-row button.active,
+.media-tab-page .life-chip-group button.active,
+.media-tab-page .life-log-actions button:hover {
+  background: var(--media-accent-soft);
+  border-color: rgba(184, 148, 122, 0.42);
+  color: var(--media-text);
+}
+
+.media-tab-page .recommendation-card,
+.media-tab-page .life-log-card {
+  background:
+    linear-gradient(180deg, rgba(250, 246, 241, 0.96), rgba(247, 240, 232, 0.78));
+  border-color: var(--media-border);
+  box-shadow: 0 12px 30px rgba(93, 70, 54, 0.04);
+}
+
+.media-tab-page .recommendation-card li,
+.media-tab-page .life-log-card p,
+.media-tab-page .life-log-card small,
+.media-tab-page .life-empty {
+  color: var(--media-muted);
+}
+
+.media-tab-page .life-tag-row span {
+  background: rgba(242, 230, 216, 0.72);
+  border: 1px solid rgba(234, 223, 214, 0.88);
+  color: rgba(87, 70, 60, 0.76);
+}
+
+@media (max-width: 760px) {
+  .media-tab-page .media-links-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .life-system-card,

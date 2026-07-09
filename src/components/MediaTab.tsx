@@ -83,7 +83,8 @@ export default function MediaTab() {
       <section className="life-system-card media-links-card">
         <div>
           <div className="section-label">Quick links</div>
-          <h3>Find and reuse good material</h3>
+          <h3 className="media-section-title">Find and reuse good material</h3>
+          <p className="media-helper">Comfort is allowed. New rabbit holes are optional.</p>
         </div>
         <div className="life-link-row">
           <a href="https://iris-book-finder.vercel.app/" target="_blank" rel="noreferrer">
@@ -99,11 +100,12 @@ export default function MediaTab() {
         </div>
       </section>
 
-      <section className="life-system-card">
+      <section className="life-system-card media-form-card">
         <div className="life-card-heading">
           <div>
             <div className="section-label">Add media entry</div>
-            <h3>What did I read, listen to, or watch?</h3>
+            <h3 className="media-form-title">记录一个素材</h3>
+            <p className="media-helper media-helper-cn">书、剧、播客、有声书、精听片段都可以。</p>
           </div>
           <button className="btn-primary" type="button" onClick={addEntry}><Plus size={14} />Save</button>
         </div>
@@ -124,8 +126,9 @@ export default function MediaTab() {
         </div>
       </section>
 
-      <section className="life-system-card">
+      <section className="life-system-card media-pools-card">
         <div className="section-label">Recommended pools</div>
+        <p className="media-helper">Soft places to look when you want input without a new spiral.</p>
         <div className="recommendation-grid">
           {MEDIA_RECOMMENDATION_POOLS.map(pool => (
             <div className="recommendation-card" key={pool.title}>
@@ -136,11 +139,12 @@ export default function MediaTab() {
         </div>
       </section>
 
-      <section className="life-system-card">
+      <section className="life-system-card media-log-section">
         <div className="life-card-heading">
           <div>
             <div className="section-label">Media log</div>
-            <h3>{entries.length} item{entries.length === 1 ? '' : 's'}</h3>
+            <h3 className="media-section-title">{entries.length} item{entries.length === 1 ? '' : 's'}</h3>
+            <p className="media-helper">Was it actually good for me?</p>
           </div>
         </div>
         <div className="life-filter-row">{MEDIA_FILTERS.map(item => <button key={item} type="button" className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div>

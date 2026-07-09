@@ -186,16 +186,7 @@ export default function StartNowDashboard({
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem('iris-exercise-focus-target', 'movement-log')
     }
-    startActiveSession({
-      origin: 'exercise',
-      kind: 'exercise',
-      category: 'Movement',
-      title: 'Movement log draft',
-      startedAt: new Date().toISOString(),
-      targetTab: 'exercise',
-      status: 'active',
-    })
-    setMessage('Exercise log opened. Movement counts only after you save it.')
+    setMessage('Exercise log opened. Nothing counts until you save a movement.')
     onOpenExercise?.()
   }
 

@@ -10,7 +10,9 @@ import {
   calculateFoundationStatus,
   calculateIris365Stats,
   determineCurrentPhase,
+  emptyIris365MonthlyReview,
   emptyIris365WeeklyReview,
+  getIris365MonthId,
   getIris365WeekEntries,
   getIris365WeekStart,
   getIris365DopamineWeekStats,
@@ -25,6 +27,7 @@ import {
   loadIris365Store,
   recentIris365Entries,
   saveIris365Entry,
+  saveIris365MonthlyReview,
   saveIris365SwapLibraryItem,
   saveIris365WeeklyReview,
   updateIris365DopamineSwapLog,
@@ -38,20 +41,61 @@ import type {
   Iris365DopamineSwapLog,
   Iris365DopamineUrge,
   Iris365Entry,
+  Iris365DayType,
   Iris365HighStimulusPatternKey,
   Iris365HighStimulusPatternStatus,
+  Iris365MonthlyReview,
   Iris365ProofCategory,
+  Iris365ProofKey,
+  Iris365SkillKey,
   Iris365WeeklyReview,
 } from '../iris365Types'
 
 const FOUNDATION_FIELDS: Array<{
   key: 'sleepRhythmProtected' | 'bodyMoved' | 'oneRealThingDone'
+  proofKey: Iris365ProofKey
   label: string
   hint: string
 }> = [
-  { key: 'sleepRhythmProtected', label: 'Sleep rhythm protected', hint: 'Protect bedtime, wake rhythm, or recovery window.' },
-  { key: 'bodyMoved', label: 'Body moved', hint: 'Walk, stretch, gym, chores, or a five-minute reset.' },
-  { key: 'oneRealThingDone', label: 'One real thing done', hint: 'A practical action that makes life, work, study, or health more real.' },
+  { key: 'sleepRhythmProtected', proofKey: 'body', label: 'Sleep rhythm protected', hint: 'Protect bedtime, wake rhythm, or recovery window.' },
+  { key: 'bodyMoved', proofKey: 'body', label: 'Body moved', hint: 'Walk, stretch, gym, chores, or a five-minute reset.' },
+  { key: 'oneRealThingDone', proofKey: 'realWorld', label: 'One real thing done', hint: 'A practical action that makes life, work, study, or health more real.' },
+]
+
+const DAILY_PROOF_ORDER: Iris365ProofKey[] = ['body', 'english', 'realWorld']
+
+const DAY_TYPE_OPTIONS: Array<{ value: Iris365DayType; label: string; hint: string }> = [
+  { value: 'normal', label: 'Normal', hint: 'steady day' },
+  { value: 'drift', label: 'Drift', hint: 'notice, reduce friction' },
+  { value: 'recovery', label: 'Recovery', hint: 'minimum anchors count' },
+  { value: 'push', label: 'Push', hint: 'extra output if stable' },
+]
+
+const ENERGY_OPTIONS: Array<{ value: 'low' | 'medium' | 'high'; label: string }> = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+]
+
+const SKILL_LABELS: Record<Iris365SkillKey | 'foundation', string> = {
+  foundation: 'Foundation',
+  english: 'English fluency',
+  aiAutomation: 'AI / automation',
+  data: 'Data / SQL',
+  cyber: 'Cyber awareness',
+  japanese: 'Japanese employability',
+  career: 'Career positioning',
+  lifeSystem: 'Life system',
+}
+
+const SKILL_ROADMAP: Array<{ key: Iris365SkillKey; title: string; why: string; tiny: string; standard: string; output: string }> = [
+  { key: 'english', title: 'English fluency', why: 'Speak and write in a way that makes study, work, interviews, and relationships easier in Australia.', tiny: 'One 5-minute active output rep.', standard: '25 minutes speaking, shadowing, writing, or oral summary.', output: 'Reusable expressions, recordings, interview answers, workplace scripts.' },
+  { key: 'japanese', title: 'Japanese employability', why: 'Keep Japanese available as a work advantage, not a fading background skill.', tiny: 'Read or produce one useful workplace phrase.', standard: '25 minutes Japanese admin/customer-service/workplace practice.', output: 'Bilingual service notes, resume bullets, Japanese-English examples.' },
+  { key: 'aiAutomation', title: 'AI / automation', why: 'Build practical workflows that make you useful in admin, education, data, and operations contexts.', tiny: 'Capture one automation idea.', standard: 'One small implementation or workflow note.', output: 'Daily Hub improvements, scripts, AI workflow case notes.' },
+  { key: 'data', title: 'Data / SQL', why: 'Keep a clean technical foundation for admin, reporting, automation, and AI-adjacent roles.', tiny: 'One SQL/Excel concept or query.', standard: '25 minutes SQL, Excel, dashboard, or data cleaning practice.', output: 'Queries, mini dashboards, data notes, examples.' },
+  { key: 'cyber', title: 'Cyber / digital awareness', why: 'Build confidence around security, privacy, systems, and TAFE/career readiness.', tiny: 'One concept, term, or assessment step.', standard: '25 minutes cyber learning or assessment work.', output: 'Cyber notes, risk examples, assessment progress.' },
+  { key: 'career', title: 'Career positioning', why: 'Turn your learning into visible career assets for Australia.', tiny: 'One resume, LinkedIn, application, or role research step.', standard: 'One tailored application or portfolio/career note.', output: 'CV bullets, LinkedIn updates, application drafts, interview stories.' },
+  { key: 'lifeSystem', title: 'Health, routine, emotional stability', why: 'The base layer that makes all other skills possible.', tiny: 'Sleep anchor, movement, food, shower, one admin edge.', standard: 'A repeatable day shape with body and recovery protected.', output: 'Stable routines, lower stimulation, better recovery, fewer spirals.' },
 ]
 
 const GROWTH_FIELDS: Array<{
@@ -103,7 +147,7 @@ const GROWTH_STATS: Array<[keyof ReturnType<typeof calculateIris365Stats>, strin
   ['workPrepDays', 'Work prep'],
 ]
 
-const WEEKLY_REVIEW_FIELDS: Array<[keyof Omit<Iris365WeeklyReview, 'weekStartDate' | 'weekEndDate' | 'updatedAt'>, string]> = [
+const WEEKLY_REVIEW_FIELDS: Array<[keyof Omit<Iris365WeeklyReview, 'weekStartDate' | 'weekEndDate' | 'scores' | 'updatedAt'>, string]> = [
   ['proofThisWeek', 'What proof did I leave this week?'],
   ['attentionDrain', 'What drained my attention the most?'],
   ['bestReturnHabit', 'Which habit gave me the best return?'],
@@ -242,6 +286,23 @@ function getMainGrowthTask(entry: Iris365Entry): string {
 function updateStimulusControlledFlag(patterns: Iris365Entry['highStimulusPatterns']): boolean {
   const statuses = Object.values(patterns)
   return statuses.includes('controlled') && !statuses.includes('overused')
+}
+
+function updateProofCompletion(entry: Iris365Entry, proofKey: Iris365ProofKey, completed: boolean): Iris365Entry['proofs'] {
+  return {
+    ...entry.proofs,
+    [proofKey]: {
+      ...entry.proofs[proofKey],
+      completed,
+    },
+  }
+}
+
+function dayTypeCopy(dayType: Iris365DayType): string {
+  if (dayType === 'drift') return 'A drift day is information, not failure. Keep the three anchors small.'
+  if (dayType === 'recovery') return 'Recovery days still count when the foundation stays visible.'
+  if (dayType === 'push') return 'Push only from stability. Extra output is optional, not punishment.'
+  return 'Normal days are for steady repetition and one visible proof.'
 }
 
 function dopamineStateLabel(value: Iris365DopamineState | null): string {
@@ -651,6 +712,8 @@ export default function Iris365() {
   const recentEntries = useMemo(() => recentIris365Entries(store.entries, 7), [store.entries])
   const weekStart = getIris365WeekStart(today)
   const weeklyReview = store.weeklyReviews[weekStart] ?? emptyIris365WeeklyReview(weekStart)
+  const monthId = getIris365MonthId(today)
+  const monthlyReview = store.monthlyReviews[monthId] ?? emptyIris365MonthlyReview(monthId)
   const weekEntries = getIris365WeekEntries(store.entries, weekStart)
   const weeklyStats = calculateIris365Stats(Object.fromEntries(weekEntries.map(item => [item.date, item])), today)
   const dopamineStats = getIris365DopamineWeekStats(store, today)
@@ -693,6 +756,17 @@ export default function Iris365() {
       updatedAt: new Date().toISOString(),
     }
     setStore(saveIris365WeeklyReview(next, store))
+  }
+
+  function updateMonthlyReview(patch: Partial<Iris365MonthlyReview>) {
+    const next = {
+      ...monthlyReview,
+      ...patch,
+      monthId,
+      phase: patch.phase ?? (monthlyReview.phase || phase.title),
+      updatedAt: new Date().toISOString(),
+    }
+    setStore(saveIris365MonthlyReview(next, store))
   }
 
   function saveProofItem() {
@@ -862,8 +936,126 @@ export default function Iris365() {
         </div>
       </section>
 
+      {!preStart && (
+        <section className="iris365-daily-system-card">
+          <div className="card-header">
+            <div>
+              <div className="section-label">Today foundation system</div>
+              <div className="card-title">Small daily proof, not perfection.</div>
+            </div>
+            <span className={`iris365-save-pill ${savedToday ? 'saved' : ''}`}>
+              {savedToday ? 'Saved today' : 'Not saved yet'}
+            </span>
+          </div>
+
+          <div className="iris365-daily-controls">
+            <div>
+              <span>Day type</span>
+              <div className="iris365-pill-options">
+                {DAY_TYPE_OPTIONS.map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={entry.dayType === option.value ? 'active' : ''}
+                    onClick={() => updateEntry({ dayType: option.value })}
+                  >
+                    {option.label}
+                    <small>{option.hint}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label>
+              Energy
+              <select value={entry.energyLevel} onChange={event => updateEntry({ energyLevel: event.target.value as Iris365Entry['energyLevel'] })}>
+                {ENERGY_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Main focus
+              <select value={entry.mainFocus} onChange={event => updateEntry({ mainFocus: event.target.value as Iris365Entry['mainFocus'] })}>
+                {(Object.keys(SKILL_LABELS) as Array<Iris365SkillKey | 'foundation'>).map(key => (
+                  <option key={key} value={key}>{SKILL_LABELS[key]}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <p className="iris365-daytype-copy">{dayTypeCopy(entry.dayType)}</p>
+
+          <label className="iris365-single-field iris365-today-proved-field">
+            Today I proved
+            <input
+              value={entry.todayIProved}
+              onChange={event => updateEntry({ todayIProved: event.target.value, tinyWin: event.target.value })}
+              placeholder="e.g. I can restart gently; I can finish one real thing; I can speak one useful sentence"
+            />
+          </label>
+        </section>
+      )}
+
       <section className="iris365-layout">
         <div className="iris365-main-stack">
+          {!preStart && (
+            <section className="iris365-daily-proof-card">
+              <div className="card-header">
+                <div>
+                  <div className="section-label">Daily essentials</div>
+                  <div className="card-title">Three anchors for stability in Australia</div>
+                </div>
+              </div>
+              <div className="iris365-daily-proof-grid">
+                {DAILY_PROOF_ORDER.map(key => {
+                  const proof = entry.proofs[key]
+                  return (
+                    <article key={key} className={`iris365-proof-anchor ${proof.completed ? 'done' : ''}`}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={proof.completed}
+                          onChange={event => {
+                            const completed = event.target.checked
+                            updateEntry({
+                              proofs: updateProofCompletion(entry, key, completed),
+                              ...(key === 'body' ? { bodyMoved: completed, movement: completed } : {}),
+                              ...(key === 'english' ? { englishOutput: completed } : {}),
+                              ...(key === 'realWorld' ? { oneRealThingDone: completed, realityTask: completed } : {}),
+                            })
+                          }}
+                        />
+                        <span>{proof.label}</span>
+                      </label>
+                      <p>{proof.description}</p>
+                      <details>
+                        <summary>Minimum / standard / push</summary>
+                        <ul>
+                          <li><strong>Minimum:</strong> {proof.minimum}</li>
+                          <li><strong>Standard:</strong> {proof.standard}</li>
+                          <li><strong>Push:</strong> {proof.push}</li>
+                        </ul>
+                      </details>
+                      <input
+                        value={proof.note ?? ''}
+                        onChange={event => updateEntry({
+                          proofs: {
+                            ...entry.proofs,
+                            [key]: {
+                              ...proof,
+                              note: event.target.value,
+                            },
+                          },
+                        })}
+                        placeholder="Optional tiny note"
+                      />
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
           <section className="iris365-foundation-card">
             <div className="card-header">
               <div>
@@ -896,7 +1088,13 @@ export default function Iris365() {
                       <input
                         type="checkbox"
                         checked={entry[item.key]}
-                        onChange={event => updateEntry(foundationPatch(item.key, event.target.checked))}
+                        onChange={event => {
+                          const completed = event.target.checked
+                          updateEntry({
+                            ...foundationPatch(item.key, completed),
+                            ...(item.key !== 'sleepRhythmProtected' ? { proofs: updateProofCompletion(entry, item.proofKey, completed) } : {}),
+                          })
+                        }}
                       />
                       <span>
                         <strong>{item.label}</strong>
@@ -924,7 +1122,20 @@ export default function Iris365() {
                       <input
                         type="checkbox"
                         checked={entry[item.key]}
-                        onChange={event => updateEntry({ [item.key]: event.target.checked })}
+                        onChange={event => {
+                          const completed = event.target.checked
+                          updateEntry({
+                            [item.key]: completed,
+                            skillTouches: {
+                              ...entry.skillTouches,
+                              ...(item.key === 'englishOutput' || item.key === 'shadowing' ? { english: completed } : {}),
+                              ...(item.key === 'cyberAiProject' ? { cyber: completed, aiAutomation: completed } : {}),
+                              ...(item.key === 'jobApplication' || item.key === 'workPrep' ? { career: completed } : {}),
+                              ...(item.key === 'studyCoursework' ? { data: completed } : {}),
+                              ...(item.key === 'lifeAdmin' ? { lifeSystem: completed } : {}),
+                            },
+                          })
+                        }}
                       />
                       <span>
                         <strong>{item.label}</strong>
@@ -950,6 +1161,38 @@ export default function Iris365() {
                     </button>
                   </div>
                 )}
+                <details className="iris365-english-output-details">
+                  <summary>English output note</summary>
+                  <div className="iris365-detail-grid">
+                    <label>
+                      Topic
+                      <input
+                        value={entry.englishOutputDetail.topic ?? ''}
+                        onChange={event => updateEntry({ englishOutputDetail: { ...entry.englishOutputDetail, topic: event.target.value } })}
+                        placeholder="What did I speak/write about?"
+                      />
+                    </label>
+                    <label>
+                      Useful expression
+                      <input
+                        value={entry.englishOutputDetail.usefulExpression ?? ''}
+                        onChange={event => updateEntry({ englishOutputDetail: { ...entry.englishOutputDetail, usefulExpression: event.target.value } })}
+                        placeholder="One phrase worth reusing"
+                      />
+                    </label>
+                    <label>
+                      Confidence 1-5
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={entry.englishOutputDetail.confidence ?? ''}
+                        onChange={event => updateEntry({ englishOutputDetail: { ...entry.englishOutputDetail, confidence: Number(event.target.value) || undefined } })}
+                        placeholder="3"
+                      />
+                    </label>
+                  </div>
+                </details>
               </section>
 
               <section className="iris365-details-card">
@@ -1234,7 +1477,11 @@ export default function Iris365() {
         </aside>
       </section>
 
-      {isIris365WeeklyReviewDay(today) && (
+      <details className="iris365-progressive-details">
+        <summary>
+          <span>Weekly review</span>
+          <small>{isIris365WeeklyReviewDay(today) ? 'Sunday review day' : 'Open when useful'}</small>
+        </summary>
         <section className="iris365-weekly-card">
           <div className="card-header">
             <div>
@@ -1262,7 +1509,64 @@ export default function Iris365() {
             ))}
           </div>
         </section>
-      )}
+      </details>
+
+      <details className="iris365-progressive-details">
+        <summary>
+          <span>Monthly reflection</span>
+          <small>What is changing slowly?</small>
+        </summary>
+        <section className="iris365-weekly-card iris365-monthly-card">
+          <div className="card-header">
+            <div>
+              <div className="section-label">Monthly review</div>
+              <div className="card-title">{monthId} · {monthlyReview.phase || phase.title}</div>
+            </div>
+          </div>
+          <div className="iris365-weekly-grid">
+            {([
+              ['whatChanged', 'What changed this month?'],
+              ['whatBecameEasier', 'What became easier?'],
+              ['stillHard', 'What is still hard?'],
+              ['whatIAvoided', 'What did I avoid?'],
+              ['proudOf', 'What am I proud of?'],
+              ['stopForcing', 'What should I stop forcing?'],
+              ['nextSmallUpgrade', 'Next small upgrade'],
+              ['visibleOutput', 'Visible output / proof'],
+            ] as Array<[keyof Iris365MonthlyReview, string]>).map(([key, label]) => (
+              <label key={key}>
+                {label}
+                <textarea
+                  value={String(monthlyReview[key] ?? '')}
+                  onChange={event => updateMonthlyReview({ [key]: event.target.value } as Partial<Iris365MonthlyReview>)}
+                />
+              </label>
+            ))}
+          </div>
+        </section>
+      </details>
+
+      <details className="iris365-progressive-details">
+        <summary>
+          <span>Skill roadmap</span>
+          <small>Long-term stability areas</small>
+        </summary>
+        <section className="iris365-skill-roadmap-card">
+          {SKILL_ROADMAP.map(skill => (
+            <article key={skill.key} className={entry.skillTouches[skill.key] ? 'touched' : ''}>
+              <div>
+                <span>{skill.title}</span>
+                <p>{skill.why}</p>
+              </div>
+              <ul>
+                <li><strong>Tiny:</strong> {skill.tiny}</li>
+                <li><strong>Standard:</strong> {skill.standard}</li>
+                <li><strong>Visible output:</strong> {skill.output}</li>
+              </ul>
+            </article>
+          ))}
+        </section>
+      </details>
 
       <section className="iris365-recent-card">
         <div className="card-header">
