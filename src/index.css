@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=LXGW+WenKai+Screen&family=Noto+Serif+SC:wght@500;600&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=LXGW+WenKai+Screen&family=Noto+Serif+SC:wght@500;600&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap');
 
 @font-face {
   font-family: 'Iris Handwriting Accent';
@@ -42,49 +42,49 @@
 }
 
 :root {
-  --bg: #FFF7F8;
-  --surface: #FFFDFD;
-  --surface-2: #F9EEF1;
-  --border: #F0D9DE;
-  --border-strong: #E5BBC5;
+  --bg: #EDE4DA;
+  --surface: #FBF7F1;
+  --surface-2: #F4EDE5;
+  --border: #E3D7CA;
+  --border-strong: #CDBBA8;
 
-  --text: #372727;
-  --text-2: #5B4447;
-  --text-3: #80686C;
-  --text-hint: #90777B;
-  --section-label: #9A7B82;
+  --text: #342A24;
+  --text-2: #6C5A4E;
+  --text-3: #9A897C;
+  --text-hint: #A99A8E;
+  --section-label: #A19386;
 
-  --accent: #F4B8C3;
-  --accent-2: #8F5660;
-  --accent-bg: #FDE8ED;
-  --accent-border: #E9AAB6;
+  --accent: #8A6A4D;
+  --accent-2: #6F543B;
+  --accent-bg: #EFE5D9;
+  --accent-border: #C7B197;
 
-  --amber: #9C725E;
-  --amber-bg: #FFF2EC;
-  --amber-border: #EFC8B8;
+  --amber: #8A6A4D;
+  --amber-bg: #F4E9DD;
+  --amber-border: #D8C5AE;
 
-  --red: #A45C67;
-  --red-bg: #FDE8ED;
-  --red-border: #E9AAB6;
+  --red: #8E6258;
+  --red-bg: #F2E5DF;
+  --red-border: #D8BEB4;
 
-  --purple: #8C6574;
-  --purple-bg: #F7EAF0;
+  --purple: #7A6A66;
+  --purple-bg: #EEE7E2;
 
-  --blue: #7D6E84;
-  --blue-bg: #F0ECF6;
+  --blue: #706C68;
+  --blue-bg: #ECE8E2;
 
-  --orange: #A06F5D;
-  --orange-bg: #FFF0EA;
+  --orange: #8C684E;
+  --orange-bg: #F4E8DC;
 
-  --milk-foam: #FFF8F8;
-  --vanilla-linen: #FBECEF;
-  --strawberry-milk: #F7C1CB;
-  --soft-peach-milk: #F9D8D8;
-  --blanched-almond: #F0DCE0;
-  --cocoa-text: #3B2B2D;
-  --soft-cocoa: #80686C;
-  --rose-border: rgba(247, 193, 203, 0.68);
-  --cream-shadow: 0 18px 45px rgba(114, 73, 82, 0.08);
+  --milk-foam: #FBF7F1;
+  --vanilla-linen: #F4EDE5;
+  --strawberry-milk: #E8D9D0;
+  --soft-peach-milk: #EFE2D8;
+  --blanched-almond: #E9DDD1;
+  --cocoa-text: #342A24;
+  --soft-cocoa: #6C5A4E;
+  --rose-border: rgba(205, 187, 168, 0.68);
+  --cream-shadow: 0 28px 70px rgba(92, 74, 56, 0.08);
 
   --shadow-sm: none;
   --shadow: none;
@@ -101,6 +101,7 @@
   --font-cjk: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-cn-soft: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "Noto Serif SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', 'Noto Serif SC', 'Times New Roman', serif;
   --font-quote-zh: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", "ELEYANG Plog", "Ma Shan Zheng Local", "Ma Shan Zheng", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-note-hand: var(--font-cn-soft);
   --font-accent-hand: 'Iris Handwriting Accent', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', cursive;
@@ -120,7 +121,9 @@ html {
 
 body {
   font-family: var(--font);
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 16% 4%, rgba(255, 252, 246, 0.38), transparent 26rem),
+    linear-gradient(180deg, #ede4da 0%, #f1e8df 48%, #e9dfd5 100%);
   color: var(--text);
   min-height: 100dvh;
   line-height: 1.55;
@@ -169,20 +172,26 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  max-width: 1240px;
+  margin: 0 auto;
+  background: rgba(251, 247, 241, 0.62);
+  border-left: 1px solid rgba(205, 187, 168, 0.22);
+  border-right: 1px solid rgba(205, 187, 168, 0.22);
 }
 
 .app-header {
-  background: var(--bg);
-  border-bottom: 0;
-  padding: 0 1.25rem;
+  background: rgba(251, 247, 241, 0.86);
+  border-bottom: 1px solid rgba(205, 187, 168, 0.24);
+  padding: 0 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
+  height: 66px;
   position: sticky;
   top: 0;
   z-index: 100;
   gap: 1rem;
+  backdrop-filter: blur(18px);
 }
 
 .app-header-brand {
@@ -192,25 +201,26 @@ body {
 }
 
 .app-brand-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   flex: 0 0 auto;
+  box-shadow: 0 10px 22px rgba(92, 74, 56, 0.08);
 }
 
 .app-header h1 {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 500;
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
   color: var(--text);
   white-space: nowrap;
 }
 
 .app-header .header-date {
   font-size: 11px;
-  color: var(--text-2);
+  color: var(--text-3);
   font-weight: 400;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -218,11 +228,12 @@ body {
 /* ── Navigation ─────────────────────────────────────────── */
 
 .nav-tabs {
-  background: var(--bg);
-  border-bottom: 0.5px solid #E8E2DB;
+  background: rgba(251, 247, 241, 0.72);
+  border-bottom: 1px solid rgba(205, 187, 168, 0.24);
   display: flex;
   justify-content: center;
-  padding: 0 0.75rem;
+  padding: 0.25rem 1.5rem;
+  gap: 0.35rem;
 }
 
 .nav-tabs::-webkit-scrollbar {
@@ -233,22 +244,23 @@ body {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  min-height: 48px;
-  padding: 0.75rem 0.85rem;
+  min-height: 44px;
+  padding: 0.75rem 0.82rem;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--text-3);
   white-space: nowrap;
-  border-bottom: 2px solid transparent;
+  border-bottom: 1px solid transparent;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   font-family: var(--font);
   flex-shrink: 0;
-  min-width: 96px;
+  min-width: 88px;
   justify-content: center;
-  letter-spacing: 0;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .nav-tab svg {
@@ -262,7 +274,7 @@ body {
 }
 
 .nav-tab.active {
-  color: #2E2218;
+  color: var(--text);
   border-bottom-color: var(--accent);
   font-weight: 500;
 }
@@ -297,9 +309,9 @@ body {
 
 .page {
   flex: 1;
-  max-width: 780px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 2rem 1.25rem 4.25rem;
+  padding: 3.2rem 2rem 5rem;
   width: 100%;
 }
 
@@ -308,19 +320,21 @@ body {
 }
 
 .page-title {
-  font-size: 20px;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.2vw, 4.8rem);
   font-weight: 500;
-  letter-spacing: 0;
+  letter-spacing: 0.01em;
   color: var(--text);
-  margin-bottom: 0.3rem;
-  line-height: 1.35;
+  margin-bottom: 0.42rem;
+  line-height: 0.96;
 }
 
 .page-subtitle {
-  font-size: 15px;
+  max-width: 640px;
+  font-size: 14px;
   color: var(--text-2);
   font-weight: 400;
-  line-height: 1.65;
+  line-height: 1.8;
 }
 
 .grounding-banner {
@@ -398,10 +412,10 @@ body {
 
 .card {
   background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.4rem 1.5rem;
-  box-shadow: none;
+  border: 1px solid rgba(205, 187, 168, 0.42);
+  border-radius: 2px;
+  padding: 1.65rem 1.75rem;
+  box-shadow: 0 24px 62px rgba(92, 74, 56, 0.045);
 }
 
 .card + .card {
@@ -432,12 +446,12 @@ body {
 /* ── Section Labels ─────────────────────────────────────────── */
 
 .section-label {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.18em;
   color: var(--section-label);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.55rem;
 }
 
 .step-indicator {
@@ -478,13 +492,13 @@ body {
 .form-group textarea {
   width: 100%;
   padding: 0.72rem 0.85rem;
-  border: 1px solid #DDD5C8;
-  border-radius: var(--control-radius);
+  border: 1px solid var(--border);
+  border-radius: 2px;
   font-size: 15px;
   font-family: var(--font-cjk);
   font-weight: 400;
   color: var(--text);
-  background: #FFFCF9;
+  background: rgba(251, 247, 241, 0.82);
   transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
   -webkit-appearance: none;
@@ -514,7 +528,7 @@ textarea {
 .form-group select:focus,
 .form-group textarea:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(196, 168, 130, 0.14);
+  box-shadow: 0 0 0 3px rgba(138, 106, 77, 0.09);
 }
 
 .form-group textarea {
@@ -562,12 +576,12 @@ textarea {
   min-height: 36px;
   padding: 0.44rem 0.85rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 2px;
   font-size: 0.8rem;
   font-family: var(--font);
   font-weight: 500;
   cursor: pointer;
-  background: var(--surface);
+  background: rgba(251, 247, 241, 0.74);
   color: var(--text-2);
   transition: all 0.15s;
   white-space: nowrap;
@@ -612,10 +626,10 @@ textarea {
   min-width: 0;
   padding: 0.7rem 0.8rem;
   border: 0.5px solid var(--border);
-  border-radius: var(--control-radius);
+  border-radius: 2px;
   font-family: var(--font);
   cursor: pointer;
-  background: var(--surface);
+  background: rgba(251, 247, 241, 0.76);
   color: var(--text-2);
   transition: all 0.15s;
   text-align: left;
@@ -820,10 +834,10 @@ textarea {
 
 .day-type-card {
   border: 0.5px solid var(--border);
-  border-radius: var(--control-radius);
+  border-radius: 2px;
   padding: 0.75rem 0.8rem;
   cursor: pointer;
-  background: var(--surface);
+  background: rgba(251, 247, 241, 0.76);
   transition: all 0.15s;
   text-align: left;
   font-family: var(--font);
@@ -871,11 +885,12 @@ textarea {
   gap: 0.45rem;
   min-height: var(--control-height);
   padding: 0.62rem var(--control-pad-x);
-  border-radius: var(--control-radius);
-  font-size: 14px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 500;
   font-family: var(--font);
-  letter-spacing: 0;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   cursor: pointer;
   border: none;
   transition: all 0.15s;
@@ -889,27 +904,29 @@ textarea {
 }
 
 .btn-primary {
-  background: #C98F8A;
-  color: #FFFCF9;
-  border: 1px solid #C98F8A;
+  background: var(--accent);
+  color: #FFFDF8;
+  border: 1px solid var(--accent);
+  box-shadow: 0 14px 34px rgba(92, 74, 56, 0.13);
 }
 
 .btn-primary:hover {
-  background: #B97873;
+  background: var(--accent-2);
+  border-color: var(--accent-2);
 }
 
 .btn-secondary {
-  background: #FFFCF9;
-  border: 1px solid #C4B8A8;
-  color: #3D3028;
+  background: rgba(251, 247, 241, 0.58);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
   font-weight: 500;
-  letter-spacing: 0;
+  letter-spacing: 0.1em;
 }
 
 .btn-secondary:hover {
-  border-color: #C98F8A;
-  color: #3D3028;
-  background: #F4E5E1;
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-bg);
 }
 
 .btn:disabled {
@@ -968,13 +985,13 @@ textarea {
 }
 
 .btn-generate {
-  background: #C98F8A;
-  color: #FFFCF9;
+  background: var(--accent);
+  color: #FFFDF8;
   font-size: 14px;
   min-height: var(--control-height);
   padding: 0.62rem var(--control-pad-x);
-  border-radius: var(--control-radius);
-  border: 1px solid #C98F8A;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
   cursor: pointer;
   font-family: var(--font);
   font-weight: 500;
@@ -985,13 +1002,14 @@ textarea {
   gap: 0.5rem;
   transition: all 0.2s;
   margin-top: 1.5rem;
-  letter-spacing: 0;
-  box-shadow: none;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: 0 14px 34px rgba(92, 74, 56, 0.13);
 }
 
 .btn-generate:hover {
-  background: #B97873;
-  box-shadow: none;
+  background: var(--accent-2);
+  box-shadow: 0 18px 40px rgba(92, 74, 56, 0.16);
   transform: translateY(-1px);
 }
 
