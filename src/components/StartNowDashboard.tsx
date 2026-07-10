@@ -1,4 +1,4 @@
-import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, ListChecks, Mic, Play, StickyNote } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, Image as ImageIcon, ListChecks, Mic, Pencil, Play, StickyNote, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ACTIVE_SESSION_CHANGED_EVENT,
@@ -6,6 +6,15 @@ import {
   startActiveSession,
   type ActiveSession,
 } from '../activeSessionStore'
+import {
+  DEFAULT_TODAY_HERO_IMAGE,
+  compressTodayHeroImage,
+  loadAppearanceSettings,
+  saveAppearanceSettings,
+  type TodayHeroImageSettings,
+  type TodayHeroObjectFit,
+  type TodayHeroObjectPosition,
+} from '../appearanceSettings'
 import { loadExerciseLog } from '../exerciseStorage'
 import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
@@ -110,6 +119,13 @@ export default function StartNowDashboard({
   const [studySessions, setStudySessions] = useState(() => loadStudySessionRecordsForDate(today))
   const [exerciseEntries, setExerciseEntries] = useState(() => loadExerciseLog().entries.filter(entry => entry.date === today))
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(() => restoreActiveSession())
+  const [heroImage, setHeroImage] = useState<TodayHeroImageSettings>(() =>
+    loadAppearanceSettings().todayHeroImage ?? DEFAULT_TODAY_HERO_IMAGE,
+  )
+  const [heroDraft, setHeroDraft] = useState<TodayHeroImageSettings>(() => heroImage)
+  const [heroPanelOpen, setHeroPanelOpen] = useState(false)
+  const [heroMessage, setHeroMessage] = useState<string | null>(null)
+  const [processingHeroImage, setProcessingHeroImage] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const activeStudySession = loadActiveStudySession()
   const irisDay = useMemo(() => getIris365DayNumber(), [])
@@ -146,6 +162,16 @@ export default function StartNowDashboard({
     return () => {
       window.clearInterval(interval)
       window.removeEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+
+  useEffect(() => {
+    const refresh = () => setHeroImage(loadAppearanceSettings().todayHeroImage ?? DEFAULT_TODAY_HERO_IMAGE)
+    window.addEventListener('iris-appearance-settings-changed', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('iris-appearance-settings-changed', refresh)
       window.removeEventListener('storage', refresh)
     }
   }, [])
@@ -249,6 +275,59 @@ export default function StartNowDashboard({
     onOpenStudy?.()
   }
 
+  function openHeroPanel() {
+    setHeroDraft(heroImage)
+    setHeroMessage(null)
+    setHeroPanelOpen(true)
+  }
+
+  function saveHeroDraft(nextDraft = heroDraft) {
+    const current = loadAppearanceSettings()
+    const result = saveAppearanceSettings({
+      ...current,
+      todayHeroImage: nextDraft,
+    })
+    if (!result.success) {
+      setHeroMessage(result.message)
+      return false
+    }
+    setHeroImage(nextDraft)
+    setHeroPanelOpen(false)
+    setHeroMessage(null)
+    return true
+  }
+
+  async function handleHeroUpload(file: File | undefined) {
+    if (!file) return
+    setProcessingHeroImage(true)
+    setHeroMessage(null)
+    try {
+      const compressed = await compressTodayHeroImage(file)
+      setHeroDraft({
+        ...heroDraft,
+        sourceType: 'upload',
+        dataUrl: compressed.dataUrl,
+      })
+      setHeroMessage(`Image ready (${Math.round(compressed.bytes / 1024)} KB).`)
+    } catch (error) {
+      setHeroMessage(error instanceof Error ? error.message : 'Image could not be saved.')
+    } finally {
+      setProcessingHeroImage(false)
+    }
+  }
+
+  function updateHeroPosition(objectPosition: TodayHeroObjectPosition) {
+    setHeroDraft(prev => ({ ...prev, objectPosition }))
+  }
+
+  function updateHeroFit(objectFit: TodayHeroObjectFit) {
+    setHeroDraft(prev => ({ ...prev, objectFit }))
+  }
+
+  function removeHeroImage() {
+    setHeroDraft(DEFAULT_TODAY_HERO_IMAGE)
+  }
+
   const activeStartedAt = activeSession ? new Date(activeSession.startedAt).getTime() : Number.NaN
   const activeElapsedMinutes = activeSession && Number.isFinite(activeStartedAt)
     ? Math.max(0, Math.floor((now - activeStartedAt) / 60_000))
@@ -270,6 +349,7 @@ export default function StartNowDashboard({
   const nextTitle = activeStudySession?.title ?? (nextBlock ? nextBlock.title : 'Start one 25-min Study Session')
   const nextCategory = activeStudySession?.category ?? (nextBlock ? labelFromToken(nextBlock.area) : 'Study')
   const nextDuration = activeStudySession?.durationMinutes ?? (nextBlock ? Math.min(nextBlock.estimatedMinutes, 50) : 25)
+  const hasCustomHeroImage = heroImage.sourceType === 'upload' && Boolean(heroImage.dataUrl)
 
   return (
     <section className="start-now-dashboard today-start-flow" aria-label="Today start flow">
@@ -292,10 +372,32 @@ export default function StartNowDashboard({
       ) : (
         <>
           <section className="today-start-panel">
-            <div className="today-start-photo-panel" aria-hidden="true">
-              <span className="today-photo-vase" />
-              <span className="today-photo-candle" />
-              <span className="today-photo-linen" />
+            <div className={`today-start-photo-panel ${hasCustomHeroImage ? 'has-custom-image' : ''}`}>
+              {hasCustomHeroImage ? (
+                <img
+                  src={heroImage.dataUrl}
+                  alt=""
+                  style={{
+                    objectFit: heroImage.objectFit,
+                    objectPosition: heroImage.objectPosition,
+                  }}
+                />
+              ) : (
+                <>
+                  <span className="today-photo-vase" />
+                  <span className="today-photo-candle" />
+                  <span className="today-photo-linen" />
+                </>
+              )}
+              <button
+                type="button"
+                className="today-hero-edit-button"
+                aria-label="Change Today hero image"
+                onClick={openHeroPanel}
+              >
+                <Pencil size={14} />
+                <span>更换图片</span>
+              </button>
             </div>
             <div className="today-start-panel-copy">
               <span className="today-soft-label">Today</span>
@@ -304,16 +406,25 @@ export default function StartNowDashboard({
             </div>
             <div className="today-start-actions">
               <button type="button" className="today-start-action-card primary" onClick={() => startStudy('study')}>
-                <BookOpen size={18} />
-                <span>Study</span>
+                <span className="start-action-card__icon"><BookOpen size={20} /></span>
+                <span className="start-action-card__content">
+                  <span className="start-action-card__label">Study</span>
+                  <span className="start-action-card__helper">Start a focus session</span>
+                </span>
               </button>
               <button type="button" className="today-start-action-card" onClick={openEnglishStart}>
-                <Mic size={18} />
-                <span>English</span>
+                <span className="start-action-card__icon"><Mic size={20} /></span>
+                <span className="start-action-card__content">
+                  <span className="start-action-card__label">English</span>
+                  <span className="start-action-card__helper">Listening or output</span>
+                </span>
               </button>
               <button type="button" className="today-start-action-card" onClick={openExerciseLog}>
-                <Dumbbell size={18} />
-                <span>Log Exercise</span>
+                <span className="start-action-card__icon"><Dumbbell size={20} /></span>
+                <span className="start-action-card__content">
+                  <span className="start-action-card__label">Exercise</span>
+                  <span className="start-action-card__helper">Log movement</span>
+                </span>
               </button>
             </div>
           </section>
@@ -417,6 +528,105 @@ export default function StartNowDashboard({
       {message && (
         <div className="start-now-message">
           {message}
+        </div>
+      )}
+
+      {heroPanelOpen && (
+        <div className="today-hero-modal-backdrop" role="presentation" onMouseDown={() => setHeroPanelOpen(false)}>
+          <section
+            className="today-hero-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="today-hero-modal-title"
+            onMouseDown={event => event.stopPropagation()}
+          >
+            <div className="today-hero-modal-header">
+              <div>
+                <span className="today-soft-label">Appearance</span>
+                <h3 id="today-hero-modal-title">Today hero image</h3>
+              </div>
+              <button type="button" aria-label="Close image settings" onClick={() => setHeroPanelOpen(false)}>
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="today-hero-preview">
+              {heroDraft.sourceType === 'upload' && heroDraft.dataUrl ? (
+                <img
+                  src={heroDraft.dataUrl}
+                  alt=""
+                  style={{
+                    objectFit: heroDraft.objectFit,
+                    objectPosition: heroDraft.objectPosition,
+                  }}
+                />
+              ) : (
+                <div className="today-hero-preview-placeholder">
+                  <ImageIcon size={22} />
+                  <span>Default soft image</span>
+                </div>
+              )}
+            </div>
+
+            <label className="today-hero-upload">
+              <ImageIcon size={16} />
+              <span>{processingHeroImage ? 'Processing image...' : 'Upload image'}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={processingHeroImage}
+                onChange={event => void handleHeroUpload(event.target.files?.[0])}
+              />
+            </label>
+
+            <div className="today-hero-setting-grid">
+              <div>
+                <span>Position</span>
+                <div className="today-hero-segmented">
+                  {(['left', 'center', 'right'] as const).map(position => (
+                    <button
+                      key={position}
+                      type="button"
+                      className={heroDraft.objectPosition === position ? 'active' : ''}
+                      onClick={() => updateHeroPosition(position)}
+                    >
+                      {position}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span>Fit</span>
+                <div className="today-hero-segmented">
+                  {(['cover', 'contain'] as const).map(fit => (
+                    <button
+                      key={fit}
+                      type="button"
+                      className={heroDraft.objectFit === fit ? 'active' : ''}
+                      onClick={() => updateHeroFit(fit)}
+                    >
+                      {fit}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {heroMessage && <p className="today-hero-message">{heroMessage}</p>}
+
+            <div className="today-hero-modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={removeHeroImage}>
+                <Trash2 size={15} />
+                Remove
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setHeroPanelOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => saveHeroDraft()} disabled={processingHeroImage}>
+                Save
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </section>
