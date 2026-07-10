@@ -6,6 +6,8 @@ export interface TodayHeroImageSettings {
   sourceType: TodayHeroImageSourceType
   dataUrl?: string
   presetId?: string
+  naturalWidth?: number
+  naturalHeight?: number
   objectPosition: TodayHeroObjectPosition
   objectFit: TodayHeroObjectFit
   zoom: number
@@ -35,15 +37,19 @@ function normaliseHeroImage(value: Partial<TodayHeroImageSettings> | undefined):
   const zoom = typeof value?.zoom === 'number' ? value.zoom : 1
   const offsetX = typeof value?.offsetX === 'number' ? value.offsetX : 0
   const offsetY = typeof value?.offsetY === 'number' ? value.offsetY : 0
+  const naturalWidth = typeof value?.naturalWidth === 'number' && value.naturalWidth > 0 ? value.naturalWidth : undefined
+  const naturalHeight = typeof value?.naturalHeight === 'number' && value.naturalHeight > 0 ? value.naturalHeight : undefined
   return {
     sourceType: value?.sourceType === 'upload' || value?.sourceType === 'preset' ? value.sourceType : 'default',
     dataUrl: value?.dataUrl,
     presetId: value?.presetId,
+    naturalWidth,
+    naturalHeight,
     objectPosition: value?.objectPosition === 'left' || value?.objectPosition === 'right' ? value.objectPosition : 'center',
     objectFit: value?.objectFit === 'contain' ? 'contain' : 'cover',
-    zoom: Math.max(0.8, Math.min(2.2, zoom)),
-    offsetX: Math.max(-50, Math.min(50, offsetX)),
-    offsetY: Math.max(-50, Math.min(50, offsetY)),
+    zoom: Math.max(0.5, Math.min(3, zoom)),
+    offsetX: Math.max(-2000, Math.min(2000, offsetX)),
+    offsetY: Math.max(-2000, Math.min(2000, offsetY)),
   }
 }
 
@@ -84,7 +90,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-export async function compressTodayHeroImage(file: File): Promise<{ dataUrl: string; bytes: number }> {
+export async function compressTodayHeroImage(file: File): Promise<{ dataUrl: string; bytes: number; naturalWidth: number; naturalHeight: number }> {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     throw new Error('Please choose a JPEG, PNG, or WebP image.')
   }
@@ -119,6 +125,8 @@ export async function compressTodayHeroImage(file: File): Promise<{ dataUrl: str
     return {
       dataUrl: await blobToDataUrl(blob),
       bytes: blob.size,
+      naturalWidth: width,
+      naturalHeight: height,
     }
   } finally {
     URL.revokeObjectURL(objectUrl)

@@ -1,5 +1,5 @@
 import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, Image as ImageIcon, ListChecks, Mic, Pencil, Play, StickyNote, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ACTIVE_SESSION_CHANGED_EVENT,
   restoreActiveSession,
@@ -13,7 +13,6 @@ import {
   saveAppearanceSettings,
   type TodayHeroImageSettings,
   type TodayHeroObjectFit,
-  type TodayHeroObjectPosition,
 } from '../appearanceSettings'
 import { loadExerciseLog } from '../exerciseStorage'
 import { getLocalDateKey } from '../focus'
@@ -23,6 +22,7 @@ import type { StudyActiveSession, StudyCategory, StudySessionRecord } from '../s
 import { ensureCustomStudyTaskInTaskStore } from '../taskStore'
 import * as timerEngine from '../timerEngine'
 import type { DayBlock } from '../types'
+import HeroImageViewport from './HeroImageViewport'
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 
@@ -107,14 +107,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
 }
 
-function heroImageStyle(settings: TodayHeroImageSettings): CSSProperties {
-  return {
-    objectFit: settings.objectFit,
-    objectPosition: settings.objectPosition,
-    transform: `translate(${settings.offsetX}%, ${settings.offsetY}%) scale(${settings.zoom})`,
-  }
-}
-
 export default function StartNowDashboard({
   onOpenStudy,
   onOpenExercise,
@@ -138,13 +130,6 @@ export default function StartNowDashboard({
   const [heroPanelOpen, setHeroPanelOpen] = useState(false)
   const [heroMessage, setHeroMessage] = useState<string | null>(null)
   const [processingHeroImage, setProcessingHeroImage] = useState(false)
-  const [heroDrag, setHeroDrag] = useState<{
-    pointerId: number
-    startX: number
-    startY: number
-    offsetX: number
-    offsetY: number
-  } | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const activeStudySession = loadActiveStudySession()
   const irisDay = useMemo(() => getIris365DayNumber(), [])
@@ -326,6 +311,9 @@ export default function StartNowDashboard({
         ...heroDraft,
         sourceType: 'upload',
         dataUrl: compressed.dataUrl,
+        naturalWidth: compressed.naturalWidth,
+        naturalHeight: compressed.naturalHeight,
+        objectFit: 'cover',
         zoom: 1,
         offsetX: 0,
         offsetY: 0,
@@ -338,12 +326,8 @@ export default function StartNowDashboard({
     }
   }
 
-  function updateHeroPosition(objectPosition: TodayHeroObjectPosition) {
-    setHeroDraft(prev => ({ ...prev, objectPosition }))
-  }
-
   function updateHeroFit(objectFit: TodayHeroObjectFit) {
-    setHeroDraft(prev => ({ ...prev, objectFit }))
+    setHeroDraft(prev => ({ ...prev, objectFit, zoom: 1, offsetX: 0, offsetY: 0 }))
   }
 
   function removeHeroImage() {
@@ -351,47 +335,19 @@ export default function StartNowDashboard({
   }
 
   function updateHeroZoom(value: number) {
-    setHeroDraft(prev => ({ ...prev, zoom: clamp(value, 0.8, 2.2) }))
+    setHeroDraft(prev => ({ ...prev, zoom: clamp(value, 0.5, 3) }))
   }
 
   function updateHeroOffset(axis: 'x' | 'y', value: number) {
     setHeroDraft(prev => ({
       ...prev,
-      offsetX: axis === 'x' ? clamp(value, -50, 50) : prev.offsetX,
-      offsetY: axis === 'y' ? clamp(value, -50, 50) : prev.offsetY,
+      offsetX: axis === 'x' ? clamp(value, -2000, 2000) : prev.offsetX,
+      offsetY: axis === 'y' ? clamp(value, -2000, 2000) : prev.offsetY,
     }))
   }
 
   function resetHeroCrop() {
     setHeroDraft(prev => ({ ...prev, zoom: 1, offsetX: 0, offsetY: 0 }))
-  }
-
-  function handleHeroPreviewPointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (!(heroDraft.sourceType === 'upload' && heroDraft.dataUrl)) return
-    event.currentTarget.setPointerCapture(event.pointerId)
-    setHeroDrag({
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      offsetX: heroDraft.offsetX,
-      offsetY: heroDraft.offsetY,
-    })
-  }
-
-  function handleHeroPreviewPointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (!heroDrag || heroDrag.pointerId !== event.pointerId) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    const deltaX = ((event.clientX - heroDrag.startX) / Math.max(1, rect.width)) * 100
-    const deltaY = ((event.clientY - heroDrag.startY) / Math.max(1, rect.height)) * 100
-    setHeroDraft(prev => ({
-      ...prev,
-      offsetX: clamp(heroDrag.offsetX + deltaX, -50, 50),
-      offsetY: clamp(heroDrag.offsetY + deltaY, -50, 50),
-    }))
-  }
-
-  function handleHeroPreviewPointerEnd(event: PointerEvent<HTMLDivElement>) {
-    if (heroDrag?.pointerId === event.pointerId) setHeroDrag(null)
   }
 
   const activeStartedAt = activeSession ? new Date(activeSession.startedAt).getTime() : Number.NaN
@@ -440,11 +396,7 @@ export default function StartNowDashboard({
           <section className="today-start-panel">
             <div className={`today-start-photo-panel ${hasCustomHeroImage ? 'has-custom-image' : ''}`}>
               {hasCustomHeroImage ? (
-                <img
-                  src={heroImage.dataUrl}
-                  alt=""
-                  style={heroImageStyle(heroImage)}
-                />
+                <HeroImageViewport image={heroImage} className="today-hero-image-viewport" />
               ) : (
                 <>
                   <span className="today-photo-vase" />
@@ -613,27 +565,21 @@ export default function StartNowDashboard({
               </button>
             </div>
 
-            <div
-              className={`today-hero-preview ${heroDrag ? 'dragging' : ''}`}
-              onPointerDown={handleHeroPreviewPointerDown}
-              onPointerMove={handleHeroPreviewPointerMove}
-              onPointerUp={handleHeroPreviewPointerEnd}
-              onPointerCancel={handleHeroPreviewPointerEnd}
+            <HeroImageViewport
+              image={heroDraft}
+              className="today-hero-preview"
+              interactive
+              onChange={patch => setHeroDraft(prev => ({ ...prev, ...patch }))}
             >
               {heroDraft.sourceType === 'upload' && heroDraft.dataUrl ? (
-                <img
-                  src={heroDraft.dataUrl}
-                  alt=""
-                  draggable={false}
-                  style={heroImageStyle(heroDraft)}
-                />
+                <span className="today-hero-drag-hint">Drag to move</span>
               ) : (
                 <div className="today-hero-preview-placeholder">
                   <ImageIcon size={22} />
                   <span>Default soft image</span>
                 </div>
               )}
-            </div>
+            </HeroImageViewport>
 
             <label className="today-hero-upload">
               <ImageIcon size={16} />
@@ -646,22 +592,13 @@ export default function StartNowDashboard({
               />
             </label>
 
+            {heroDraft.sourceType === 'upload' && heroDraft.dataUrl && (!heroDraft.naturalWidth || !heroDraft.naturalHeight) && (
+              <p className="today-hero-message">
+                This image was saved by the older crop system. Re-upload the original image to use full positioning.
+              </p>
+            )}
+
             <div className="today-hero-setting-grid">
-              <div>
-                <span>Position</span>
-                <div className="today-hero-segmented">
-                  {(['left', 'center', 'right'] as const).map(position => (
-                    <button
-                      key={position}
-                      type="button"
-                      className={heroDraft.objectPosition === position ? 'active' : ''}
-                      onClick={() => updateHeroPosition(position)}
-                    >
-                      {position}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div>
                 <span>Fit</span>
                 <div className="today-hero-segmented">
@@ -684,8 +621,8 @@ export default function StartNowDashboard({
                 <span>Zoom <strong>{Math.round(heroDraft.zoom * 100)}%</strong></span>
                 <input
                   type="range"
-                  min="80"
-                  max="220"
+                  min="50"
+                  max="300"
                   step="1"
                   value={Math.round(heroDraft.zoom * 100)}
                   onChange={event => updateHeroZoom(Number(event.target.value) / 100)}
@@ -695,8 +632,8 @@ export default function StartNowDashboard({
                 <span>Move X <strong>{Math.round(heroDraft.offsetX)}</strong></span>
                 <input
                   type="range"
-                  min="-50"
-                  max="50"
+                  min="-500"
+                  max="500"
                   step="1"
                   value={Math.round(heroDraft.offsetX)}
                   onChange={event => updateHeroOffset('x', Number(event.target.value))}
@@ -706,8 +643,8 @@ export default function StartNowDashboard({
                 <span>Move Y <strong>{Math.round(heroDraft.offsetY)}</strong></span>
                 <input
                   type="range"
-                  min="-50"
-                  max="50"
+                  min="-500"
+                  max="500"
                   step="1"
                   value={Math.round(heroDraft.offsetY)}
                   onChange={event => updateHeroOffset('y', Number(event.target.value))}
