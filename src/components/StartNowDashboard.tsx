@@ -292,6 +292,11 @@ export default function StartNowDashboard({
       ) : (
         <>
           <section className="today-start-panel">
+            <div className="today-start-photo-panel" aria-hidden="true">
+              <span className="today-photo-vase" />
+              <span className="today-photo-candle" />
+              <span className="today-photo-linen" />
+            </div>
             <div className="today-start-panel-copy">
               <span className="today-soft-label">Today</span>
               <h2>Start</h2>
@@ -327,7 +332,7 @@ export default function StartNowDashboard({
 
       {!activeSession && (
         <section className="today-next-useful-card">
-          <div>
+          <div className="today-next-copy">
             <span className="today-soft-label">Next</span>
             <h3>{nextTitle}</h3>
             <div className="today-next-chips">
@@ -335,9 +340,13 @@ export default function StartNowDashboard({
               <span>{nextDuration} min</span>
             </div>
           </div>
+          <div className="today-next-image-panel" aria-hidden="true">
+            <span className="today-next-coffee" />
+            <span className="today-next-notebook" />
+          </div>
           <button type="button" className="btn btn-primary" onClick={handleNextUsefulThing}>
             <Play size={15} />
-            {activeStudySession ? 'Open' : 'Start'}
+            {activeStudySession ? 'Open' : nextCategory.toLowerCase().includes('study') ? 'Start 25-min' : 'Start Study'}
           </button>
         </section>
       )}
