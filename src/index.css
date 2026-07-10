@@ -5828,6 +5828,19 @@ textarea {
   line-height: 1.55;
 }
 
+.study-change-task-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0.45rem;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0;
+}
+
 .study-timer-header svg {
   color: var(--accent);
   flex-shrink: 0;

@@ -264,7 +264,7 @@ export default function StartNowDashboard({
       onStartNextBlock()
       return
     }
-    startStudy('study')
+    onOpenStudy?.()
   }
 
   function toggleModule(module: TodayStartModule) {
@@ -368,7 +368,7 @@ export default function StartNowDashboard({
     { id: 'queue' as const, icon: <ListChecks size={16} />, label: 'Queue', badge: `${queueCount} block${queueCount === 1 ? '' : 's'}` },
   ]
 
-  const nextTitle = activeStudySession?.title ?? (nextBlock ? nextBlock.title : 'Start one 25-min Study Session')
+  const nextTitle = activeStudySession?.title ?? (nextBlock ? nextBlock.title : 'Choose one Study task')
   const nextCategory = activeStudySession?.category ?? (nextBlock ? labelFromToken(nextBlock.area) : 'Study')
   const nextDuration = activeStudySession?.durationMinutes ?? (nextBlock ? Math.min(nextBlock.estimatedMinutes, 50) : 25)
   const hasCustomHeroImage = heroImage.sourceType === 'upload' && Boolean(heroImage.dataUrl)
@@ -472,7 +472,7 @@ export default function StartNowDashboard({
           </div>
           <button type="button" className="btn btn-primary" onClick={handleNextUsefulThing}>
             <Play size={15} />
-            {activeStudySession ? 'Open' : nextCategory.toLowerCase().includes('study') ? 'Start 25-min' : 'Start Study'}
+            {activeStudySession ? 'Open active session' : nextBlock ? 'Open in Study' : 'Open Study'}
           </button>
         </section>
       )}

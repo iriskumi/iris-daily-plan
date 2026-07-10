@@ -12,7 +12,7 @@ import type {
   EnergyLevel,
 } from '../types'
 import { DAY_MODE_CONFIGS, minimumViableBlock, queueOverview, suggestNextBlock, targetBlocksForMode } from '../blockQueue'
-import { queueSessionTitle, startStudySessionFromQueueBlock } from '../blockQueueStudySession'
+import { createStudyHandoffFromQueueBlock, queueSessionTitle, saveStudyTaskHandoff } from '../studyHandoff'
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
 import { loadStudySessionRecordsForDate } from '../studyStorage'
@@ -576,13 +576,9 @@ export default function HomeCommandCentre({
     updateBlock(block.id, minimumViableBlock(block), 'Made it a 25-minute version.')
   }
 
-  function startQueueBlock(block: DayBlock, durationMinutes: 25 | 50) {
-    const result = startStudySessionFromQueueBlock(block, durationMinutes)
-    if (!result.success) {
-      setMessage(result.message)
-      return
-    }
-    updateBlock(block.id, { status: 'in_progress' }, result.message)
+  function openQueueBlockInStudy(block: DayBlock) {
+    saveStudyTaskHandoff(createStudyHandoffFromQueueBlock(block, 'today-queue'))
+    setMessage('Opened in Study. Choose 25, 50, or custom there.')
     onOpenStudy?.()
   }
 
@@ -705,7 +701,7 @@ export default function HomeCommandCentre({
         onOpenStudy={onOpenStudy}
         onOpenExercise={onOpenExercise}
         nextBlock={nextBlock}
-        onStartNextBlock={nextBlock ? () => startQueueBlock(nextBlock, 25) : undefined}
+        onStartNextBlock={nextBlock ? () => openQueueBlockInStudy(nextBlock) : undefined}
         queueCount={blocks.length}
         expandedModule={expandedTodayModule}
         onExpandedModuleChange={setExpandedTodayModule}
@@ -797,11 +793,11 @@ export default function HomeCommandCentre({
         </div>
         {nextBlock && (
           <div className="next-best-actions">
-            <button className="btn btn-primary" type="button" onClick={() => startQueueBlock(nextBlock, 25)}>
+            <button className="btn btn-primary" type="button" onClick={() => openQueueBlockInStudy(nextBlock)}>
               <Play size={14} />
-              Start 25-min Study
+              Open in Study
             </button>
-            <span className="next-best-helper">Creates a Study timer. Minutes count only after you complete the session.</span>
+            <span className="next-best-helper">Plan chooses the task. Study runs the session.</span>
           </div>
         )}
       </div>
@@ -931,8 +927,7 @@ export default function HomeCommandCentre({
                 {block.notes && <p className="home-block-note">{block.notes}</p>}
               </div>
               <div className="home-block-actions">
-                <button type="button" className="home-block-primary-action" onClick={() => startQueueBlock(block, 25)}><Play size={13} />Start 25-min Study</button>
-                <button type="button" onClick={() => startQueueBlock(block, 50)}>Start 50-min Study</button>
+                <button type="button" className="home-block-primary-action" onClick={() => openQueueBlockInStudy(block)}><Play size={13} />Open in Study</button>
                 <button type="button" onClick={() => completeWithoutTimer(block)}><Check size={13} />Done without timer</button>
                 <button type="button" onClick={() => hideBlockForToday(block, 'later')}>Later</button>
                 <button type="button" onClick={() => skipBlock(block)}>Skip</button>

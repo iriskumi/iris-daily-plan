@@ -37,6 +37,13 @@ import {
   saveGoogleCalendarMeta,
   saveOpportunities,
 } from '../storage'
+import {
+  getExpressionHubImportStatus,
+  importExpressionHubPayload,
+  importExpressionHubQueue,
+  loadExpressionHubImportNotice,
+  parseExpressionHubImportJson,
+} from '../expressionHubImport'
 import { getFocusStats, getLocalDateKey } from '../focus'
 import { exportPlanToNotion } from '../services/notionService'
 import type {
@@ -120,6 +127,13 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     loadGoogleCalendarMeta(),
   )
   const [importingCalendar, setImportingCalendar] = useState(false)
+  const [expressionImportStatus, setExpressionImportStatus] = useState(() => getExpressionHubImportStatus())
+  const [expressionImportJson, setExpressionImportJson] = useState('')
+  const [expressionImportMessage, setExpressionImportMessage] = useState<string | null>(() => {
+    const notice = loadExpressionHubImportNotice()
+    if (!notice) return null
+    return notice.error ? `${notice.message} ${notice.error}` : notice.message
+  })
 
   useEffect(() => {
     void refreshCalendarStatus()
@@ -368,6 +382,38 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     setCalendarMeta(next)
   }
 
+  function refreshExpressionStatus() {
+    setExpressionImportStatus(getExpressionHubImportStatus())
+  }
+
+  function handleExpressionHubImport() {
+    const result = importExpressionHubQueue()
+    refreshExpressionStatus()
+    if (result.importedCount > 0) {
+      setExpressionImportMessage(`Imported ${result.importedCount} Expression Review Hub item${result.importedCount === 1 ? '' : 's'}.`)
+      return
+    }
+    if (result.duplicateCount > 0) {
+      setExpressionImportMessage('Expression Review Hub queue items were already imported.')
+      return
+    }
+    setExpressionImportMessage('No new Expression Review Hub items to import.')
+  }
+
+  function handleExpressionHubJsonImport() {
+    try {
+      const payload = parseExpressionHubImportJson(expressionImportJson)
+      const result = importExpressionHubPayload(payload)
+      refreshExpressionStatus()
+      setExpressionImportMessage(result.error ? `${result.message} ${result.error}` : result.message)
+      if (result.success && result.importedCount > 0) {
+        setExpressionImportJson('')
+      }
+    } catch (error) {
+      setExpressionImportMessage(error instanceof Error ? error.message : 'Could not import Expression Review Hub JSON.')
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -408,6 +454,50 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           >
             <Download size={14} />
             {importingCalendar ? 'Importing...' : 'Import Next 7 Days'}
+          </button>
+        </div>
+      </div>
+
+      <div className="card mt-1 expression-hub-import-card">
+        <div>
+          <div className="section-label">Expression Review Hub</div>
+          <h3>Integration Inbox</h3>
+          {expressionImportStatus.pendingCount > 0 ? (
+            <p>
+              Expression Review Hub has {expressionImportStatus.pendingCount} output rep{expressionImportStatus.pendingCount === 1 ? '' : 's'} ready to import.
+            </p>
+          ) : (
+            <p>Import English output reps by URL, local queue, or pasted JSON. Study stays focused on sessions.</p>
+          )}
+          <a href="https://iris-expression-review-hub.vercel.app/" target="_blank" rel="noreferrer">
+            Open Expression Review Hub
+          </a>
+          {expressionImportStatus.lastImportedAt && (
+            <small>
+              Last imported {new Date(expressionImportStatus.lastImportedAt).toLocaleString('en-AU')}
+            </small>
+          )}
+          {expressionImportMessage && <small>{expressionImportMessage}</small>}
+        </div>
+        <div className="expression-hub-import-actions">
+          <button type="button" className="btn btn-secondary" onClick={handleExpressionHubImport}>
+            Import local queue
+          </button>
+          <label>
+            Import Expression Hub JSON
+            <textarea
+              value={expressionImportJson}
+              onChange={event => setExpressionImportJson(event.target.value)}
+              placeholder='Paste JSON payload, e.g. {"schemaVersion":1,"type":"english-output-rep",...}'
+            />
+          </label>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleExpressionHubJsonImport}
+            disabled={!expressionImportJson.trim()}
+          >
+            Import pasted JSON
           </button>
         </div>
       </div>

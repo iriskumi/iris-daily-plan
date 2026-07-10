@@ -8,7 +8,7 @@ import {
   suggestNextBlock,
   targetBlocksForMode,
 } from '../blockQueue'
-import { queueSessionTitle, startStudySessionFromQueueBlock } from '../blockQueueStudySession'
+import { createStudyHandoffFromQueueBlock, queueSessionTitle, saveStudyTaskHandoff } from '../studyHandoff'
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
 import { loadStudySessionRecordsForDate } from '../studyStorage'
@@ -57,7 +57,7 @@ function reorderBlocks(blocks: DayBlock[], index: number, direction: -1 | 1): Da
   }))
 }
 
-export default function BlockQueueView() {
+export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => void }) {
   const [queue, setQueue] = useState<DayBlockQueue>(() => loadDayBlockQueue(getLocalDateKey()))
   const [message, setMessage] = useState<string | null>(null)
 
@@ -125,13 +125,10 @@ export default function BlockQueueView() {
     updateBlock(block.id, compact, 'Converted to a 25-minute version.')
   }
 
-  function startQueueBlock(block: DayBlock, durationMinutes: 25 | 50) {
-    const result = startStudySessionFromQueueBlock(block, durationMinutes)
-    if (!result.success) {
-      setMessage(result.message)
-      return
-    }
-    updateBlock(block.id, { status: 'in_progress' }, `${result.message} Open Study to finish the session.`)
+  function openQueueBlockInStudy(block: DayBlock) {
+    saveStudyTaskHandoff(createStudyHandoffFromQueueBlock(block, 'plan-queue'))
+    setMessage('Opened in Study. Choose 25, 50, or custom there.')
+    onOpenStudy?.()
   }
 
   function completeWithoutTimer(block: DayBlock) {
@@ -166,7 +163,7 @@ export default function BlockQueueView() {
           <div className="section-label">Block Queue</div>
           <h3>Today’s flexible blocks</h3>
           <p>
-            Only completed Study/Timer sessions count toward focus time. The queue is just today’s menu.
+            Plan 决定今天做什么；Study 负责计时和完成记录。
           </p>
         </div>
         <div className="block-queue-mode">
@@ -226,10 +223,10 @@ export default function BlockQueueView() {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => startQueueBlock(nextBlock, 25)}
+            onClick={() => openQueueBlockInStudy(nextBlock)}
           >
             <Play size={14} />
-            Start 25-min Study
+            Open in Study
           </button>
         )}
       </div>
@@ -279,16 +276,10 @@ export default function BlockQueueView() {
                 <div className="block-queue-actions" aria-label={`Actions for ${block.title}`}>
                   <button
                     type="button"
-                    onClick={() => startQueueBlock(block, 25)}
+                    onClick={() => openQueueBlockInStudy(block)}
                   >
                     <Play size={13} />
-                    Start 25-min Study
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startQueueBlock(block, 50)}
-                  >
-                    Start 50-min Study
+                    Open in Study
                   </button>
                   <button
                     type="button"

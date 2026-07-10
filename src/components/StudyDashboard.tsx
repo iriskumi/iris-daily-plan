@@ -28,13 +28,6 @@ import {
   studySessionHasProofArtifact,
 } from '../iris365Storage'
 import {
-  getExpressionHubImportStatus,
-  importExpressionHubQueue,
-  importExpressionHubPayload,
-  loadExpressionHubImportNotice,
-  parseExpressionHubImportJson,
-} from '../expressionHubImport'
-import {
   addManualEnglishOutputRep,
   addStudySessionEnglishOutputRep,
   currentEnglishOutputMilestone,
@@ -73,6 +66,7 @@ import type {
 import type { Iris365ProofCategory, Iris365ProofItem } from '../iris365Types'
 import type { EnglishListeningDrawMode, EnglishListeningDrawResult } from '../englishListeningDraw'
 import type { TimerSession } from '../timerEngineTypes'
+import { consumeStudyTaskHandoff, type StudyTaskHandoff } from '../studyHandoff'
 
 const QUICK_TARGETS = [3, 5, 6, 8]
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
@@ -309,13 +303,7 @@ export default function StudyDashboard() {
   const [notionStatus, setNotionStatus] = useState<string | null>(null)
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
   const [pushingNotion, setPushingNotion] = useState(false)
-  const [expressionImportStatus, setExpressionImportStatus] = useState(() => getExpressionHubImportStatus())
-  const [expressionImportMessage, setExpressionImportMessage] = useState<string | null>(() => {
-    const notice = loadExpressionHubImportNotice()
-    if (!notice) return null
-    return notice.error ? `${notice.message} ${notice.error}` : notice.message
-  })
-  const [expressionImportJson, setExpressionImportJson] = useState('')
+  const [selectedQueueTask, setSelectedQueueTask] = useState<StudyTaskHandoff | null>(null)
   const [outputJourney, setOutputJourney] = useState(() => loadEnglishOutputJourney())
   const [manualRepNote, setManualRepNote] = useState('')
   const [drawMode, setDrawMode] = useState<EnglishListeningDrawMode>('shadowing')
@@ -394,6 +382,24 @@ export default function StudyDashboard() {
     if (!timerEngine.isFinished(activeTimer, nowMs)) return
     completeSession('completed', timerEngine.expectedEndTime(activeTimer, nowMs))
   }, [activeSession, nowMs])
+
+  useEffect(() => {
+    const handoff = consumeStudyTaskHandoff()
+    if (!handoff) return
+    setSelectedQueueTask(handoff)
+    setSelectedCategory(handoff.category)
+    setCustomTimerMinutes(String(handoff.durationMinutes || 25))
+    setCustomTask({
+      title: handoff.title,
+      category: handoff.category,
+      duration: String(handoff.durationMinutes || 25),
+      noteDestination: handoff.noteDestination,
+      notes: handoff.notes,
+    })
+    window.setTimeout(() => {
+      document.getElementById('study-focus-timer')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 80)
+  }, [])
 
   function updateTargetMinutes(targetMinutes: number) {
     const next = {
@@ -578,6 +584,53 @@ export default function StudyDashboard() {
     persistActiveSession(session)
   }
 
+  function startQueueHandoffSession(durationMinutes: number) {
+    if (!selectedQueueTask) return
+    const start = Date.now()
+    const customTaskId = selectedQueueTask.selectedStudyTaskId
+    const sessionId = crypto.randomUUID()
+    const timerSession = timerEngine.start(
+      `manual-study:${customTaskId}`,
+      durationMinutes,
+      'study',
+      { id: sessionId, startedAt: new Date(start).toISOString() },
+    )
+    const session = studySessionWithTimer({
+      id: sessionId,
+      customTaskId,
+      source: 'block-queue',
+      sourceImportId: selectedQueueTask.linkedQueueBlockId,
+      title: selectedQueueTask.title,
+      category: selectedQueueTask.category,
+      sessionStartTime: start,
+      durationMinutes,
+      expectedEndTime: start + durationMinutes * 60_000,
+      pausedAccumulatedMs: 0,
+      status: 'running',
+      noteDestination: selectedQueueTask.noteDestination,
+      notes: selectedQueueTask.notes,
+      resourceUsed: selectedQueueTask.resourceUsed,
+    }, timerSession)
+    ensureCustomStudyTaskInTaskStore({
+      customTaskId,
+      title: selectedQueueTask.title,
+      category: selectedQueueTask.category,
+      durationMinutes,
+      noteDestination: selectedQueueTask.noteDestination,
+      notes: selectedQueueTask.notes,
+      activeSession: session,
+    })
+    persistActiveSession(session)
+  }
+
+  function startSelectedStudySession(durationMinutes: number) {
+    if (selectedQueueTask) {
+      startQueueHandoffSession(durationMinutes)
+      return
+    }
+    startTemplateSession(durationMinutes)
+  }
+
   function startListeningDrawSession(draw: EnglishListeningDrawResult) {
     if (activeSession) return
     const start = Date.now()
@@ -621,7 +674,7 @@ export default function StudyDashboard() {
   function startCustomDurationSession() {
     const duration = Number(customTimerMinutes)
     if (!Number.isFinite(duration) || duration <= 0) return
-    startTemplateSession(Math.round(duration))
+    startSelectedStudySession(Math.round(duration))
   }
 
   function pauseSession() {
@@ -684,41 +737,6 @@ export default function StudyDashboard() {
 
   function handleUndoOutputRep() {
     setOutputJourney(undoLastEnglishOutputRep())
-  }
-
-  function refreshStudyState() {
-    setOutputJourney(loadEnglishOutputJourney())
-    setSessions(loadStudySessionRecordsForDate(today))
-    setAllStudySessions(loadStudySessionRecords())
-    setExpressionImportStatus(getExpressionHubImportStatus())
-  }
-
-  function handleExpressionHubImport() {
-    const result = importExpressionHubQueue()
-    refreshStudyState()
-    if (result.importedCount > 0) {
-      setExpressionImportMessage(`Imported ${result.importedCount} Expression Review Hub item${result.importedCount === 1 ? '' : 's'}.`)
-      return
-    }
-    if (result.duplicateCount > 0) {
-      setExpressionImportMessage('Expression Review Hub queue items were already imported.')
-      return
-    }
-    setExpressionImportMessage('No new Expression Review Hub items to import.')
-  }
-
-  function handleExpressionHubJsonImport() {
-    try {
-      const payload = parseExpressionHubImportJson(expressionImportJson)
-      const result = importExpressionHubPayload(payload)
-      refreshStudyState()
-      setExpressionImportMessage(result.error ? `${result.message} ${result.error}` : result.message)
-      if (result.success && result.importedCount > 0) {
-        setExpressionImportJson('')
-      }
-    } catch (error) {
-      setExpressionImportMessage(error instanceof Error ? error.message : 'Could not import Expression Review Hub JSON.')
-    }
   }
 
   function updateReview(patch: Partial<StudyDailyReview>) {
@@ -1101,60 +1119,23 @@ export default function StudyDashboard() {
         )}
       </section>
 
-      <section className="expression-hub-import-card">
-        <div>
-          <div className="section-label">Integration Inbox</div>
-          <h3>Expression Review Hub</h3>
-          {expressionImportStatus.pendingCount > 0 ? (
-            <p>
-              Expression Review Hub has {expressionImportStatus.pendingCount} output rep{expressionImportStatus.pendingCount === 1 ? '' : 's'} ready to import.
-            </p>
-          ) : (
-            <p>Import English output reps from Expression Review Hub by URL, local queue, or pasted JSON.</p>
-          )}
-          <a href="https://iris-expression-review-hub.vercel.app/" target="_blank" rel="noreferrer">
-            Open Expression Review Hub
-          </a>
-          {expressionImportStatus.lastImportedAt && (
-            <small>
-              Last imported {new Date(expressionImportStatus.lastImportedAt).toLocaleString('en-AU')}
-            </small>
-          )}
-          {expressionImportMessage && <small>{expressionImportMessage}</small>}
-        </div>
-        <div className="expression-hub-import-actions">
-          <button type="button" className="btn btn-secondary" onClick={handleExpressionHubImport}>
-            Import local queue
-          </button>
-          <label>
-            Import Expression Hub JSON
-            <textarea
-              value={expressionImportJson}
-              onChange={event => setExpressionImportJson(event.target.value)}
-              placeholder='Paste JSON payload, e.g. {"schemaVersion":1,"type":"english-output-rep",...}'
-            />
-          </label>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleExpressionHubJsonImport}
-            disabled={!expressionImportJson.trim()}
-          >
-            Import pasted JSON
-          </button>
-        </div>
-      </section>
-
-      <section className="study-timer-card">
+      <section className="study-timer-card" id="study-focus-timer">
         <div className="study-timer-header">
           <div>
-            <div className="section-label">Focus timer</div>
-            <h3>{activeSession ? activeSession.title : selectedTemplate?.title ?? 'Choose a study task'}</h3>
+            <div className="section-label">Selected task</div>
+            <h3>{activeSession ? activeSession.title : selectedQueueTask?.title ?? selectedTemplate?.title ?? 'Choose a study task'}</h3>
             <p>
               {activeSession
                 ? `${activeSession.category} · ${activeSession.durationMinutes} min session`
-                : 'Start a 25 or 50 minute focus session from the selected task.'}
+                : selectedQueueTask
+                  ? `${selectedQueueTask.source === 'plan-queue' ? 'Plan queue' : 'Today queue'} · ${selectedQueueTask.category} · Study runs the timer.`
+                  : 'Start a 25 or 50 minute focus session from the selected task.'}
             </p>
+            {selectedQueueTask && !activeSession && (
+              <button type="button" className="study-change-task-link" onClick={() => setSelectedQueueTask(null)}>
+                Change task
+              </button>
+            )}
           </div>
           <Clock size={18} />
         </div>
@@ -1180,11 +1161,11 @@ export default function StudyDashboard() {
 
         {!activeSession ? (
           <div className="study-timer-controls">
-            <button type="button" className="btn btn-primary" onClick={() => startTemplateSession(25)}>
+            <button type="button" className="btn btn-primary" onClick={() => startSelectedStudySession(25)}>
               <Play size={14} />
               Start 25-min Study
             </button>
-            <button type="button" className="btn btn-secondary" onClick={() => startTemplateSession(50)}>
+            <button type="button" className="btn btn-secondary" onClick={() => startSelectedStudySession(50)}>
               <Play size={14} />
               Start 50-min Study
             </button>

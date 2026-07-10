@@ -658,6 +658,7 @@ export default function App() {
                 taskView={taskView}
                 onTaskViewChange={setTaskView}
                 onOpenTasks={() => goToTab('tasks')}
+                onOpenStudy={() => goToTab('study')}
               />
             }
             onStartToday={async () => {
@@ -755,6 +756,7 @@ export default function App() {
             taskView={taskView}
             onTaskViewChange={setTaskView}
             onOpenTasks={() => goToTab('tasks')}
+            onOpenStudy={() => goToTab('study')}
           />
         )}
         {tab === 'tasks' && (
@@ -783,6 +785,7 @@ interface PlanWorkspaceProps {
   taskView: TaskView
   onTaskViewChange: (view: TaskView) => void
   onOpenTasks: () => void
+  onOpenStudy: () => void
 }
 
 function PlanWorkspace({
@@ -795,11 +798,12 @@ function PlanWorkspace({
   taskView,
   onTaskViewChange,
   onOpenTasks,
+  onOpenStudy,
 }: PlanWorkspaceProps) {
   return (
     <>
       <div className="page plan-page">
-        <BlockQueueView />
+        <BlockQueueView onOpenStudy={onOpenStudy} />
       </div>
       <DailyPlanView
         plan={plan}
