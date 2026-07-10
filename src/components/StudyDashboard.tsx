@@ -852,6 +852,99 @@ export default function StudyDashboard() {
     }
   }
 
+  function renderStudyTimerSection() {
+    return (
+      <section className={`study-timer-card ${activeSession ? 'study-timer-card-active' : ''}`} id="study-focus-timer">
+        <div className="study-timer-header">
+          <div>
+            <div className="section-label">{activeSession ? 'Focus timer' : 'Selected task'}</div>
+            <h3>{activeSession ? activeSession.title : selectedQueueTask?.title ?? selectedTemplate?.title ?? 'Choose a study task'}</h3>
+            <p>
+              {activeSession
+                ? `${activeSession.category} · ${activeSession.durationMinutes} min session`
+                : selectedQueueTask
+                  ? `${selectedQueueTask.source === 'plan-queue' ? 'Plan queue' : 'Today queue'} · ${selectedQueueTask.category} · Study runs the timer.`
+                  : 'Start a 25 or 50 minute focus session from the selected task.'}
+            </p>
+            {selectedQueueTask && !activeSession && (
+              <button type="button" className="study-change-task-link" onClick={() => setSelectedQueueTask(null)}>
+                Change task
+              </button>
+            )}
+          </div>
+          <Clock size={18} />
+        </div>
+
+        <div className="study-timer-face">
+          <span>{activeSession ? formatTimer(activeRemainingMs) : '--:--'}</span>
+          <div className="study-progress-bar" aria-label={`Timer progress ${activeProgress}%`}>
+            <span style={{ width: `${activeProgress}%` }} />
+          </div>
+          {activeSession && (
+            <small>
+              {activeSession.status === 'paused'
+                ? 'Paused'
+                : activeRemainingMs === 0
+                  ? 'Ready to complete'
+                  : `Expected end ${new Date(activeSession.expectedEndTime).toLocaleTimeString('en-AU', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`}
+            </small>
+          )}
+        </div>
+
+        {!activeSession ? (
+          <div className="study-timer-controls">
+            <button type="button" className="btn btn-primary" onClick={() => startSelectedStudySession(25)}>
+              <Play size={14} />
+              Start 25-min Study
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => startSelectedStudySession(50)}>
+              <Play size={14} />
+              Start 50-min Study
+            </button>
+            <div className="study-timer-custom">
+              <input
+                aria-label="Custom focus duration minutes"
+                type="number"
+                min="1"
+                step="1"
+                value={customTimerMinutes}
+                onChange={event => setCustomTimerMinutes(event.target.value)}
+              />
+              <button type="button" className="btn btn-secondary" onClick={startCustomDurationSession}>
+                Start custom Study
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="study-timer-controls">
+            {activeSession.status === 'paused' ? (
+              <button type="button" className="btn btn-primary" onClick={resumeSession}>
+                <Play size={14} />
+                Resume
+              </button>
+            ) : (
+              <button type="button" className="btn btn-secondary" onClick={pauseSession}>
+                <Pause size={14} />
+                Pause
+              </button>
+            )}
+            <button type="button" className="btn btn-primary" onClick={() => completeSession('completed')}>
+              <Check size={14} />
+              Complete
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => completeSession('abandoned')}>
+              <X size={14} />
+              Abandon
+            </button>
+          </div>
+        )}
+      </section>
+    )
+  }
+
   return (
     <div className="page study-page">
       <div className="page-header">
@@ -861,6 +954,8 @@ export default function StudyDashboard() {
           A focused place for study targets, session templates, and Obsidian-ready notes.
         </p>
       </div>
+
+      {activeSession && renderStudyTimerSection()}
 
       <section className={`coursera-scholarship-card ${courseraStatus.severity}`}>
         <div className="coursera-scholarship-main">
@@ -1119,94 +1214,7 @@ export default function StudyDashboard() {
         )}
       </section>
 
-      <section className="study-timer-card" id="study-focus-timer">
-        <div className="study-timer-header">
-          <div>
-            <div className="section-label">Selected task</div>
-            <h3>{activeSession ? activeSession.title : selectedQueueTask?.title ?? selectedTemplate?.title ?? 'Choose a study task'}</h3>
-            <p>
-              {activeSession
-                ? `${activeSession.category} · ${activeSession.durationMinutes} min session`
-                : selectedQueueTask
-                  ? `${selectedQueueTask.source === 'plan-queue' ? 'Plan queue' : 'Today queue'} · ${selectedQueueTask.category} · Study runs the timer.`
-                  : 'Start a 25 or 50 minute focus session from the selected task.'}
-            </p>
-            {selectedQueueTask && !activeSession && (
-              <button type="button" className="study-change-task-link" onClick={() => setSelectedQueueTask(null)}>
-                Change task
-              </button>
-            )}
-          </div>
-          <Clock size={18} />
-        </div>
-
-        <div className="study-timer-face">
-          <span>{activeSession ? formatTimer(activeRemainingMs) : '--:--'}</span>
-          <div className="study-progress-bar" aria-label={`Timer progress ${activeProgress}%`}>
-            <span style={{ width: `${activeProgress}%` }} />
-          </div>
-          {activeSession && (
-            <small>
-              {activeSession.status === 'paused'
-                ? 'Paused'
-                : activeRemainingMs === 0
-                  ? 'Ready to complete'
-                  : `Expected end ${new Date(activeSession.expectedEndTime).toLocaleTimeString('en-AU', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}`}
-            </small>
-          )}
-        </div>
-
-        {!activeSession ? (
-          <div className="study-timer-controls">
-            <button type="button" className="btn btn-primary" onClick={() => startSelectedStudySession(25)}>
-              <Play size={14} />
-              Start 25-min Study
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => startSelectedStudySession(50)}>
-              <Play size={14} />
-              Start 50-min Study
-            </button>
-            <div className="study-timer-custom">
-              <input
-                aria-label="Custom focus duration minutes"
-                type="number"
-                min="1"
-                step="1"
-                value={customTimerMinutes}
-                onChange={event => setCustomTimerMinutes(event.target.value)}
-              />
-              <button type="button" className="btn btn-secondary" onClick={startCustomDurationSession}>
-                Start custom Study
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="study-timer-controls">
-            {activeSession.status === 'paused' ? (
-              <button type="button" className="btn btn-primary" onClick={resumeSession}>
-                <Play size={14} />
-                Resume
-              </button>
-            ) : (
-              <button type="button" className="btn btn-secondary" onClick={pauseSession}>
-                <Pause size={14} />
-                Pause
-              </button>
-            )}
-            <button type="button" className="btn btn-primary" onClick={() => completeSession('completed')}>
-              <Check size={14} />
-              Complete
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => completeSession('abandoned')}>
-              <X size={14} />
-              Abandon
-            </button>
-          </div>
-        )}
-      </section>
+      {!activeSession && renderStudyTimerSection()}
 
       <section className="card">
         <div className="card-header">

@@ -15,6 +15,8 @@ const STUDY_KEYS = {
   reviewsByDate: 'iris-study-reviews-by-date',
 }
 
+export const STUDY_ACTIVE_SESSION_CHANGED_EVENT = 'iris-study-active-session-changed'
+
 interface VersionedValue<T> {
   schemaVersion: number
   value: T
@@ -49,6 +51,11 @@ function save(key: string, value: unknown): void {
     value,
   }
   localStorage.setItem(key, JSON.stringify(payload))
+}
+
+function notifyActiveStudySessionChanged(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(STUDY_ACTIVE_SESSION_CHANGED_EVENT))
 }
 
 export function emptyDailyStudyTarget(date = getLocalDateKey()): DailyStudyTarget {
@@ -108,10 +115,12 @@ export function loadActiveStudySession(): StudyActiveSession | null {
 
 export function saveActiveStudySession(session: StudyActiveSession): void {
   save(STUDY_KEYS.activeSession, session)
+  notifyActiveStudySessionChanged()
 }
 
 export function clearActiveStudySession(): void {
   localStorage.removeItem(STUDY_KEYS.activeSession)
+  notifyActiveStudySessionChanged()
 }
 
 export function emptyStudyDailyReview(date = getLocalDateKey()): StudyDailyReview {

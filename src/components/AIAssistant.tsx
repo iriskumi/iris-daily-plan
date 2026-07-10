@@ -458,20 +458,17 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         </div>
       </div>
 
-      <div className="card mt-1 expression-hub-import-card">
+      <div className="card mt-1 expression-hub-import-card expression-hub-import-card-compact">
         <div>
           <div className="section-label">Expression Review Hub</div>
-          <h3>Integration Inbox</h3>
+          <h3>Expression Review Hub</h3>
           {expressionImportStatus.pendingCount > 0 ? (
             <p>
-              Expression Review Hub has {expressionImportStatus.pendingCount} output rep{expressionImportStatus.pendingCount === 1 ? '' : 's'} ready to import.
+              {expressionImportStatus.pendingCount} completed output rep{expressionImportStatus.pendingCount === 1 ? '' : 's'} ready to sync.
             </p>
           ) : (
-            <p>Import English output reps by URL, local queue, or pasted JSON. Study stays focused on sessions.</p>
+            <p>Review saved expressions and bring completed output reps into Iris Hub.</p>
           )}
-          <a href="https://iris-expression-review-hub.vercel.app/" target="_blank" rel="noreferrer">
-            Open Expression Review Hub
-          </a>
           {expressionImportStatus.lastImportedAt && (
             <small>
               Last imported {new Date(expressionImportStatus.lastImportedAt).toLocaleString('en-AU')}
@@ -480,25 +477,31 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           {expressionImportMessage && <small>{expressionImportMessage}</small>}
         </div>
         <div className="expression-hub-import-actions">
-          <button type="button" className="btn btn-secondary" onClick={handleExpressionHubImport}>
-            Import local queue
+          <a className="btn btn-secondary" href="https://iris-expression-review-hub.vercel.app/" target="_blank" rel="noreferrer">
+            Open Expression Review Hub
+          </a>
+          <button type="button" className="btn btn-primary" onClick={handleExpressionHubImport}>
+            Sync available reps
           </button>
-          <label>
-            Import Expression Hub JSON
-            <textarea
-              value={expressionImportJson}
-              onChange={event => setExpressionImportJson(event.target.value)}
-              placeholder='Paste JSON payload, e.g. {"schemaVersion":1,"type":"english-output-rep",...}'
-            />
-          </label>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleExpressionHubJsonImport}
-            disabled={!expressionImportJson.trim()}
-          >
-            Import pasted JSON
-          </button>
+          <details className="expression-hub-advanced-tools">
+            <summary>Advanced import tools</summary>
+            <label>
+              Import Expression Hub JSON
+              <textarea
+                value={expressionImportJson}
+                onChange={event => setExpressionImportJson(event.target.value)}
+                placeholder='Paste JSON payload, e.g. {"schemaVersion":1,"type":"english-output-rep",...}'
+              />
+            </label>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleExpressionHubJsonImport}
+              disabled={!expressionImportJson.trim()}
+            >
+              Import pasted JSON
+            </button>
+          </details>
         </div>
       </div>
 

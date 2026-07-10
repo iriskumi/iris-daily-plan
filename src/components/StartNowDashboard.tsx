@@ -1,9 +1,11 @@
-import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, Image as ImageIcon, ListChecks, Mic, Pencil, Play, StickyNote, Trash2, X } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, Image as ImageIcon, ListChecks, Mic, Pause, Pencil, Play, StickyNote, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ACTIVE_SESSION_CHANGED_EVENT,
+  clearActiveSession,
   restoreActiveSession,
   startActiveSession,
+  updateActiveSession,
   type ActiveSession,
 } from '../activeSessionStore'
 import {
@@ -17,10 +19,12 @@ import {
 import { loadExerciseLog } from '../exerciseStorage'
 import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
-import { loadActiveStudySession, loadStudySessionRecordsForDate, saveActiveStudySession } from '../studyStorage'
+import { addStudySessionRecord, clearActiveStudySession, loadActiveStudySession, loadStudySessionRecordsForDate, saveActiveStudySession, STUDY_ACTIVE_SESSION_CHANGED_EVENT } from '../studyStorage'
+import { addStudySessionEnglishOutputRep } from '../englishOutputJourney'
 import type { StudyActiveSession, StudyCategory, StudySessionRecord } from '../studyTypes'
-import { ensureCustomStudyTaskInTaskStore } from '../taskStore'
+import { ensureCustomStudyTaskInTaskStore, writeStudySessionToTaskStore } from '../taskStore'
 import * as timerEngine from '../timerEngine'
+import type { TimerSession } from '../timerEngineTypes'
 import type { DayBlock } from '../types'
 import HeroImageViewport from './HeroImageViewport'
 
@@ -70,6 +74,87 @@ function labelFromToken(value: string): string {
     .filter(Boolean)
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+function formatTimer(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+function activePauseStartedAt(session: TimerSession): number | undefined {
+  const latest = session.pausedIntervals[session.pausedIntervals.length - 1]
+  if (!latest || latest.resumedAt) return undefined
+  const time = new Date(latest.pausedAt).getTime()
+  return Number.isFinite(time) ? time : undefined
+}
+
+function completedPauseMs(session: TimerSession): number {
+  return session.pausedIntervals.reduce((total, interval) => {
+    if (!interval.resumedAt) return total
+    const pausedAt = new Date(interval.pausedAt).getTime()
+    const resumedAt = new Date(interval.resumedAt).getTime()
+    if (!Number.isFinite(pausedAt) || !Number.isFinite(resumedAt)) return total
+    return total + Math.max(0, resumedAt - pausedAt)
+  }, 0)
+}
+
+function studyTimerTaskId(session: StudyActiveSession): string {
+  if (session.taskTemplateId) return `study-template-instance:${session.taskTemplateId}`
+  if (session.customTaskId) return `manual-study:${session.customTaskId}`
+  return `active-study:${session.id}`
+}
+
+function timerFromStudySession(session: StudyActiveSession): TimerSession {
+  if (session.timerSession) return session.timerSession
+  const pausedIntervals: TimerSession['pausedIntervals'] = []
+  if (session.pausedAccumulatedMs > 0) {
+    pausedIntervals.push({
+      pausedAt: new Date(session.sessionStartTime).toISOString(),
+      resumedAt: new Date(session.sessionStartTime + session.pausedAccumulatedMs).toISOString(),
+    })
+  }
+  if (session.status === 'paused' && session.pauseStartedAt) {
+    pausedIntervals.push({
+      pausedAt: new Date(session.pauseStartedAt).toISOString(),
+    })
+  }
+  return {
+    id: session.id,
+    taskId: studyTimerTaskId(session),
+    engine: 'study',
+    durationPlannedMin: session.durationMinutes,
+    startedAt: new Date(session.sessionStartTime).toISOString(),
+    pausedIntervals,
+    outcome: 'in-progress',
+  }
+}
+
+function studySessionWithTimer(session: StudyActiveSession, timerSession: TimerSession): StudyActiveSession {
+  const sessionStartTime = new Date(timerSession.startedAt).getTime()
+  const pauseStartedAt = activePauseStartedAt(timerSession)
+  return {
+    ...session,
+    id: timerSession.id,
+    sessionStartTime: Number.isFinite(sessionStartTime) ? sessionStartTime : session.sessionStartTime,
+    durationMinutes: timerSession.durationPlannedMin,
+    expectedEndTime: timerEngine.expectedEndTime(timerSession),
+    pausedAccumulatedMs: completedPauseMs(timerSession),
+    pauseStartedAt,
+    status: timerEngine.isPaused(timerSession) ? 'paused' : 'running',
+    timerSession,
+  }
+}
+
+function restoreActiveStudySession(): StudyActiveSession | null {
+  const session = loadActiveStudySession()
+  if (!session) return null
+  const restoredTimer = timerEngine.restore(STUDY_TIMER_ENGINE_KEY)
+  const timerSession = restoredTimer?.id === session.id
+    ? restoredTimer
+    : timerFromStudySession(session)
+  return studySessionWithTimer(session, timerSession)
 }
 
 function startTitle(kind: StartKind) {
@@ -131,7 +216,7 @@ export default function StartNowDashboard({
   const [heroMessage, setHeroMessage] = useState<string | null>(null)
   const [processingHeroImage, setProcessingHeroImage] = useState(false)
   const [now, setNow] = useState(() => Date.now())
-  const activeStudySession = loadActiveStudySession()
+  const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
   const irisDay = useMemo(() => getIris365DayNumber(), [])
   const summary = studyDoneSummary(studySessions)
   const movementMinutes = exerciseEntries.reduce((sum, entry) => sum + entry.durationMinutes, 0)
@@ -156,16 +241,21 @@ export default function StartNowDashboard({
   }
 
   useEffect(() => {
-    const refresh = () => setActiveSession(restoreActiveSession())
+    const refresh = () => {
+      setActiveSession(restoreActiveSession())
+      setActiveStudySession(restoreActiveStudySession())
+    }
     const interval = window.setInterval(() => {
       setNow(Date.now())
       refresh()
     }, 30_000)
     window.addEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
+    window.addEventListener(STUDY_ACTIVE_SESSION_CHANGED_EVENT, refresh)
     window.addEventListener('storage', refresh)
     return () => {
       window.clearInterval(interval)
       window.removeEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
+      window.removeEventListener(STUDY_ACTIVE_SESSION_CHANGED_EVENT, refresh)
       window.removeEventListener('storage', refresh)
     }
   }, [])
@@ -279,6 +369,68 @@ export default function StartNowDashboard({
     onOpenStudy?.()
   }
 
+  function persistActiveStudySession(session: StudyActiveSession | null) {
+    setActiveStudySession(session)
+    if (session) {
+      saveActiveStudySession(session)
+      timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerFromStudySession(session))
+      updateActiveSession({ status: session.status === 'paused' ? 'paused' : 'active' })
+      return
+    }
+    clearActiveStudySession()
+    timerEngine.clear(STUDY_TIMER_ENGINE_KEY)
+    clearActiveSession()
+    refreshDone()
+  }
+
+  function pauseActiveStudySession() {
+    if (!activeStudySession || activeStudySession.status === 'paused') return
+    const nextTimer = timerEngine.pause(timerFromStudySession(activeStudySession))
+    persistActiveStudySession(studySessionWithTimer(activeStudySession, nextTimer))
+  }
+
+  function resumeActiveStudySession() {
+    if (!activeStudySession || activeStudySession.status !== 'paused') return
+    const nextTimer = timerEngine.resume(timerFromStudySession(activeStudySession))
+    persistActiveStudySession(studySessionWithTimer(activeStudySession, nextTimer))
+  }
+
+  function completeActiveStudySession(status: StudySessionRecord['status']) {
+    if (!activeStudySession) return
+    const completedAtMs = Date.now()
+    const activeTimerSession = timerFromStudySession(activeStudySession)
+    const endedTimer = status === 'completed'
+      ? timerEngine.complete(activeTimerSession, completedAtMs)
+      : timerEngine.abandon(activeTimerSession, completedAtMs)
+    const actualMs = status === 'completed'
+      ? Math.min(activeStudySession.durationMinutes * 60_000, timerEngine.elapsedMs(endedTimer, completedAtMs))
+      : timerEngine.elapsedMs(endedTimer, completedAtMs)
+    const record: StudySessionRecord = {
+      id: activeStudySession.id,
+      taskTemplateId: activeStudySession.taskTemplateId,
+      customTaskId: activeStudySession.customTaskId,
+      source: activeStudySession.source,
+      sourceImportId: activeStudySession.sourceImportId,
+      title: activeStudySession.title,
+      category: activeStudySession.category,
+      startedAt: endedTimer.startedAt,
+      completedAt: endedTimer.endedAt ?? new Date(completedAtMs).toISOString(),
+      plannedMinutes: endedTimer.durationPlannedMin,
+      actualMinutes: status === 'completed'
+        ? Math.max(1, Math.round(actualMs / 60_000))
+        : Math.max(0, Math.round(actualMs / 60_000)),
+      status,
+      noteDestination: activeStudySession.noteDestination,
+      notes: activeStudySession.notes,
+      resourceUsed: activeStudySession.resourceUsed,
+    }
+    addStudySessionRecord(record)
+    writeStudySessionToTaskStore(record)
+    if (record.status === 'completed') addStudySessionEnglishOutputRep(record)
+    persistActiveStudySession(null)
+    setMessage(status === 'completed' ? 'Session completed.' : 'Session abandoned.')
+  }
+
   function openHeroPanel() {
     setHeroDraft(heroImage)
     setHeroMessage(null)
@@ -350,10 +502,6 @@ export default function StartNowDashboard({
     setHeroDraft(prev => ({ ...prev, zoom: 1, offsetX: 0, offsetY: 0 }))
   }
 
-  const activeStartedAt = activeSession ? new Date(activeSession.startedAt).getTime() : Number.NaN
-  const activeElapsedMinutes = activeSession && Number.isFinite(activeStartedAt)
-    ? Math.max(0, Math.floor((now - activeStartedAt) / 60_000))
-    : 0
   const doneCount = summary.completed.length + exerciseEntries.length
   const progressItems = [
     { label: 'Study', value: `${summary.studyMinutes}m` },
@@ -372,24 +520,81 @@ export default function StartNowDashboard({
   const nextCategory = activeStudySession?.category ?? (nextBlock ? labelFromToken(nextBlock.area) : 'Study')
   const nextDuration = activeStudySession?.durationMinutes ?? (nextBlock ? Math.min(nextBlock.estimatedMinutes, 50) : 25)
   const hasCustomHeroImage = heroImage.sourceType === 'upload' && Boolean(heroImage.dataUrl)
+  const activeStudyTimer = activeStudySession ? timerFromStudySession(activeStudySession) : null
+  const activeStudyRemainingMs = activeStudyTimer ? timerEngine.remainingMs(activeStudyTimer, now) : 0
+  const activeStudyElapsedMs = activeStudyTimer ? timerEngine.elapsedMs(activeStudyTimer, now) : 0
+  const activeStudyElapsedLabel = formatTimer(activeStudyElapsedMs)
+  const activeStudyRemainingLabel = formatTimer(activeStudyRemainingMs)
+  const activeStudyProgress = activeStudySession
+    ? Math.min(100, Math.round(((activeStudySession.durationMinutes * 60_000 - activeStudyRemainingMs) / (activeStudySession.durationMinutes * 60_000)) * 100))
+    : 0
 
   return (
     <section className="start-now-dashboard today-start-flow" aria-label="Today start flow">
-      {activeSession ? (
-        <section className="today-active-surface" aria-label="Current session">
-          <div className="today-active-copy">
-            <span className="today-soft-label">正在进行</span>
-            <h2>{activeSession.title}</h2>
+      {activeStudySession ? (
+        <section className="today-active-session-hero" aria-label="Active focus session">
+          <div className="today-active-session-main">
+            <span className="today-active-status-dot">FOCUS SESSION ACTIVE</span>
+            <h2>{activeStudySession.title}</h2>
             <div className="today-active-meta">
-              <span>{activeSession.category}</span>
-              <span>{activeElapsedMinutes} min</span>
-              {activeSession.status === 'paused' && <span>paused</span>}
+              <span>{activeStudySession.category}</span>
+              <span>Estimated {activeStudySession.durationMinutes} min</span>
+              {activeStudySession.status === 'paused' && <span>Paused</span>}
+            </div>
+            <div className="today-active-timer" aria-label={`${activeStudyRemainingLabel} remaining`}>
+              {activeStudyRemainingLabel}
+            </div>
+            <div className="today-active-progress-row">
+              <span>{activeStudyElapsedLabel} elapsed</span>
+              <div className="today-active-progress" aria-label={`Session progress ${activeStudyProgress}%`}>
+                <span style={{ width: `${activeStudyProgress}%` }} />
+              </div>
+              <span>{activeStudyRemainingLabel} remaining</span>
+            </div>
+            <div className="today-active-actions">
+              {activeStudySession.status === 'paused' ? (
+                <button type="button" className="btn btn-secondary" onClick={resumeActiveStudySession}>
+                  <Play size={15} />
+                  Resume
+                </button>
+              ) : (
+                <button type="button" className="btn btn-secondary" onClick={pauseActiveStudySession}>
+                  <Pause size={15} />
+                  Pause
+                </button>
+              )}
+              <button type="button" className="btn btn-primary" onClick={() => completeActiveStudySession('completed')}>
+                <CheckCircle2 size={15} />
+                Complete
+              </button>
+              <button type="button" className="btn btn-secondary today-active-abandon" onClick={() => completeActiveStudySession('abandoned')}>
+                <X size={15} />
+                Abandon
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={openActiveSession}>
+                <Play size={15} />
+                Open in Study
+              </button>
             </div>
           </div>
-          <button type="button" className="btn btn-primary" onClick={openActiveSession}>
-            <Play size={16} />
-            Open session
-          </button>
+          <aside className="today-active-session-info" aria-label="Current task details">
+            <div className="section-label">Current task</div>
+            <h3>{activeStudySession.title}</h3>
+            <dl>
+              <div>
+                <dt>Source</dt>
+                <dd>{activeStudySession.source ? labelFromToken(activeStudySession.source) : 'Study'}</dd>
+              </div>
+              <div>
+                <dt>Note</dt>
+                <dd>{activeStudySession.noteDestination || 'Daily Study Log'}</dd>
+              </div>
+              <div>
+                <dt>Method</dt>
+                <dd>{activeStudySession.notes || activeStudySession.resourceUsed || 'Stay with this one task.'}</dd>
+              </div>
+            </dl>
+          </aside>
         </section>
       ) : (
         <>

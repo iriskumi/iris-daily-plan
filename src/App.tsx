@@ -113,7 +113,12 @@ import { DURATION_GROUPS, isStandardDuration, longBlockHint } from './durations'
 import * as timerEngine from './timerEngine'
 import { writeFocusBlockSessionToTaskStore, writeInboxTaskToTaskStore } from './taskStore'
 import { consumeExpressionHubUrlImport } from './expressionHubImport'
+import {
+  loadActiveStudySession,
+  STUDY_ACTIVE_SESSION_CHANGED_EVENT,
+} from './studyStorage'
 import type { TimerSession } from './timerEngineTypes'
+import type { StudyActiveSession } from './studyTypes'
 import './index.css'
 
 type Tab = 'today' | 'iris365' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations' | 'settings'
@@ -134,6 +139,89 @@ const TABS: { id: Extract<Tab, 'today' | 'iris365' | 'study' | 'plan' | 'tasks' 
   { id: 'media', label: 'Media', icon: <Heart /> },
   { id: 'integrations', label: 'Integrations', icon: <Plug /> },
 ]
+
+const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
+
+function formatStudyTimer(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+function activeStudyPauseStartedAt(session: TimerSession): number | undefined {
+  const latest = session.pausedIntervals[session.pausedIntervals.length - 1]
+  if (!latest || latest.resumedAt) return undefined
+  const time = new Date(latest.pausedAt).getTime()
+  return Number.isFinite(time) ? time : undefined
+}
+
+function completedStudyPauseMs(session: TimerSession): number {
+  return session.pausedIntervals.reduce((total, interval) => {
+    if (!interval.resumedAt) return total
+    const pausedAt = new Date(interval.pausedAt).getTime()
+    const resumedAt = new Date(interval.resumedAt).getTime()
+    if (!Number.isFinite(pausedAt) || !Number.isFinite(resumedAt)) return total
+    return total + Math.max(0, resumedAt - pausedAt)
+  }, 0)
+}
+
+function studyTimerTaskId(session: StudyActiveSession): string {
+  if (session.taskTemplateId) return `study-template-instance:${session.taskTemplateId}`
+  if (session.customTaskId) return `manual-study:${session.customTaskId}`
+  return `active-study:${session.id}`
+}
+
+function timerFromActiveStudySession(session: StudyActiveSession): TimerSession {
+  if (session.timerSession) return session.timerSession
+  const pausedIntervals: TimerSession['pausedIntervals'] = []
+  if (session.pausedAccumulatedMs > 0) {
+    pausedIntervals.push({
+      pausedAt: new Date(session.sessionStartTime).toISOString(),
+      resumedAt: new Date(session.sessionStartTime + session.pausedAccumulatedMs).toISOString(),
+    })
+  }
+  if (session.status === 'paused' && session.pauseStartedAt) {
+    pausedIntervals.push({
+      pausedAt: new Date(session.pauseStartedAt).toISOString(),
+    })
+  }
+  return {
+    id: session.id,
+    taskId: studyTimerTaskId(session),
+    engine: 'study',
+    durationPlannedMin: session.durationMinutes,
+    startedAt: new Date(session.sessionStartTime).toISOString(),
+    pausedIntervals,
+    outcome: 'in-progress',
+  }
+}
+
+function studySessionWithTimer(session: StudyActiveSession, timerSession: TimerSession): StudyActiveSession {
+  const sessionStartTime = new Date(timerSession.startedAt).getTime()
+  const pauseStartedAt = activeStudyPauseStartedAt(timerSession)
+  return {
+    ...session,
+    id: timerSession.id,
+    sessionStartTime: Number.isFinite(sessionStartTime) ? sessionStartTime : session.sessionStartTime,
+    durationMinutes: timerSession.durationPlannedMin,
+    expectedEndTime: timerEngine.expectedEndTime(timerSession),
+    pausedAccumulatedMs: completedStudyPauseMs(timerSession),
+    pauseStartedAt,
+    status: timerEngine.isPaused(timerSession) ? 'paused' : 'running',
+    timerSession,
+  }
+}
+
+function restoreActiveStudySession(): StudyActiveSession | null {
+  const session = loadActiveStudySession()
+  if (!session) return null
+  const restoredTimer = timerEngine.restore(STUDY_TIMER_ENGINE_KEY)
+  const timerSession = restoredTimer?.id === session.id
+    ? restoredTimer
+    : timerFromActiveStudySession(session)
+  return studySessionWithTimer(session, timerSession)
+}
 
 function getUrgentBills(bills: Bill[]): Bill[] {
   return bills.filter(b => {
@@ -386,9 +474,26 @@ export default function App() {
   const [activeWorkLeads, setActiveWorkLeads] = useState<WorkOpportunity[]>([])
   const [generatingPlan, setGeneratingPlan] = useState(false)
   const [generationMessage, setGenerationMessage] = useState<string | null>(null)
+  const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
+  const [activeStudyNow, setActiveStudyNow] = useState(() => Date.now())
 
   useEffect(() => {
     consumeExpressionHubUrlImport()
+  }, [])
+
+  useEffect(() => {
+    const refresh = () => setActiveStudySession(restoreActiveStudySession())
+    const interval = window.setInterval(() => {
+      setActiveStudyNow(Date.now())
+      refresh()
+    }, 15_000)
+    window.addEventListener(STUDY_ACTIVE_SESSION_CHANGED_EVENT, refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener(STUDY_ACTIVE_SESSION_CHANGED_EVENT, refresh)
+      window.removeEventListener('storage', refresh)
+    }
   }, [])
 
   useEffect(() => {
@@ -536,6 +641,9 @@ export default function App() {
   const overdueBills = urgentBills.filter(b => getDaysUntil(b.dueDate) < 0)
   const dueSoonBills = urgentBills.filter(b => getDaysUntil(b.dueDate) >= 0)
   const visibleTabs = TABS
+  const compactActiveTimer = activeStudySession ? timerFromActiveStudySession(activeStudySession) : null
+  const compactActiveRemaining = compactActiveTimer ? formatStudyTimer(timerEngine.remainingMs(compactActiveTimer, activeStudyNow)) : ''
+  const showCompactActiveBar = Boolean(activeStudySession && tab !== 'today' && tab !== 'study')
 
   function goToTab(nextTab: Tab) {
     setTab(nextTab)
@@ -624,6 +732,17 @@ export default function App() {
           {dueSoonBills.length === 1
             ? `Due soon: ${dueSoonBills[0].name} — $${dueSoonBills[0].amount}`
             : `${dueSoonBills.length} bills due within 3 days`}
+        </div>
+      )}
+
+      {showCompactActiveBar && activeStudySession && (
+        <div className="active-session-compact-bar">
+          <span>Active</span>
+          <strong>{activeStudySession.title}</strong>
+          <small>{compactActiveRemaining}</small>
+          <button type="button" className="btn btn-secondary" onClick={() => goToTab('study')}>
+            Open
+          </button>
         </div>
       )}
 
