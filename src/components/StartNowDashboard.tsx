@@ -1,5 +1,5 @@
 import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, Image as ImageIcon, ListChecks, Mic, Pencil, Play, StickyNote, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent } from 'react'
 import {
   ACTIVE_SESSION_CHANGED_EVENT,
   restoreActiveSession,
@@ -103,6 +103,18 @@ function studyDoneSummary(sessions: StudySessionRecord[]) {
   return { completed, studyMinutes, englishOutputMinutes, englishInputMinutes, adminMinutes, englishReps }
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value))
+}
+
+function heroImageStyle(settings: TodayHeroImageSettings): CSSProperties {
+  return {
+    objectFit: settings.objectFit,
+    objectPosition: settings.objectPosition,
+    transform: `translate(${settings.offsetX}%, ${settings.offsetY}%) scale(${settings.zoom})`,
+  }
+}
+
 export default function StartNowDashboard({
   onOpenStudy,
   onOpenExercise,
@@ -126,6 +138,13 @@ export default function StartNowDashboard({
   const [heroPanelOpen, setHeroPanelOpen] = useState(false)
   const [heroMessage, setHeroMessage] = useState<string | null>(null)
   const [processingHeroImage, setProcessingHeroImage] = useState(false)
+  const [heroDrag, setHeroDrag] = useState<{
+    pointerId: number
+    startX: number
+    startY: number
+    offsetX: number
+    offsetY: number
+  } | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const activeStudySession = loadActiveStudySession()
   const irisDay = useMemo(() => getIris365DayNumber(), [])
@@ -307,6 +326,9 @@ export default function StartNowDashboard({
         ...heroDraft,
         sourceType: 'upload',
         dataUrl: compressed.dataUrl,
+        zoom: 1,
+        offsetX: 0,
+        offsetY: 0,
       })
       setHeroMessage(`Image ready (${Math.round(compressed.bytes / 1024)} KB).`)
     } catch (error) {
@@ -326,6 +348,50 @@ export default function StartNowDashboard({
 
   function removeHeroImage() {
     setHeroDraft(DEFAULT_TODAY_HERO_IMAGE)
+  }
+
+  function updateHeroZoom(value: number) {
+    setHeroDraft(prev => ({ ...prev, zoom: clamp(value, 0.8, 2.2) }))
+  }
+
+  function updateHeroOffset(axis: 'x' | 'y', value: number) {
+    setHeroDraft(prev => ({
+      ...prev,
+      offsetX: axis === 'x' ? clamp(value, -50, 50) : prev.offsetX,
+      offsetY: axis === 'y' ? clamp(value, -50, 50) : prev.offsetY,
+    }))
+  }
+
+  function resetHeroCrop() {
+    setHeroDraft(prev => ({ ...prev, zoom: 1, offsetX: 0, offsetY: 0 }))
+  }
+
+  function handleHeroPreviewPointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (!(heroDraft.sourceType === 'upload' && heroDraft.dataUrl)) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setHeroDrag({
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: heroDraft.offsetX,
+      offsetY: heroDraft.offsetY,
+    })
+  }
+
+  function handleHeroPreviewPointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!heroDrag || heroDrag.pointerId !== event.pointerId) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const deltaX = ((event.clientX - heroDrag.startX) / Math.max(1, rect.width)) * 100
+    const deltaY = ((event.clientY - heroDrag.startY) / Math.max(1, rect.height)) * 100
+    setHeroDraft(prev => ({
+      ...prev,
+      offsetX: clamp(heroDrag.offsetX + deltaX, -50, 50),
+      offsetY: clamp(heroDrag.offsetY + deltaY, -50, 50),
+    }))
+  }
+
+  function handleHeroPreviewPointerEnd(event: PointerEvent<HTMLDivElement>) {
+    if (heroDrag?.pointerId === event.pointerId) setHeroDrag(null)
   }
 
   const activeStartedAt = activeSession ? new Date(activeSession.startedAt).getTime() : Number.NaN
@@ -377,10 +443,7 @@ export default function StartNowDashboard({
                 <img
                   src={heroImage.dataUrl}
                   alt=""
-                  style={{
-                    objectFit: heroImage.objectFit,
-                    objectPosition: heroImage.objectPosition,
-                  }}
+                  style={heroImageStyle(heroImage)}
                 />
               ) : (
                 <>
@@ -550,15 +613,19 @@ export default function StartNowDashboard({
               </button>
             </div>
 
-            <div className="today-hero-preview">
+            <div
+              className={`today-hero-preview ${heroDrag ? 'dragging' : ''}`}
+              onPointerDown={handleHeroPreviewPointerDown}
+              onPointerMove={handleHeroPreviewPointerMove}
+              onPointerUp={handleHeroPreviewPointerEnd}
+              onPointerCancel={handleHeroPreviewPointerEnd}
+            >
               {heroDraft.sourceType === 'upload' && heroDraft.dataUrl ? (
                 <img
                   src={heroDraft.dataUrl}
                   alt=""
-                  style={{
-                    objectFit: heroDraft.objectFit,
-                    objectPosition: heroDraft.objectPosition,
-                  }}
+                  draggable={false}
+                  style={heroImageStyle(heroDraft)}
                 />
               ) : (
                 <div className="today-hero-preview-placeholder">
@@ -610,6 +677,44 @@ export default function StartNowDashboard({
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div className="today-hero-adjustments" aria-label="Fine tune hero image">
+              <label>
+                <span>Zoom <strong>{Math.round(heroDraft.zoom * 100)}%</strong></span>
+                <input
+                  type="range"
+                  min="80"
+                  max="220"
+                  step="1"
+                  value={Math.round(heroDraft.zoom * 100)}
+                  onChange={event => updateHeroZoom(Number(event.target.value) / 100)}
+                />
+              </label>
+              <label>
+                <span>Move X <strong>{Math.round(heroDraft.offsetX)}</strong></span>
+                <input
+                  type="range"
+                  min="-50"
+                  max="50"
+                  step="1"
+                  value={Math.round(heroDraft.offsetX)}
+                  onChange={event => updateHeroOffset('x', Number(event.target.value))}
+                />
+              </label>
+              <label>
+                <span>Move Y <strong>{Math.round(heroDraft.offsetY)}</strong></span>
+                <input
+                  type="range"
+                  min="-50"
+                  max="50"
+                  step="1"
+                  value={Math.round(heroDraft.offsetY)}
+                  onChange={event => updateHeroOffset('y', Number(event.target.value))}
+                />
+              </label>
+              <button type="button" onClick={resetHeroCrop}>Reset crop</button>
+              <small>Drag the preview to move the image.</small>
             </div>
 
             {heroMessage && <p className="today-hero-message">{heroMessage}</p>}

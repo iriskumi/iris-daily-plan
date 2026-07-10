@@ -8,6 +8,9 @@ export interface TodayHeroImageSettings {
   presetId?: string
   objectPosition: TodayHeroObjectPosition
   objectFit: TodayHeroObjectFit
+  zoom: number
+  offsetX: number
+  offsetY: number
 }
 
 export interface AppearanceSettings {
@@ -23,15 +26,24 @@ export const DEFAULT_TODAY_HERO_IMAGE: TodayHeroImageSettings = {
   sourceType: 'default',
   objectPosition: 'center',
   objectFit: 'cover',
+  zoom: 1,
+  offsetX: 0,
+  offsetY: 0,
 }
 
 function normaliseHeroImage(value: Partial<TodayHeroImageSettings> | undefined): TodayHeroImageSettings {
+  const zoom = typeof value?.zoom === 'number' ? value.zoom : 1
+  const offsetX = typeof value?.offsetX === 'number' ? value.offsetX : 0
+  const offsetY = typeof value?.offsetY === 'number' ? value.offsetY : 0
   return {
     sourceType: value?.sourceType === 'upload' || value?.sourceType === 'preset' ? value.sourceType : 'default',
     dataUrl: value?.dataUrl,
     presetId: value?.presetId,
     objectPosition: value?.objectPosition === 'left' || value?.objectPosition === 'right' ? value.objectPosition : 'center',
     objectFit: value?.objectFit === 'contain' ? 'contain' : 'cover',
+    zoom: Math.max(0.8, Math.min(2.2, zoom)),
+    offsetX: Math.max(-50, Math.min(50, offsetX)),
+    offsetY: Math.max(-50, Math.min(50, offsetY)),
   }
 }
 
