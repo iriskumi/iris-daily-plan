@@ -12611,6 +12611,93 @@ textarea:focus,
   }
 }
 
+/* Today start surface layout fix: keep action cards readable */
+.today-start-panel {
+  grid-template-columns: minmax(240px, 0.42fr) minmax(0, 1fr) !important;
+  grid-template-rows: auto auto;
+  align-items: center;
+  min-height: 0;
+  gap: clamp(1rem, 2vw, 1.65rem);
+}
+
+.today-start-photo-panel {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  min-height: clamp(13rem, 22vw, 16.5rem);
+}
+
+.today-start-panel-copy {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+}
+
+.today-start-panel-copy h2,
+.today-active-copy h2 {
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  letter-spacing: -0.035em;
+}
+
+.today-start-actions {
+  grid-column: 2;
+  grid-row: 2;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  margin-top: 1rem;
+}
+
+.today-start-action-card,
+.today-start-action-card.primary,
+.today-start-action-card:hover {
+  min-width: 0;
+  min-height: 82px;
+  height: auto;
+  border-radius: 20px;
+}
+
+.today-start-action-card {
+  overflow: hidden;
+  padding: 0.9rem 0.95rem;
+}
+
+.start-action-card__content {
+  overflow: hidden;
+}
+
+.start-action-card__label,
+.start-action-card__helper {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 980px) {
+  .today-start-panel {
+    grid-template-columns: minmax(210px, 0.46fr) minmax(0, 1fr) !important;
+  }
+
+  .today-start-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .today-start-action-card {
+    min-height: 72px;
+  }
+}
+
+@media (max-width: 760px) {
+  .today-start-panel {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto;
+  }
+
+  .today-start-photo-panel,
+  .today-start-panel-copy,
+  .today-start-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
 /* Life-system tabs: Media, Exercise, Iris365 */
 .media-tab-page,
 .exercise-tab-page,

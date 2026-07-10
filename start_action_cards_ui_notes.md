@@ -4,6 +4,7 @@
 - Refined Today Start actions from oversized rounded buttons into compact horizontal action cards.
 - Kept the same click behavior and routing.
 - Changed the visible exercise label from `Log Exercise` to `Exercise`.
+- Fixed the desktop hero layout so the cards sit in a readable right-side content area instead of being squeezed into a narrow column.
 - Added helper lines:
   - Study: `Start a focus session`
   - English: `Listening or output`
