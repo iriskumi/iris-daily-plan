@@ -482,6 +482,24 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    const handleOpenTab = (event: Event) => {
+      const detail = (event as CustomEvent<{ tab?: Tab; focus?: string }>).detail
+      if (!detail?.tab) return
+      setTab(detail.tab)
+      if (detail.focus === 'active-session') {
+        window.setTimeout(() => {
+          document.querySelector('[aria-label="Active focus session"]')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          })
+        }, 100)
+      }
+    }
+    window.addEventListener('iris-open-tab', handleOpenTab)
+    return () => window.removeEventListener('iris-open-tab', handleOpenTab)
+  }, [])
+
+  useEffect(() => {
     const refresh = () => setActiveStudySession(restoreActiveStudySession())
     const interval = window.setInterval(() => {
       setActiveStudyNow(Date.now())

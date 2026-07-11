@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Check, Clipboard, Clock, Copy, Pause, Play, Square, Target, X } from 'lucide-react'
+import { BookOpen, Check, Clipboard, Clock, Copy, Play, Square, Target } from 'lucide-react'
 import { getLocalDateKey } from '../focus'
 import { STUDY_CATEGORIES, STUDY_TASK_LIBRARY } from '../studyTaskLibrary'
 import {
@@ -677,18 +677,6 @@ export default function StudyDashboard() {
     startSelectedStudySession(Math.round(duration))
   }
 
-  function pauseSession() {
-    if (!activeSession || activeSession.status === 'paused') return
-    const nextTimer = timerEngine.pause(timerFromStudySession(activeSession))
-    persistActiveSession(studySessionWithTimer(activeSession, nextTimer))
-  }
-
-  function resumeSession() {
-    if (!activeSession || activeSession.status !== 'paused') return
-    const nextTimer = timerEngine.resume(timerFromStudySession(activeSession))
-    persistActiveSession(studySessionWithTimer(activeSession, nextTimer))
-  }
-
   function completeSession(status: StudySessionRecord['status'], completedAtMs = Date.now()) {
     if (!activeSession) return
     const activeTimerSession = timerFromStudySession(activeSession)
@@ -728,6 +716,16 @@ export default function StudyDashboard() {
     setSessions(loadStudySessionRecordsForDate(today))
     setAllStudySessions(loadStudySessionRecords())
     persistActiveSession(null)
+  }
+
+  function returnToFocusScreen() {
+    window.dispatchEvent(new CustomEvent('iris-open-tab', { detail: { tab: 'today', focus: 'active-session' } }))
+    window.setTimeout(() => {
+      document.querySelector('[aria-label="Active focus session"]')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 100)
   }
 
   function handleManualOutputRep() {
@@ -854,19 +852,17 @@ export default function StudyDashboard() {
 
   function renderStudyTimerSection() {
     return (
-      <section className={`study-timer-card ${activeSession ? 'study-timer-card-active' : ''}`} id="study-focus-timer">
+      <section className="study-timer-card" id="study-focus-timer">
         <div className="study-timer-header">
           <div>
-            <div className="section-label">{activeSession ? 'Focus timer' : 'Selected task'}</div>
-            <h3>{activeSession ? activeSession.title : selectedQueueTask?.title ?? selectedTemplate?.title ?? 'Choose a study task'}</h3>
+            <div className="section-label">Selected task</div>
+            <h3>{selectedQueueTask?.title ?? selectedTemplate?.title ?? 'Choose a study task'}</h3>
             <p>
-              {activeSession
-                ? `${activeSession.category} · ${activeSession.durationMinutes} min session`
-                : selectedQueueTask
-                  ? `${selectedQueueTask.source === 'plan-queue' ? 'Plan queue' : 'Today queue'} · ${selectedQueueTask.category} · Study runs the timer.`
-                  : 'Start a 25 or 50 minute focus session from the selected task.'}
+              {selectedQueueTask
+                ? `${selectedQueueTask.source === 'plan-queue' ? 'Plan queue' : 'Today queue'} · ${selectedQueueTask.category} · Study runs the timer.`
+                : 'Start a 25 or 50 minute focus session from the selected task.'}
             </p>
-            {selectedQueueTask && !activeSession && (
+            {selectedQueueTask && (
               <button type="button" className="study-change-task-link" onClick={() => setSelectedQueueTask(null)}>
                 Change task
               </button>
@@ -876,71 +872,57 @@ export default function StudyDashboard() {
         </div>
 
         <div className="study-timer-face">
-          <span>{activeSession ? formatTimer(activeRemainingMs) : '--:--'}</span>
-          <div className="study-progress-bar" aria-label={`Timer progress ${activeProgress}%`}>
-            <span style={{ width: `${activeProgress}%` }} />
+          <span>--:--</span>
+          <div className="study-progress-bar" aria-label="Timer progress 0%">
+            <span style={{ width: '0%' }} />
           </div>
-          {activeSession && (
-            <small>
-              {activeSession.status === 'paused'
-                ? 'Paused'
-                : activeRemainingMs === 0
-                  ? 'Ready to complete'
-                  : `Expected end ${new Date(activeSession.expectedEndTime).toLocaleTimeString('en-AU', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}`}
-            </small>
-          )}
         </div>
 
-        {!activeSession ? (
-          <div className="study-timer-controls">
-            <button type="button" className="btn btn-primary" onClick={() => startSelectedStudySession(25)}>
-              <Play size={14} />
-              Start 25-min Study
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => startSelectedStudySession(50)}>
-              <Play size={14} />
-              Start 50-min Study
-            </button>
-            <div className="study-timer-custom">
-              <input
-                aria-label="Custom focus duration minutes"
-                type="number"
-                min="1"
-                step="1"
-                value={customTimerMinutes}
-                onChange={event => setCustomTimerMinutes(event.target.value)}
-              />
-              <button type="button" className="btn btn-secondary" onClick={startCustomDurationSession}>
-                Start custom Study
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="study-timer-controls">
-            {activeSession.status === 'paused' ? (
-              <button type="button" className="btn btn-primary" onClick={resumeSession}>
-                <Play size={14} />
-                Resume
-              </button>
-            ) : (
-              <button type="button" className="btn btn-secondary" onClick={pauseSession}>
-                <Pause size={14} />
-                Pause
-              </button>
-            )}
-            <button type="button" className="btn btn-primary" onClick={() => completeSession('completed')}>
-              <Check size={14} />
-              Complete
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => completeSession('abandoned')}>
-              <X size={14} />
-              Abandon
+        <div className="study-timer-controls">
+          <button type="button" className="btn btn-primary" onClick={() => startSelectedStudySession(25)}>
+            <Play size={14} />
+            Start 25-min Study
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => startSelectedStudySession(50)}>
+            <Play size={14} />
+            Start 50-min Study
+          </button>
+          <div className="study-timer-custom">
+            <input
+              aria-label="Custom focus duration minutes"
+              type="number"
+              min="1"
+              step="1"
+              value={customTimerMinutes}
+              onChange={event => setCustomTimerMinutes(event.target.value)}
+            />
+            <button type="button" className="btn btn-secondary" onClick={startCustomDurationSession}>
+              Start custom Study
             </button>
           </div>
-        )}
+        </div>
+      </section>
+    )
+  }
+
+  function renderActiveSessionCompactBanner() {
+    if (!activeSession) return null
+    return (
+      <section className="study-active-session-banner" aria-label="Active study session">
+        <div className="study-active-session-copy">
+          <div className="section-label">Active session</div>
+          <h3>{activeSession.title}</h3>
+          <p>
+            {activeSession.category} · {formatTimer(activeRemainingMs)} remaining
+            {activeSession.status === 'paused' ? ' · Paused' : ''}
+          </p>
+          <div className="study-active-session-progress" aria-label={`Session progress ${activeProgress}%`}>
+            <span style={{ width: `${activeProgress}%` }} />
+          </div>
+        </div>
+        <button type="button" className="btn btn-primary" onClick={returnToFocusScreen}>
+          Return to session
+        </button>
       </section>
     )
   }
@@ -955,44 +937,7 @@ export default function StudyDashboard() {
         </p>
       </div>
 
-      {activeSession && renderStudyTimerSection()}
-
-      <section className={`coursera-scholarship-card ${courseraStatus.severity}`}>
-        <div className="coursera-scholarship-main">
-          <div className="section-label">High priority study project</div>
-          <h3>She Plus Tech x Coursera AI Scholarship</h3>
-          <p>Access until Sep 23, 2026 · Stay active every week</p>
-          <strong>Do at least one Coursera session each week to stay active.</strong>
-        </div>
-        <div className="coursera-scholarship-stats">
-          <div>
-            <span>{Math.max(0, courseraDaysRemaining)}</span>
-            <small>days remaining</small>
-          </div>
-          <div>
-            <span>{courseraStatus.daysInactive === null ? '—' : courseraStatus.daysInactive}</span>
-            <small>days inactive</small>
-          </div>
-        </div>
-        <div className="coursera-activity-status">
-          <span>{courseraStatus.label}</span>
-          <p>{courseraStatus.detail}</p>
-        </div>
-      </section>
-
-      <section className="coursera-course-plan-card">
-        <div>
-          <div className="section-label">Suggested course plan</div>
-          <h3>Priority courses</h3>
-          <p>Guidance only, not a forced plan.</p>
-        </div>
-        <ol>
-          <li>Google AI Essentials</li>
-          <li>Vanderbilt Generative AI Automation</li>
-          <li>Build Powerful AI Agents with OpenAI Tools</li>
-          <li>Google Cloud Generative AI Leader</li>
-        </ol>
-      </section>
+      {activeSession && renderActiveSessionCompactBanner()}
 
       <section className="study-hero-card">
         <div className="study-hero-main">
@@ -1038,6 +983,43 @@ export default function StudyDashboard() {
             </button>
           </div>
         </div>
+      </section>
+
+      <section className={`coursera-scholarship-card ${courseraStatus.severity}`}>
+        <div className="coursera-scholarship-main">
+          <div className="section-label">High priority study project</div>
+          <h3>She Plus Tech x Coursera AI Scholarship</h3>
+          <p>Access until Sep 23, 2026 · Stay active every week</p>
+          <strong>Do at least one Coursera session each week to stay active.</strong>
+        </div>
+        <div className="coursera-scholarship-stats">
+          <div>
+            <span>{Math.max(0, courseraDaysRemaining)}</span>
+            <small>days remaining</small>
+          </div>
+          <div>
+            <span>{courseraStatus.daysInactive === null ? '—' : courseraStatus.daysInactive}</span>
+            <small>days inactive</small>
+          </div>
+        </div>
+        <div className="coursera-activity-status">
+          <span>{courseraStatus.label}</span>
+          <p>{courseraStatus.detail}</p>
+        </div>
+      </section>
+
+      <section className="coursera-course-plan-card">
+        <div>
+          <div className="section-label">Suggested course plan</div>
+          <h3>Priority courses</h3>
+          <p>Guidance only, not a forced plan.</p>
+        </div>
+        <ol>
+          <li>Google AI Essentials</li>
+          <li>Vanderbilt Generative AI Automation</li>
+          <li>Build Powerful AI Agents with OpenAI Tools</li>
+          <li>Google Cloud Generative AI Leader</li>
+        </ol>
       </section>
 
       <section className="english-output-journey-card">
