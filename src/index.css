@@ -12261,6 +12261,127 @@ textarea:focus,
   font-variant-numeric: tabular-nums;
 }
 
+.external-task-import-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  background: rgba(55, 42, 34, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.external-task-import-modal {
+  width: min(620px, 100%);
+  max-height: min(780px, calc(100vh - 2.4rem));
+  overflow: auto;
+  padding: clamp(1.2rem, 2.6vw, 1.8rem);
+  border: 1px solid rgba(205, 187, 168, 0.5);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(230, 201, 195, 0.26), transparent 16rem),
+    rgba(255, 252, 249, 0.96);
+  box-shadow: 0 28px 80px rgba(64, 45, 34, 0.18);
+}
+
+.external-task-import-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.external-task-import-modal h2 {
+  margin: 0.32rem 0 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.external-task-import-modal p {
+  color: var(--text-2);
+  line-height: 1.65;
+}
+
+.external-task-import-preview {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.15rem;
+}
+
+.external-task-import-preview label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--section-label);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.external-task-import-preview input,
+.external-task-import-preview select {
+  min-height: 46px;
+  width: 100%;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid rgba(205, 187, 168, 0.48);
+  border-radius: 14px;
+  background: rgba(255, 252, 249, 0.92);
+  color: var(--text);
+  font-family: var(--font-cjk);
+  font-size: 15px;
+}
+
+.external-task-import-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.external-task-import-preview dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.external-task-import-preview dl div,
+.external-task-import-notes,
+.external-task-import-message {
+  padding: 0.78rem 0.85rem;
+  border: 1px solid rgba(205, 187, 168, 0.34);
+  border-radius: 16px;
+  background: rgba(246, 239, 232, 0.5);
+}
+
+.external-task-import-preview dt {
+  color: var(--text-3);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.external-task-import-preview dd {
+  margin-top: 0.2rem;
+  color: var(--text);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.external-task-import-message {
+  color: var(--accent-2);
+  font-weight: 500;
+}
+
+.external-task-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+
 .today-active-session-hero {
   display: block;
   padding: clamp(1.4rem, 3vw, 2.5rem);
@@ -12604,6 +12725,16 @@ textarea:focus,
     border-radius: 2px;
     flex-direction: column;
     width: calc(100% - 2rem);
+  }
+
+  .external-task-import-grid,
+  .external-task-import-preview dl {
+    grid-template-columns: 1fr;
+  }
+
+  .external-task-import-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .expression-hub-import-card-compact,

@@ -18,6 +18,8 @@ import type {
   Task,
   TaskStatus,
 } from './types'
+import { createInboxTask } from './focusBlocks'
+import { loadTasks, saveTasks } from './storage'
 
 export const TASK_STORE_SCHEMA_VERSION = 1
 export const TASK_STORE_KEY = 'iris-task-store'
@@ -320,6 +322,11 @@ export function clearBlockQueueScheduleInTaskStore(block: DayBlock, status: 'tod
 export function writeInboxTaskToTaskStore(task: Task): string {
   const store = mutableTaskStore()
   const createdAt = task.createdAt || new Date().toISOString()
+  const externalContext = task.tags?.includes('external-context:study')
+    ? 'study'
+    : task.tags?.includes('external-context:life')
+      ? 'life'
+      : 'work'
   const subtasks = task.subtasks?.length
     ? task.subtasks
     : task.checklist?.map((title, index) => ({
@@ -330,25 +337,88 @@ export function writeInboxTaskToTaskStore(task: Task): string {
   const unifiedTask: UnifiedTask = {
     id: task.id,
     title: task.title,
-    context: null,
+    context: task.externalSource === 'iris-job-search' ? externalContext : null,
     category: task.area ?? task.category,
     status: statusFromInboxStatus(task.status, task.done),
     priority: task.priority,
     energy: task.energy,
     estimatedMinutes: task.estimatedMinutes,
-    source: 'task-inbox',
+    source: task.externalSource === 'iris-job-search' ? 'iris-job-search' : 'task-inbox',
     notes: task.notes,
     subtasks,
     createdAt,
     updatedAt: task.updatedAt ?? createdAt,
     oldSource: 'iris-tasks',
     oldSourceId: task.id,
+    externalSource: task.externalSource,
+    sourceImportId: task.sourceImportId,
+    sourceUrl: task.sourceUrl,
+    externalCategory: task.externalCategory,
+    applicationId: task.applicationId,
+    company: task.company,
+    jobTitle: task.jobTitle,
   }
   saveTaskStore({
     ...store,
     tasks: upsertById(store.tasks, unifiedTask),
   })
   return unifiedTask.id
+}
+
+export interface ExternalInboxTaskInput {
+  title: string
+  estimatedMinutes: number
+  context: UnifiedTask['context']
+  notes?: string
+  sourceUrl?: string
+  externalCategory?: string
+  applicationId?: string
+  company?: string
+  jobTitle?: string
+  externalSource: string
+  sourceImportId: string
+}
+
+export function findExternalInboxTask(externalSource: string, sourceImportId: string): Task | null {
+  return loadTasks().find(task =>
+    task.externalSource === externalSource &&
+    task.sourceImportId === sourceImportId,
+  ) ?? null
+}
+
+export function createExternalInboxTask(input: ExternalInboxTaskInput): { task: Task; created: boolean } {
+  const existing = findExternalInboxTask(input.externalSource, input.sourceImportId)
+  if (existing) return { task: existing, created: false }
+  const task = createInboxTask({
+    title: input.title,
+    area: 'Job',
+    energy: input.estimatedMinutes > 45 ? 'High' : input.estimatedMinutes <= 25 ? 'Low' : 'Medium',
+    mode: input.estimatedMinutes <= 25 ? 'Admin' : 'Focus',
+    estimatedMinutes: input.estimatedMinutes,
+    nextTinyAction: 'Open the JD and highlight 3 requirements only.',
+  })
+  const notes = [
+    input.notes,
+    input.company ? `Company: ${input.company}` : '',
+    input.jobTitle ? `Role: ${input.jobTitle}` : '',
+    input.sourceUrl ? `Source: ${input.sourceUrl}` : '',
+  ].filter(Boolean).join('\n')
+  const externalTask: Task = {
+    ...task,
+    project: input.company || 'Iris Job Search',
+    notes,
+    tags: ['iris-job-search', 'job-search', `external-context:${input.context ?? 'work'}`, input.externalCategory].filter(Boolean) as string[],
+    externalSource: input.externalSource,
+    sourceImportId: input.sourceImportId,
+    sourceUrl: input.sourceUrl,
+    externalCategory: input.externalCategory,
+    applicationId: input.applicationId,
+    company: input.company,
+    jobTitle: input.jobTitle,
+  }
+  saveTasks([externalTask, ...loadTasks()])
+  writeInboxTaskToTaskStore(externalTask)
+  return { task: externalTask, created: true }
 }
 
 function taskIdForStudyRecord(record: StudySessionRecord): string {

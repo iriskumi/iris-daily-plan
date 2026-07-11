@@ -114,6 +114,16 @@ import * as timerEngine from './timerEngine'
 import { writeFocusBlockSessionToTaskStore, writeInboxTaskToTaskStore } from './taskStore'
 import { consumeExpressionHubUrlImport } from './expressionHubImport'
 import {
+  addExternalTaskToToday,
+  clearExternalTaskImportUrl,
+  draftFromExternalTaskPayload,
+  existingTaskForExternalImport,
+  importExternalTask,
+  parseExternalTaskImportFromUrl,
+  type ExternalTaskImportDraft,
+  type ExternalTaskImportPayload,
+} from './externalTaskImport'
+import {
   loadActiveStudySession,
   STUDY_ACTIVE_SESSION_CHANGED_EVENT,
 } from './studyStorage'
@@ -128,6 +138,19 @@ interface StartTodayResult {
   steps: string[]
   carryOverSuggestions: CarryOverSuggestion[]
 }
+
+type ExternalTaskImportDialog =
+  | {
+      status: 'preview'
+      payload: ExternalTaskImportPayload
+      draft: ExternalTaskImportDraft
+      existingTaskId?: string
+      message?: string
+    }
+  | {
+      status: 'error'
+      message: string
+    }
 
 const TABS: { id: Extract<Tab, 'today' | 'iris365' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
@@ -476,9 +499,24 @@ export default function App() {
   const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
   const [activeStudyNow, setActiveStudyNow] = useState(() => Date.now())
+  const [externalTaskDialog, setExternalTaskDialog] = useState<ExternalTaskImportDialog | null>(null)
 
   useEffect(() => {
     consumeExpressionHubUrlImport()
+    const importResult = parseExternalTaskImportFromUrl()
+    if (!importResult) return
+    if (!importResult.ok) {
+      setExternalTaskDialog({ status: 'error', message: importResult.error })
+      return
+    }
+    const existing = existingTaskForExternalImport(importResult.payload)
+    setExternalTaskDialog({
+      status: 'preview',
+      payload: importResult.payload,
+      draft: draftFromExternalTaskPayload(importResult.payload),
+      existingTaskId: existing?.id,
+      message: existing ? 'This task is already in Daily Hub.' : undefined,
+    })
   }, [])
 
   useEffect(() => {
@@ -668,6 +706,60 @@ export default function App() {
     setSettingsPanelOpen(false)
   }
 
+  function closeExternalTaskDialog() {
+    clearExternalTaskImportUrl()
+    setExternalTaskDialog(null)
+  }
+
+  function updateExternalTaskDraft(patch: Partial<ExternalTaskImportDraft>) {
+    setExternalTaskDialog(current => {
+      if (!current || current.status !== 'preview') return current
+      return {
+        ...current,
+        draft: {
+          ...current.draft,
+          ...patch,
+        },
+        message: current.existingTaskId ? current.message : undefined,
+      }
+    })
+  }
+
+  function handleExternalTaskImport(addToToday = false) {
+    if (!externalTaskDialog || externalTaskDialog.status !== 'preview') return
+    if (externalTaskDialog.existingTaskId) {
+      const existing = existingTaskForExternalImport(externalTaskDialog.payload)
+      if (existing && addToToday) {
+        addExternalTaskToToday(existing)
+        clearExternalTaskImportUrl()
+        setExternalTaskDialog({
+          ...externalTaskDialog,
+          message: 'Added existing task to Today’s Queue.',
+        })
+        goToTab('today')
+        return
+      }
+      goToTab('tasks')
+      closeExternalTaskDialog()
+      return
+    }
+    try {
+      const result = importExternalTask(externalTaskDialog.payload, externalTaskDialog.draft, { addToToday })
+      clearExternalTaskImportUrl()
+      setExternalTaskDialog({
+        ...externalTaskDialog,
+        existingTaskId: result.task.id,
+        message: addToToday ? 'Added to Today’s Queue.' : 'Imported to Task Inbox.',
+      })
+      goToTab(addToToday ? 'today' : 'tasks')
+    } catch {
+      setExternalTaskDialog({
+        ...externalTaskDialog,
+        message: 'Could not import this task.',
+      })
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -761,6 +853,127 @@ export default function App() {
           <button type="button" className="btn btn-secondary" onClick={() => goToTab('study')}>
             Open
           </button>
+        </div>
+      )}
+
+      {externalTaskDialog && (
+        <div className="external-task-import-backdrop" role="presentation">
+          <section className="external-task-import-modal" role="dialog" aria-modal="true" aria-label="Import task from Iris Job Search">
+            {externalTaskDialog.status === 'error' ? (
+              <>
+                <div className="section-label">Import from Iris Job Search</div>
+                <h2>Could not read this task import.</h2>
+                <p>{externalTaskDialog.message}</p>
+                <div className="external-task-import-actions">
+                  <button type="button" className="btn btn-primary" onClick={closeExternalTaskDialog}>
+                    Close
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="external-task-import-heading">
+                  <div>
+                    <div className="section-label">Import from Iris Job Search</div>
+                    <h2>{externalTaskDialog.existingTaskId ? 'This task is already in Daily Hub.' : 'Review task before importing'}</h2>
+                  </div>
+                  <button type="button" className="btn-ghost" onClick={closeExternalTaskDialog} aria-label="Cancel task import">
+                    <X />
+                  </button>
+                </div>
+                <div className="external-task-import-preview">
+                  <label>
+                    Title
+                    <input
+                      value={externalTaskDialog.draft.title}
+                      onChange={event => updateExternalTaskDraft({ title: event.target.value })}
+                      disabled={Boolean(externalTaskDialog.existingTaskId)}
+                    />
+                  </label>
+                  <div className="external-task-import-grid">
+                    <label>
+                      Estimated minutes
+                      <input
+                        type="number"
+                        min="5"
+                        max="180"
+                        step="5"
+                        value={externalTaskDialog.draft.estimatedMinutes}
+                        onChange={event => updateExternalTaskDraft({ estimatedMinutes: Number(event.target.value) })}
+                        disabled={Boolean(externalTaskDialog.existingTaskId)}
+                      />
+                    </label>
+                    <label>
+                      Context
+                      <select
+                        value={externalTaskDialog.draft.context}
+                        onChange={event => updateExternalTaskDraft({ context: event.target.value as ExternalTaskImportDraft['context'] })}
+                        disabled={Boolean(externalTaskDialog.existingTaskId)}
+                      >
+                        <option value="work">Work</option>
+                        <option value="study">Study</option>
+                        <option value="life">Life</option>
+                      </select>
+                    </label>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Source</dt>
+                      <dd>Iris Job Search</dd>
+                    </div>
+                    {externalTaskDialog.payload.task.company && (
+                      <div>
+                        <dt>Company</dt>
+                        <dd>{externalTaskDialog.payload.task.company}</dd>
+                      </div>
+                    )}
+                    {externalTaskDialog.payload.task.jobTitle && (
+                      <div>
+                        <dt>Role</dt>
+                        <dd>{externalTaskDialog.payload.task.jobTitle}</dd>
+                      </div>
+                    )}
+                    {externalTaskDialog.payload.task.externalCategory && (
+                      <div>
+                        <dt>Category</dt>
+                        <dd>{externalTaskDialog.payload.task.externalCategory}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  {externalTaskDialog.payload.task.notes && (
+                    <p className="external-task-import-notes">{externalTaskDialog.payload.task.notes}</p>
+                  )}
+                  {externalTaskDialog.message && (
+                    <p className="external-task-import-message">{externalTaskDialog.message}</p>
+                  )}
+                </div>
+                <div className="external-task-import-actions">
+                  {externalTaskDialog.existingTaskId ? (
+                    <>
+                      <button type="button" className="btn btn-secondary" onClick={() => handleExternalTaskImport(false)}>
+                        Open existing task
+                      </button>
+                      <button type="button" className="btn btn-primary" onClick={() => handleExternalTaskImport(true)}>
+                        Add existing task to Today
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="btn btn-secondary" onClick={() => handleExternalTaskImport(false)}>
+                        Import to Task Inbox
+                      </button>
+                      <button type="button" className="btn btn-primary" onClick={() => handleExternalTaskImport(true)}>
+                        Import and add to Today
+                      </button>
+                    </>
+                  )}
+                  <button type="button" className="btn btn-secondary" onClick={closeExternalTaskDialog}>
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
         </div>
       )}
 

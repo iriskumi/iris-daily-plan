@@ -7,6 +7,7 @@ export type UnifiedTaskSource =
   | 'plan-generated'
   | 'manual'
   | 'synthetic-history'
+  | 'iris-job-search'
 export type UnifiedSessionEngine = 'study' | 'pomodoro' | 'focus-block' | 'unknown'
 export type UnifiedSessionOutcome = 'completed' | 'abandoned' | 'in-progress'
 
@@ -38,6 +39,13 @@ export interface UnifiedTask {
   updatedAt: string
   oldSource?: string
   oldSourceId?: string
+  externalSource?: string
+  sourceImportId?: string
+  sourceUrl?: string
+  externalCategory?: string
+  applicationId?: string
+  company?: string
+  jobTitle?: string
 }
 
 export interface UnifiedTaskTemplate {

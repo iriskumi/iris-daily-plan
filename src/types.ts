@@ -314,6 +314,13 @@ export interface Task {
   done: boolean
   createdAt: string
   updatedAt?: string
+  externalSource?: string
+  sourceImportId?: string
+  sourceUrl?: string
+  externalCategory?: string
+  applicationId?: string
+  company?: string
+  jobTitle?: string
 }
 
 export interface FocusBlock {
