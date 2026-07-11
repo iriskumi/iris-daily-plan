@@ -12413,7 +12413,7 @@ textarea:focus,
 
 .today-active-session-main {
   min-width: 0;
-  width: min(100%, 780px);
+  width: min(100%, 720px);
 }
 
 .today-active-status-dot {
@@ -12442,32 +12442,36 @@ textarea:focus,
 }
 
 .today-active-session-hero h2 {
-  max-width: 720px;
-  margin: clamp(1.2rem, 3vw, 1.8rem) auto 0.85rem;
+  max-width: 660px;
+  margin: clamp(1rem, 2.4vw, 1.45rem) auto 0.75rem;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: clamp(2rem, 4.2vw, 3.35rem);
+  font-size: clamp(1.65rem, 3.35vw, 2.55rem);
   font-weight: 500;
-  line-height: 1.03;
+  line-height: 1.12;
 }
 
-.today-active-timer {
+.today-active-timer-card {
   display: grid;
-  place-items: center;
-  min-height: clamp(12rem, 26vw, 15.6rem);
-  margin: clamp(2rem, 4.6vw, 3.2rem) auto 0;
-  padding: clamp(1.6rem, 4vw, 2.4rem);
+  align-items: center;
+  gap: clamp(1.05rem, 2vw, 1.35rem);
+  min-height: clamp(12rem, 22vw, 14.2rem);
+  margin: clamp(1.7rem, 3.6vw, 2.6rem) auto 0;
+  padding: clamp(1.45rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.6rem);
   border: 1px solid rgba(205, 187, 168, 0.52);
   border-radius: 34px;
   background: rgba(255, 252, 249, 0.86);
-  color: var(--text);
   box-shadow: 0 24px 70px rgba(92, 74, 56, 0.08);
+}
+
+.today-active-timer {
+  color: var(--text);
   font-family: var(--font-display);
-  font-size: clamp(5rem, 12vw, 8.2rem);
+  font-size: clamp(4.7rem, 10.5vw, 7.25rem);
   font-variant-numeric: tabular-nums;
   font-weight: 400;
   letter-spacing: 0.01em;
-  line-height: 0.9;
+  line-height: 0.82;
 }
 
 .today-active-progress-row {
@@ -12475,12 +12479,10 @@ textarea:focus,
   grid-template-columns: auto minmax(10rem, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  width: min(100%, 520px);
-  margin: -2.25rem auto 0;
+  width: min(100%, 500px);
+  margin: 0 auto;
   color: var(--text-3);
   font-size: 0.82rem;
-  position: relative;
-  z-index: 1;
 }
 
 .today-active-progress {
@@ -12526,7 +12528,7 @@ textarea:focus,
 }
 
 .today-active-session-note {
-  display: inline-flex;
+  display: none;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.28rem;
@@ -12758,7 +12760,7 @@ textarea:focus,
     padding-block: 2.2rem 2.8rem;
   }
 
-  .today-active-timer {
+  .today-active-timer-card {
     min-height: 11rem;
     margin-top: 1.8rem;
     border-radius: 28px;
@@ -12767,7 +12769,6 @@ textarea:focus,
   .today-active-progress-row {
     grid-template-columns: auto minmax(8rem, 1fr) auto;
     width: 100%;
-    margin-top: -1.8rem;
     font-size: 0.76rem;
   }
 
@@ -12814,14 +12815,16 @@ textarea:focus,
     font-size: clamp(1.8rem, 11vw, 2.5rem);
   }
 
-  .today-active-timer {
+  .today-active-timer-card {
     min-height: 9.5rem;
+  }
+
+  .today-active-timer {
     font-size: clamp(4.2rem, 20vw, 5.8rem);
   }
 
   .today-active-progress-row {
     grid-template-columns: 1fr;
-    margin-top: 0.85rem;
   }
 
   .today-active-actions {

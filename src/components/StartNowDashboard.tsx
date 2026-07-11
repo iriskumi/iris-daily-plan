@@ -492,15 +492,17 @@ export default function StartNowDashboard({
               <span>From {activeStudySource}</span>
               {activeStudySession.status === 'paused' && <span>Paused</span>}
             </div>
-            <div className="today-active-timer" aria-label={`${activeStudyRemainingLabel} remaining`}>
-              {activeStudyRemainingLabel}
-            </div>
-            <div className="today-active-progress-row">
-              <span>{activeStudyElapsedLabel} elapsed</span>
-              <div className="today-active-progress" aria-label={`Session progress ${activeStudyProgress}%`}>
-                <span style={{ width: `${activeStudyProgress}%` }} />
+            <div className="today-active-timer-card">
+              <div className="today-active-timer" aria-label={`${activeStudyRemainingLabel} remaining`}>
+                {activeStudyRemainingLabel}
               </div>
-              <span>{activeStudyRemainingLabel} remaining</span>
+              <div className="today-active-progress-row">
+                <span>{activeStudyElapsedLabel} elapsed</span>
+                <div className="today-active-progress" aria-label={`Session progress ${activeStudyProgress}%`}>
+                  <span style={{ width: `${activeStudyProgress}%` }} />
+                </div>
+                <span>{activeStudyRemainingLabel} remaining</span>
+              </div>
             </div>
             <div className="today-active-session-metadata" aria-label="Session metadata">
               <p className="today-active-session-method">
