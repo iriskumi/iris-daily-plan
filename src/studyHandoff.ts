@@ -25,7 +25,7 @@ export function studyCategoryForQueueBlock(block: DayBlock): StudyCategory {
   if (block.area === 'life_admin') return 'Admin / Life'
   if (block.area === 'cyber') return 'Cyber'
   if (block.area === 'health' || block.type === 'recovery') return 'Reset'
-  return 'Review / NotebookLM'
+  return 'Admin / Life'
 }
 
 export function queueSessionTitle(block: DayBlock, durationMinutes = 25): string {

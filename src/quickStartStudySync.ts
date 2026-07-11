@@ -47,7 +47,7 @@ function categoryForQuickStart(record: StartNowRecord, choice: QuickStartStudySy
   }
   if (record.actionType === 'Project') return 'AI Coding'
   if (record.actionType === 'Work / Resume') return 'Job / Career'
-  return 'Review / NotebookLM'
+  return 'Admin / Life'
 }
 
 function titleForQuickStart(record: StartNowRecord, category: StudyCategory): string {

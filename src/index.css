@@ -5910,6 +5910,20 @@ textarea {
   margin-top: 1rem;
 }
 
+.study-start-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(198, 168, 148, 0.38);
+  border-radius: 16px;
+  background: rgba(250, 246, 241, 0.72);
+  color: var(--text-2);
+  font-size: 0.88rem;
+}
+
 .study-timer-custom {
   display: grid;
   grid-template-columns: 82px auto;

@@ -289,7 +289,7 @@ export default function StudyDashboard() {
   const today = getLocalDateKey()
   const [target, setTarget] = useState<DailyStudyTarget>(() => loadDailyStudyTarget(today))
   const [selectedCategory, setSelectedCategory] = useState<StudyCategory>('English Output')
-  const [selectedTemplateId, setSelectedTemplateId] = useState(STUDY_TASK_LIBRARY[0]?.id ?? '')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [customHours, setCustomHours] = useState(() => String(target.targetMinutes / 60))
   const [copied, setCopied] = useState<string | null>(null)
   const [customTask, setCustomTask] = useState({
@@ -318,6 +318,7 @@ export default function StudyDashboard() {
   const [proofStore, setProofStore] = useState(() => loadIris365Store())
   const [pendingProofSession, setPendingProofSession] = useState<StudySessionRecord | null>(null)
   const [proofDraft, setProofDraft] = useState<StudyProofDraft | null>(null)
+  const [sessionStartMessage, setSessionStartMessage] = useState<string | null>(null)
   const summary = todayStudySummary(sessions)
   const completedSessions = sessions.filter(record => record.status === 'completed')
   const proofsToday = useMemo(() => getIris365ProofItemsForDate(today, proofStore), [proofStore, today])
@@ -334,10 +335,7 @@ export default function StudyDashboard() {
     () => STUDY_TASK_LIBRARY.filter(template => template.category === selectedCategory),
     [selectedCategory],
   )
-  const selectedTemplate =
-    STUDY_TASK_LIBRARY.find(template => template.id === selectedTemplateId) ??
-    visibleTemplates[0] ??
-    STUDY_TASK_LIBRARY[0]
+  const selectedTemplate = STUDY_TASK_LIBRARY.find(template => template.id === selectedTemplateId) ?? null
   const activeTimer = activeSession ? timerFromStudySession(activeSession) : null
   const activeRemainingMs = activeTimer ? timerEngine.remainingMs(activeTimer, nowMs) : 0
   const activeProgress = activeSession
@@ -367,12 +365,12 @@ export default function StudyDashboard() {
   useEffect(() => {
     if (typeof sessionStorage === 'undefined') return
     const target = sessionStorage.getItem('iris-study-focus-target')
-    if (target !== 'english') return
     sessionStorage.removeItem('iris-study-focus-target')
+    if (target !== 'english' && target !== 'timer') return
     window.setTimeout(() => {
-      document.getElementById('english-listening-draw')?.scrollIntoView({
+      document.getElementById(target === 'english' ? 'english-listening-draw' : 'study-focus-timer')?.scrollIntoView({
         behavior: 'smooth',
-        block: 'start',
+        block: target === 'english' ? 'start' : 'center',
       })
     }, 80)
   }, [])
@@ -388,6 +386,7 @@ export default function StudyDashboard() {
     if (!handoff) return
     setSelectedQueueTask(handoff)
     setSelectedCategory(handoff.category)
+    setSelectedTemplateId('')
     setCustomTimerMinutes(String(handoff.durationMinutes || 25))
     setCustomTask({
       title: handoff.title,
@@ -419,9 +418,9 @@ export default function StudyDashboard() {
 
   function selectCategory(category: StudyCategory) {
     setSelectedCategory(category)
-    setSelectedTemplateId(
-      STUDY_TASK_LIBRARY.find(template => template.category === category)?.id ?? selectedTemplateId,
-    )
+    setSelectedTemplateId('')
+    setSelectedQueueTask(null)
+    setSessionStartMessage(null)
   }
 
   async function copyText(label: string, text: string) {
@@ -517,8 +516,28 @@ export default function StudyDashboard() {
     }
   }
 
+  function logStudySessionStart(input: {
+    requestedTaskId?: string
+    resolvedTaskId?: string
+    resolvedTitle: string
+    source: string
+  }) {
+    if (!import.meta.env.DEV) return
+    console.debug('[StudySessionStart]', input)
+  }
+
+  function showChooseTaskMessage() {
+    setSessionStartMessage('Choose a task first.')
+    window.setTimeout(() => {
+      document.getElementById('study-task-picker')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }
+
   function startTemplateSession(durationMinutes: number) {
-    if (!selectedTemplate) return
+    if (!selectedTemplate) {
+      showChooseTaskMessage()
+      return
+    }
     const start = Date.now()
     const sessionId = crypto.randomUUID()
     const timerSession = timerEngine.start(
@@ -541,14 +560,25 @@ export default function StudyDashboard() {
       notes: selectedTemplate.studyMethod,
       resourceUsed: selectedTemplate.resourceSuggestion,
     }, timerSession)
+    logStudySessionStart({
+      requestedTaskId: selectedTemplate.id,
+      resolvedTaskId: selectedTemplate.id,
+      resolvedTitle: selectedTemplate.title,
+      source: 'study-template',
+    })
     ensureStudyTemplateTaskInTaskStore(selectedTemplate, durationMinutes, session)
     persistActiveSession(session)
+    setSessionStartMessage(null)
   }
 
   function startCustomSession() {
     const duration = Number(customTask.duration)
     const durationMinutes = Number.isFinite(duration) && duration > 0 ? duration : 25
-    const title = customTask.title.trim() || 'Custom study task'
+    const title = customTask.title.trim()
+    if (!title) {
+      setSessionStartMessage('Add a custom task title first.')
+      return
+    }
     const start = Date.now()
     const customTaskId = crypto.randomUUID()
     const sessionId = crypto.randomUUID()
@@ -572,6 +602,12 @@ export default function StudyDashboard() {
       notes: customTask.notes,
       resourceUsed: customTask.notes,
     }, timerSession)
+    logStudySessionStart({
+      requestedTaskId: customTaskId,
+      resolvedTaskId: customTaskId,
+      resolvedTitle: title,
+      source: 'manual',
+    })
     ensureCustomStudyTaskInTaskStore({
       customTaskId,
       title,
@@ -582,10 +618,14 @@ export default function StudyDashboard() {
       activeSession: session,
     })
     persistActiveSession(session)
+    setSessionStartMessage(null)
   }
 
   function startQueueHandoffSession(durationMinutes: number) {
-    if (!selectedQueueTask) return
+    if (!selectedQueueTask) {
+      showChooseTaskMessage()
+      return
+    }
     const start = Date.now()
     const customTaskId = selectedQueueTask.selectedStudyTaskId
     const sessionId = crypto.randomUUID()
@@ -611,6 +651,12 @@ export default function StudyDashboard() {
       notes: selectedQueueTask.notes,
       resourceUsed: selectedQueueTask.resourceUsed,
     }, timerSession)
+    logStudySessionStart({
+      requestedTaskId: selectedQueueTask.selectedStudyTaskId,
+      resolvedTaskId: customTaskId,
+      resolvedTitle: selectedQueueTask.title,
+      source: selectedQueueTask.source,
+    })
     ensureCustomStudyTaskInTaskStore({
       customTaskId,
       title: selectedQueueTask.title,
@@ -621,11 +667,16 @@ export default function StudyDashboard() {
       activeSession: session,
     })
     persistActiveSession(session)
+    setSessionStartMessage(null)
   }
 
   function startSelectedStudySession(durationMinutes: number) {
     if (selectedQueueTask) {
       startQueueHandoffSession(durationMinutes)
+      return
+    }
+    if (!selectedTemplate) {
+      showChooseTaskMessage()
       return
     }
     startTemplateSession(durationMinutes)
@@ -658,6 +709,12 @@ export default function StudyDashboard() {
       notes: draw.studyMethod,
       resourceUsed: draw.resourceSuggestion,
     }, timerSession)
+    logStudySessionStart({
+      requestedTaskId: draw.id,
+      resolvedTaskId: draw.id,
+      resolvedTitle: draw.title,
+      source: draw.source,
+    })
     ensureCustomStudyTaskInTaskStore({
       customTaskId,
       title: draw.title,
@@ -668,6 +725,7 @@ export default function StudyDashboard() {
       activeSession: session,
     })
     persistActiveSession(session)
+    setSessionStartMessage(null)
     setListeningDrawState(markEnglishListeningDrawStarted(draw.id, sessionId, listeningDrawState))
   }
 
@@ -901,6 +959,14 @@ export default function StudyDashboard() {
             </button>
           </div>
         </div>
+        {sessionStartMessage && (
+          <div className="study-start-message">
+            <span>{sessionStartMessage}</span>
+            <button type="button" className="study-change-task-link" onClick={showChooseTaskMessage}>
+              Choose task
+            </button>
+          </div>
+        )}
       </section>
     )
   }
@@ -1198,7 +1264,7 @@ export default function StudyDashboard() {
 
       {!activeSession && renderStudyTimerSection()}
 
-      <section className="card">
+      <section className="card" id="study-task-picker">
         <div className="card-header">
           <div>
             <div className="section-label">Task library</div>
@@ -1227,7 +1293,11 @@ export default function StudyDashboard() {
                 key={template.id}
                 type="button"
                 className={`study-template-card ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
-                onClick={() => setSelectedTemplateId(template.id)}
+                onClick={() => {
+                  setSelectedTemplateId(template.id)
+                  setSelectedQueueTask(null)
+                  setSessionStartMessage(null)
+                }}
               >
                 <div className="study-template-header">
                   <div>

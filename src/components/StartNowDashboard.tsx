@@ -4,7 +4,6 @@ import {
   ACTIVE_SESSION_CHANGED_EVENT,
   clearActiveSession,
   restoreActiveSession,
-  startActiveSession,
   updateActiveSession,
   type ActiveSession,
 } from '../activeSessionStore'
@@ -21,8 +20,8 @@ import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
 import { addStudySessionRecord, clearActiveStudySession, loadActiveStudySession, loadStudySessionRecordsForDate, saveActiveStudySession, STUDY_ACTIVE_SESSION_CHANGED_EVENT } from '../studyStorage'
 import { addStudySessionEnglishOutputRep } from '../englishOutputJourney'
-import type { StudyActiveSession, StudyCategory, StudySessionRecord } from '../studyTypes'
-import { ensureCustomStudyTaskInTaskStore, writeStudySessionToTaskStore } from '../taskStore'
+import type { StudyActiveSession, StudySessionRecord } from '../studyTypes'
+import { writeStudySessionToTaskStore } from '../taskStore'
 import * as timerEngine from '../timerEngine'
 import type { TimerSession } from '../timerEngineTypes'
 import type { DayBlock } from '../types'
@@ -30,7 +29,6 @@ import HeroImageViewport from './HeroImageViewport'
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 
-type StartKind = 'study' | 'english-output' | 'english-input'
 export type TodayStartModule = 'note' | 'done' | 'queue'
 
 interface StartNowDashboardProps {
@@ -46,11 +44,6 @@ interface StartNowDashboardProps {
     caption: string
   }
   eveningNote?: string
-}
-
-function makeId(prefix: string) {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return `${prefix}-${crypto.randomUUID()}`
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 function getIris365DayNumber() {
@@ -163,18 +156,6 @@ function restoreActiveStudySession(): StudyActiveSession | null {
   return studySessionWithTimer(session, timerSession)
 }
 
-function startTitle(kind: StartKind) {
-  if (kind === 'english-output') return 'English Output Session'
-  if (kind === 'english-input') return 'English Input Session'
-  return 'Study Session'
-}
-
-function startCategory(kind: StartKind): StudyCategory {
-  if (kind === 'english-output') return 'English Output'
-  if (kind === 'english-input') return 'English Input'
-  return 'Review / NotebookLM'
-}
-
 function studyDoneSummary(sessions: StudySessionRecord[]) {
   const completed = sessions.filter(session => session.status === 'completed')
   const studyMinutes = completed
@@ -276,63 +257,22 @@ export default function StartNowDashboard({
     }
   }, [])
 
-  function startStudy(kind: StartKind) {
+  function openStudyStart() {
     const existing = loadActiveStudySession()
     if (existing) {
-      setMessage(`A Study Session is already active: ${existing.title}. Finish it in Study first.`)
+      setMessage(`A Study Session is already active: ${existing.title}.`)
       onOpenStudy?.()
       return
     }
-    const start = Date.now()
-    const sessionId = makeId('today-study')
-    const customTaskId = `today-start:${kind}:${sessionId}`
-    const category = startCategory(kind)
-    const timerSession = timerEngine.start(`manual-study:${customTaskId}`, 25, 'study', {
-      id: sessionId,
-      startedAt: new Date(start).toISOString(),
-    })
-    const session: StudyActiveSession = {
-      id: sessionId,
-      customTaskId,
-      source: 'today-start-panel',
-      title: startTitle(kind),
-      category,
-      sessionStartTime: start,
-      durationMinutes: 25,
-      expectedEndTime: start + 25 * 60_000,
-      pausedAccumulatedMs: 0,
-      status: 'running',
-      noteDestination: category === 'English Output' || category === 'English Input'
-        ? 'Obsidian/Study/English Daily Log.md'
-        : 'Obsidian/Study/Daily Study Log.md',
-      notes: 'Started from Today Start Panel. 统计只计算完成的 Study Session。',
-      resourceUsed: 'Today Start Panel',
-      timerSession,
+    if (nextBlock && onStartNextBlock) {
+      onStartNextBlock()
+      setMessage(`Opened "${nextBlock.title}" in Study. Press Start there when ready.`)
+      return
     }
-    saveActiveStudySession(session)
-    timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerSession)
-    startActiveSession({
-      id: session.id,
-      origin: 'today-start-panel',
-      kind,
-      category,
-      title: session.title,
-      startedAt: new Date(start).toISOString(),
-      plannedMinutes: 25,
-      linkedTaskId: customTaskId,
-      targetTab: 'study',
-      status: 'active',
-    })
-    ensureCustomStudyTaskInTaskStore({
-      customTaskId,
-      title: session.title,
-      category,
-      durationMinutes: 25,
-      noteDestination: session.noteDestination,
-      notes: session.notes,
-      activeSession: session,
-    })
-    setMessage(`${session.title} started. Complete it in Study for minutes to count.`)
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('iris-study-focus-target', 'timer')
+    }
+    setMessage('Choose a task first.')
     onOpenStudy?.()
   }
 
@@ -645,7 +585,7 @@ export default function StartNowDashboard({
               <p>先开始一个小块。</p>
             </div>
             <div className="today-start-actions">
-              <button type="button" className="today-start-action-card primary" onClick={() => startStudy('study')}>
+              <button type="button" className="today-start-action-card primary" onClick={openStudyStart}>
                 <span className="start-action-card__icon"><BookOpen size={20} /></span>
                 <span className="start-action-card__content">
                   <span className="start-action-card__label">Study</span>
