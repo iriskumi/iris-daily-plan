@@ -12262,9 +12262,7 @@ textarea:focus,
 }
 
 .today-active-session-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.34fr);
-  gap: clamp(1.2rem, 3vw, 2.2rem);
+  display: block;
   padding: clamp(1.4rem, 3vw, 2.5rem);
   border: 1px solid rgba(205, 187, 168, 0.42);
   border-radius: 2px;
@@ -12276,6 +12274,7 @@ textarea:focus,
 
 .today-active-session-main {
   min-width: 0;
+  max-width: 980px;
 }
 
 .today-active-status-dot {
@@ -12342,6 +12341,78 @@ textarea:focus,
   background: var(--accent);
 }
 
+.today-active-session-metadata {
+  max-width: 760px;
+  margin-top: 1rem;
+  color: var(--text-2);
+}
+
+.today-active-session-method,
+.today-active-session-note {
+  margin: 0;
+}
+
+.today-active-session-method {
+  color: var(--text-2);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.today-active-session-method span,
+.today-active-session-note span {
+  margin-right: 0.35rem;
+  color: var(--section-label);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-active-session-note {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin-top: 0.35rem;
+  color: var(--text-3);
+  font-size: 0.9rem;
+}
+
+.today-active-session-details {
+  margin-top: 0.55rem;
+  color: var(--text-3);
+  font-size: 0.86rem;
+}
+
+.today-active-session-details summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--text-3);
+}
+
+.today-active-session-details dl {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 680px;
+  margin: 0.65rem 0 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid rgba(205, 187, 168, 0.34);
+}
+
+.today-active-session-details dt {
+  color: var(--section-label);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-active-session-details dd {
+  margin: 0.12rem 0 0;
+  color: var(--text-2);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .today-active-actions {
   display: flex;
   flex-wrap: wrap;
@@ -12357,39 +12428,9 @@ textarea:focus,
   color: var(--text-3);
 }
 
-.today-active-session-info {
-  align-self: stretch;
-  padding: 1.15rem;
-  border: 1px solid rgba(205, 187, 168, 0.38);
-  border-radius: 2px;
-  background: rgba(251, 247, 241, 0.62);
-}
-
-.today-active-session-info h3 {
-  margin: 0.25rem 0 0.85rem;
-  color: var(--text);
-  font-size: 1.02rem;
-  font-weight: 500;
-}
-
-.today-active-session-info dl {
-  display: grid;
-  gap: 0.78rem;
-}
-
-.today-active-session-info dt {
-  color: var(--section-label);
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.today-active-session-info dd {
-  margin-top: 0.18rem;
-  color: var(--text-2);
-  font-size: 0.86rem;
-  line-height: 1.55;
-  overflow-wrap: anywhere;
+.today-active-study-link {
+  margin-left: auto;
+  color: var(--text-3);
 }
 
 .today-compact-status {

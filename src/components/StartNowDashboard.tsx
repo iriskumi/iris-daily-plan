@@ -76,6 +76,12 @@ function labelFromToken(value: string): string {
     .join(' ')
 }
 
+function noteLabelFromDestination(value: string): string {
+  const withoutExtension = value.replace(/\.[^/.]+$/, '')
+  const parts = withoutExtension.split(/[\\/]/).filter(Boolean)
+  return parts[parts.length - 1] || value
+}
+
 function formatTimer(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
   const minutes = Math.floor(totalSeconds / 60)
@@ -528,6 +534,10 @@ export default function StartNowDashboard({
   const activeStudyProgress = activeStudySession
     ? Math.min(100, Math.round(((activeStudySession.durationMinutes * 60_000 - activeStudyRemainingMs) / (activeStudySession.durationMinutes * 60_000)) * 100))
     : 0
+  const activeStudySource = activeStudySession?.source ? labelFromToken(activeStudySession.source) : 'Study'
+  const activeStudyMethod = activeStudySession?.notes || activeStudySession?.resourceUsed || 'Stay with this one task.'
+  const activeStudyNoteDestination = activeStudySession?.noteDestination || 'Daily Study Log'
+  const activeStudyNoteLabel = noteLabelFromDestination(activeStudyNoteDestination)
 
   return (
     <section className="start-now-dashboard today-start-flow" aria-label="Today start flow">
@@ -538,7 +548,8 @@ export default function StartNowDashboard({
             <h2>{activeStudySession.title}</h2>
             <div className="today-active-meta">
               <span>{activeStudySession.category}</span>
-              <span>Estimated {activeStudySession.durationMinutes} min</span>
+              <span>{activeStudySession.durationMinutes} min</span>
+              <span>From {activeStudySource}</span>
               {activeStudySession.status === 'paused' && <span>Paused</span>}
             </div>
             <div className="today-active-timer" aria-label={`${activeStudyRemainingLabel} remaining`}>
@@ -550,6 +561,33 @@ export default function StartNowDashboard({
                 <span style={{ width: `${activeStudyProgress}%` }} />
               </div>
               <span>{activeStudyRemainingLabel} remaining</span>
+            </div>
+            <div className="today-active-session-metadata" aria-label="Session metadata">
+              <p className="today-active-session-method">
+                <span>Method:</span>
+                {activeStudyMethod}
+              </p>
+              <p className="today-active-session-note" title={activeStudyNoteDestination}>
+                <span>Note destination:</span>
+                {activeStudyNoteLabel}
+              </p>
+              <details className="today-active-session-details">
+                <summary>Session details</summary>
+                <dl>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>{activeStudySource}</dd>
+                  </div>
+                  <div>
+                    <dt>Full note path</dt>
+                    <dd>{activeStudyNoteDestination}</dd>
+                  </div>
+                  <div>
+                    <dt>Method</dt>
+                    <dd>{activeStudyMethod}</dd>
+                  </div>
+                </dl>
+              </details>
             </div>
             <div className="today-active-actions">
               {activeStudySession.status === 'paused' ? (
@@ -571,30 +609,12 @@ export default function StartNowDashboard({
                 <X size={15} />
                 Abandon
               </button>
-              <button type="button" className="btn btn-secondary" onClick={openActiveSession}>
+              <button type="button" className="btn btn-secondary today-active-study-link" onClick={openActiveSession}>
                 <Play size={15} />
                 Open in Study
               </button>
             </div>
           </div>
-          <aside className="today-active-session-info" aria-label="Current task details">
-            <div className="section-label">Current task</div>
-            <h3>{activeStudySession.title}</h3>
-            <dl>
-              <div>
-                <dt>Source</dt>
-                <dd>{activeStudySession.source ? labelFromToken(activeStudySession.source) : 'Study'}</dd>
-              </div>
-              <div>
-                <dt>Note</dt>
-                <dd>{activeStudySession.noteDestination || 'Daily Study Log'}</dd>
-              </div>
-              <div>
-                <dt>Method</dt>
-                <dd>{activeStudySession.notes || activeStudySession.resourceUsed || 'Stay with this one task.'}</dd>
-              </div>
-            </dl>
-          </aside>
         </section>
       ) : (
         <>
