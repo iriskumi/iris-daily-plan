@@ -1,6 +1,8 @@
+import { areaFromCategory } from './focusBlocks'
 import { getLocalDateKey } from './focus'
 import type { Task } from './types'
-import { taskKindFromTask } from './taskTaxonomy'
+import { taskKindFromTask, taskKindLabel } from './taskTaxonomy'
+import { formatTaskTimeLabel, taskEffectiveDate } from './taskScheduleDisplay'
 
 export interface TaskScheduleDraft {
   title: string
@@ -9,6 +11,7 @@ export interface TaskScheduleDraft {
   durationMinutes: number
   reminderMinutes: number
   notes: string
+  location: string
   allDay: boolean
 }
 
@@ -26,39 +29,44 @@ function defaultDuration(task: Task): number {
 }
 
 function defaultReminderMinutes(task: Task): number {
-  if (task.deadline && isBillOrAdminTask(task)) return 24 * 60
+  const effectiveDate = taskEffectiveDate(task)
+  if (effectiveDate && isBillOrAdminTask(task)) return 24 * 60
   return taskKindFromTask(task) === 'study-work' ? 10 : 30
 }
 
 function defaultDate(task: Task): string {
-  if (task.deadline) return task.deadline.slice(0, 10)
+  const effective = taskEffectiveDate(task)
+  if (effective) return effective
   return getLocalDateKey()
 }
 
 function defaultStartTime(task: Task): string {
-  if (task.deadline && isBillOrAdminTask(task)) return '09:00'
-  const hour = new Date().getHours()
-  const nextHour = Math.min(20, Math.max(9, hour + 1))
-  return `${String(nextHour).padStart(2, '0')}:00`
+  return formatTaskTimeLabel(task.scheduledTime) ?? ''
 }
 
 export function buildScheduleDraftFromTask(task: Task): TaskScheduleDraft {
   const billOrAdmin = isBillOrAdminTask(task)
+  const hasDate = Boolean(taskEffectiveDate(task))
+  const hasTime = Boolean(task.scheduledTime?.trim())
   return {
     title: task.title,
     date: defaultDate(task),
     startTime: defaultStartTime(task),
     durationMinutes: defaultDuration(task),
     reminderMinutes: defaultReminderMinutes(task),
-    allDay: Boolean(task.deadline && billOrAdmin && !task.deadline.includes('T')),
+    location: task.location?.trim() ?? '',
+    allDay: Boolean(hasDate && billOrAdmin && !hasTime),
     notes: buildScheduleNotes(task),
   }
 }
 
 export function buildScheduleNotes(task: Task): string {
+  const kind = taskKindFromTask(task)
+  const area = task.area ?? areaFromCategory(task.category)
   const lines = [
-    task.title,
     task.nextTinyAction ? `Next tiny action: ${task.nextTinyAction}` : null,
+    `Type: ${taskKindLabel(kind)}`,
+    area ? `Area / tag: ${area}` : null,
     task.notes?.trim() ? task.notes.trim() : null,
     'Source: Iris Daily Plan Hub',
     typeof window !== 'undefined' ? `Daily Hub: ${window.location.origin}` : null,
@@ -67,16 +75,21 @@ export function buildScheduleNotes(task: Task): string {
 }
 
 export function formatScheduleDraftForCopy(draft: TaskScheduleDraft): string {
-  const end = addMinutesToTime(draft.date, draft.startTime, draft.durationMinutes)
+  const end = draft.allDay
+    ? null
+    : addMinutesToTime(draft.date, draft.startTime, draft.durationMinutes)
   return [
     draft.title,
     draft.allDay
       ? `Date: ${draft.date} (all day)`
-      : `When: ${draft.date} ${draft.startTime} – ${end.time} (${draft.durationMinutes} min)`,
+      : end
+        ? `When: ${draft.date} ${draft.startTime} – ${end.time} (${draft.durationMinutes} min)`
+        : `Date: ${draft.date} (choose a start time for a timed block)`,
+    draft.location ? `Location: ${draft.location}` : null,
     `Reminder: ${draft.reminderMinutes} min before`,
     '',
     draft.notes,
-  ].join('\n')
+  ].filter(line => line !== null).join('\n')
 }
 
 export function addMinutesToTime(date: string, startTime: string, minutes: number): { date: string; time: string } {

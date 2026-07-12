@@ -299,6 +299,12 @@ export interface Task {
   status?: TaskStatus
   category: TaskCategory
   deadline?: string
+  /** Optional reminder / calendar date (YYYY-MM-DD). Mirrors deadline when set from inbox. */
+  scheduledDate?: string
+  /** Optional reminder / calendar time (HH:MM). */
+  scheduledTime?: string
+  /** Optional place for calendar events or life reminders. */
+  location?: string
   estimatedMinutes: number
   difficulty: Difficulty
   urgency: Urgency
@@ -554,6 +560,7 @@ export interface CreateCalendarEventInput {
   durationMinutes: number
   reminderMinutes: number
   description?: string
+  location?: string
   taskId?: string
   allDay?: boolean
 }

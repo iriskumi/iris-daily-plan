@@ -43,6 +43,7 @@ interface CreateEventBody {
   durationMinutes?: number
   reminderMinutes?: number
   description?: string
+  location?: string
   taskId?: string
   allDay?: boolean
 }
@@ -259,11 +260,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     const offset = getMelbourneOffset(date)
     const allDay = Boolean(body.allDay)
-    const startTime = body.startTime?.trim() || '09:00'
+
+    if (!allDay && !body.startTime?.trim()) {
+      sendJson(res, {
+        success: false,
+        message: 'Choose a start time or select all-day.',
+        data: null,
+        connected: true,
+        calendarWriteConnected: true,
+      }, 400)
+      return
+    }
+
+    const startTime = body.startTime?.trim() ?? ''
 
     const eventPayload: Record<string, unknown> = {
       summary,
       description: body.description?.trim() || undefined,
+      location: body.location?.trim() || undefined,
       extendedProperties: body.taskId
         ? { private: { taskId: body.taskId, source: 'iris-daily-plan-hub' } }
         : undefined,

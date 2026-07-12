@@ -11,9 +11,10 @@ import {
 import { createStudyHandoffFromQueueBlock, queueSessionTitle, saveStudyTaskHandoff } from '../studyHandoff'
 import { startStudySessionFromQueueBlock } from '../blockQueueStudySession'
 import { getLocalDateKey } from '../focus'
-import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
+import { loadDayBlockQueue, loadTasks, saveDayBlockQueue } from '../storage'
 import { loadStudySessionRecordsForDate } from '../studyStorage'
 import { clearBlockQueueScheduleInTaskStore } from '../taskStore'
+import { formatTaskLocationLine, queueTitleWithSchedule } from '../taskScheduleDisplay'
 
 function labelFromToken(value: string): string {
   return value
@@ -78,6 +79,10 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
   )
   const overview = queueOverview({ ...queue, blocks }, completedStudyMinutes)
   const nextBlock = suggestNextBlock({ ...queue, blocks })
+  const taskById = useMemo(
+    () => new Map(loadTasks().map(task => [task.id, task])),
+    [queue.blocks, message],
+  )
   const modeConfig = DAY_MODES.find(mode => mode.id === queue.mode)
 
   function persist(nextQueue: DayBlockQueue, nextMessage?: string) {
@@ -184,7 +189,19 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
       <div className="block-queue-next block-queue-next-hero">
         <div>
           <div className="section-label">Start here</div>
-          <strong>{nextBlock ? queueSessionTitle(nextBlock, 25) : 'No active blocks left'}</strong>
+          <strong>
+            {nextBlock
+              ? queueTitleWithSchedule(nextBlock.title, nextBlock.sourceTaskId ? taskById.get(nextBlock.sourceTaskId)?.scheduledTime : undefined, {
+                  largeTask: nextBlock.estimatedMinutes >= 90,
+                  sessionTitle: queueSessionTitle(nextBlock, 25),
+                })
+              : 'No active blocks left'}
+          </strong>
+          {nextBlock?.sourceTaskId && formatTaskLocationLine(taskById.get(nextBlock.sourceTaskId) ?? {}) && (
+            <span className="block-queue-location-line">
+              {formatTaskLocationLine(taskById.get(nextBlock.sourceTaskId) ?? {})}
+            </span>
+          )}
           <span>
             {nextBlock
               ? `${labelFromToken(nextBlock.priority)} · ${nextBlock.estimatedMinutes} min · ${labelFromToken(nextBlock.energyLevel)} energy${nextBlock.estimatedMinutes >= 90 ? ' · Large task' : ''}`
@@ -245,15 +262,22 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
         ) : (
           blocks.map((block, index) => {
             const due = dueDateLabel(block.dueDate)
+            const sourceTask = block.sourceTaskId ? taskById.get(block.sourceTaskId) : undefined
+            const displayTitle = queueTitleWithSchedule(block.title, sourceTask?.scheduledTime, {
+              largeTask: block.estimatedMinutes >= 90,
+              sessionTitle: queueSessionTitle(block, 25),
+            })
+            const locationLine = sourceTask ? formatTaskLocationLine(sourceTask) : null
             return (
               <article key={block.id} className={`block-queue-card block-queue-card-${block.status}`}>
                 <div className="block-queue-card-main">
                   <div className="block-queue-title-row">
-                    <h4>{block.estimatedMinutes >= 90 ? queueSessionTitle(block, 25) : block.title}</h4>
+                    <h4>{displayTitle}</h4>
                     <span className={`block-queue-status block-queue-status-${block.status}`}>
                       {statusLabel(block.status)}
                     </span>
                   </div>
+                  {locationLine && <p className="block-queue-location-line">{locationLine}</p>}
                   {block.description && <p>{block.description}</p>}
                   <div className="block-queue-badges">
                     <span className={`queue-badge queue-badge-priority-${block.priority}`}>

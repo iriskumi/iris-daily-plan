@@ -126,7 +126,7 @@ function taskPriority(task: Task): BlockTaskPriority {
 }
 
 function dueDateForTask(task: Task): string | undefined {
-  return task.dueDate ?? task.deadline
+  return task.dueDate ?? task.scheduledDate ?? task.deadline
 }
 
 function blockTagsForTask(task: Task): string[] {

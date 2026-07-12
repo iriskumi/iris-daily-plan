@@ -60,6 +60,10 @@ export default function TaskScheduleModal({
   }
 
   async function handleCreateEvent() {
+    if (!draft.allDay && !draft.startTime.trim()) {
+      setMessage('Choose a start time, or check all-day reminder.')
+      return
+    }
     setSubmitting(true)
     setMessage(null)
     const result = await createCalendarEventFromTask({
@@ -69,6 +73,7 @@ export default function TaskScheduleModal({
       durationMinutes: draft.durationMinutes,
       reminderMinutes: draft.reminderMinutes,
       description: draft.notes,
+      location: draft.location.trim() || undefined,
       taskId: task.id,
       allDay: draft.allDay,
     })
@@ -90,6 +95,7 @@ export default function TaskScheduleModal({
   }
 
   const canCreate = canScheduleToCalendar(calendarMeta)
+  const needsStartTime = canCreate && !draft.allDay && !draft.startTime.trim()
 
   return (
     <div className="task-schedule-backdrop" role="presentation" onMouseDown={onClose}>
@@ -157,6 +163,7 @@ export default function TaskScheduleModal({
                 type="time"
                 value={draft.startTime}
                 disabled={draft.allDay}
+                placeholder="Optional"
                 onChange={event => setDraft(prev => ({ ...prev, startTime: event.target.value }))}
               />
             </label>
@@ -182,6 +189,14 @@ export default function TaskScheduleModal({
               />
             </label>
           </div>
+          <label>
+            Location
+            <input
+              value={draft.location}
+              placeholder="Optional location, e.g. Holmesglen Reserve, Chadstone, Online"
+              onChange={event => setDraft(prev => ({ ...prev, location: event.target.value }))}
+            />
+          </label>
           <label className="task-schedule-checkbox">
             <input
               type="checkbox"
@@ -190,6 +205,9 @@ export default function TaskScheduleModal({
             />
             All-day reminder
           </label>
+          {needsStartTime && (
+            <p className="task-schedule-hint">Pick a start time for a timed calendar block, or use all-day.</p>
+          )}
           <label>
             Notes
             <textarea
@@ -207,7 +225,7 @@ export default function TaskScheduleModal({
             <button
               type="button"
               className="btn btn-primary"
-              disabled={submitting || !draft.title.trim()}
+              disabled={submitting || !draft.title.trim() || needsStartTime}
               onClick={() => void handleCreateEvent()}
             >
               {submitting ? 'Creating…' : success ? 'Created' : 'Create calendar event'}

@@ -15,9 +15,10 @@ import { DAY_MODE_CONFIGS, minimumViableBlock, queueOverview, suggestNextBlock }
 import { startStudySessionFromQueueBlock } from '../blockQueueStudySession'
 import { createStudyHandoffFromQueueBlock, queueSessionTitle, saveStudyTaskHandoff } from '../studyHandoff'
 import { getLocalDateKey } from '../focus'
-import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
+import { loadDayBlockQueue, loadTasks, saveDayBlockQueue } from '../storage'
 import { loadStudySessionRecordsForDate } from '../studyStorage'
 import { clearBlockQueueScheduleInTaskStore, writeQuickAddBlockToTaskStore } from '../taskStore'
+import { formatTaskLocationLine, queueTitleWithSchedule } from '../taskScheduleDisplay'
 import StartNowDashboard, { type TodayStartModule } from './StartNowDashboard'
 
 interface QuickAddTemplate {
@@ -438,6 +439,10 @@ export default function HomeCommandCentre({
     () => sortedBlocks.filter(block => !block.hiddenToday),
     [sortedBlocks],
   )
+  const taskById = useMemo(
+    () => new Map(loadTasks().map(task => [task.id, task])),
+    [queue.blocks, message],
+  )
   const dynamicAreaFilters = useMemo<Array<BlockTaskArea>>(
     () => [...new Set(blocks.map(block => block.area))].sort((a, b) => labelFromToken(a).localeCompare(labelFromToken(b))),
     [blocks],
@@ -772,10 +777,17 @@ export default function HomeCommandCentre({
             const isEditing = editingBlockId === block.id && editDraft
             const allSubtasksDone = block.subtasks.length > 0 && block.subtasks.every(subtask => subtask.done)
             const showCompletionPrompt = allSubtasksDone && block.status !== 'done' && !dismissedCompletionPrompts[block.id]
+            const sourceTask = block.sourceTaskId ? taskById.get(block.sourceTaskId) : undefined
+            const displayTitle = queueTitleWithSchedule(block.title, sourceTask?.scheduledTime, {
+              largeTask: block.estimatedMinutes >= 90,
+              sessionTitle: queueSessionTitle(block, 25),
+            })
+            const locationLine = sourceTask ? formatTaskLocationLine(sourceTask) : null
             return (
             <article key={block.id} className={`home-block-card home-block-card-${block.status}`}>
               <div className="home-block-main">
-                <h4>{block.estimatedMinutes >= 90 ? queueSessionTitle(block, 25) : block.title}</h4>
+                <h4>{displayTitle}</h4>
+                {locationLine && <p className="home-block-location-line">{locationLine}</p>}
                 <div className="home-block-meta">
                   <span className={`home-priority home-priority-${block.priority}`}>{block.priority}</span>
                   <span>{labelFromToken(block.area)}</span>

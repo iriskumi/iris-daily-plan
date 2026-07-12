@@ -1263,6 +1263,38 @@ textarea {
   font-weight: 500;
 }
 
+.form-hint {
+  margin: -0.15rem 0 0.65rem;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  line-height: 1.45;
+}
+
+.task-schedule-lines {
+  margin-top: 0.25rem;
+}
+
+.task-when-line,
+.task-location-line,
+.block-queue-location-line,
+.home-block-location-line {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.task-location-line,
+.block-queue-location-line,
+.home-block-location-line {
+  color: var(--text-3);
+}
+
+.task-schedule-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-3);
+}
+
 .task-deadline {
   font-size: 0.72rem;
   color: var(--text-3);

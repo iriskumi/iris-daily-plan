@@ -37,16 +37,17 @@ import {
   type TaskKind,
 } from '../taskTaxonomy'
 import { formatScheduledChipLabel } from '../taskCalendarDefaults'
+import { formatTaskLocationLine, formatTaskWhenLine, taskEffectiveDate } from '../taskScheduleDisplay'
 import TaskScheduleModal from './TaskScheduleModal'
 
-function deadlineTag(deadline?: string): { text: string; cls: string } | null {
-  if (!deadline) return null
-  const days = getDaysUntil(deadline)
+function deadlineTag(date?: string): { text: string; cls: string } | null {
+  if (!date) return null
+  const days = getDaysUntil(date)
   if (days < 0) return { text: `Overdue (${Math.abs(days)}d)`, cls: 'deadline-urgent' }
   if (days === 0) return { text: 'Due today', cls: 'deadline-urgent' }
   if (days <= 3) return { text: `${days}d left`, cls: 'deadline-soon' }
   return {
-    text: new Date(deadline + 'T12:00:00').toLocaleDateString('en-AU', {
+    text: new Date(date + 'T12:00:00').toLocaleDateString('en-AU', {
       day: 'numeric',
       month: 'short',
     }),
@@ -56,9 +57,8 @@ function deadlineTag(deadline?: string): { text: string; cls: string } | null {
 
 type TaskFormData = Pick<
   Task,
-  'title' | 'area' | 'energy' | 'mode' | 'estimatedMinutes' | 'nextTinyAction' | 'status'
+  'title' | 'area' | 'energy' | 'mode' | 'estimatedMinutes' | 'nextTinyAction' | 'status' | 'scheduledDate' | 'scheduledTime' | 'location'
 > & {
-  deadline?: string
   taskKind?: TaskKind
 }
 
@@ -71,7 +71,9 @@ const emptyForm = (): TaskFormData => ({
   estimatedMinutes: 25,
   nextTinyAction: '',
   status: 'Inbox',
-  deadline: undefined,
+  scheduledDate: undefined,
+  scheduledTime: undefined,
+  location: undefined,
 })
 
 interface TaskFormProps {
@@ -181,11 +183,32 @@ function TaskForm({ initial, onSave, onCancel, isEdit = false }: TaskFormProps &
           </select>
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Deadline (optional)</label>
+          <label>Date (optional)</label>
           <input
             type="date"
-            value={form.deadline ?? ''}
-            onChange={e => f('deadline', e.target.value || undefined)}
+            value={form.scheduledDate ?? ''}
+            onChange={e => f('scheduledDate', e.target.value || undefined)}
+          />
+        </div>
+      </div>
+      <p className="form-hint">Use date/time only when this task needs a reminder or calendar block.</p>
+
+      <div className="form-row mt-1">
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label>Time (optional)</label>
+          <input
+            type="time"
+            value={form.scheduledTime ?? ''}
+            placeholder="Optional time, e.g. 10:30"
+            onChange={e => f('scheduledTime', e.target.value || undefined)}
+          />
+        </div>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label>Location (optional)</label>
+          <input
+            value={form.location ?? ''}
+            placeholder="Optional location, e.g. Holmesglen Reserve, Chadstone, Online"
+            onChange={e => f('location', e.target.value || undefined)}
           />
         </div>
       </div>
@@ -214,7 +237,21 @@ function TaskForm({ initial, onSave, onCancel, isEdit = false }: TaskFormProps &
             </div>
           )}
         </div>
-        {!isEdit ? null : (
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label>Energy</label>
+          <div className="btn-group">
+            {triBtn(
+              form.energy ?? 'Medium',
+              TASK_ENERGIES,
+              TASK_ENERGIES,
+              v => f('energy', v as TaskEnergy),
+            )}
+          </div>
+        </div>
+      </div>
+
+      {isEdit ? (
+      <div className="form-row mt-1">
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Mode</label>
           <div className="btn-group">
@@ -226,20 +263,8 @@ function TaskForm({ initial, onSave, onCancel, isEdit = false }: TaskFormProps &
             )}
           </div>
         </div>
-        )}
       </div>
-
-      <div className="form-group mt-1">
-        <label>Energy</label>
-        <div className="btn-group">
-          {triBtn(
-            form.energy ?? 'Medium',
-            TASK_ENERGIES,
-            TASK_ENERGIES,
-            v => f('energy', v as TaskEnergy),
-          )}
-        </div>
-      </div>
+      ) : null}
 
       {isEdit && (
       <div className="form-group">
@@ -345,7 +370,10 @@ export default function TaskInbox() {
       nextTinyAction: data.nextTinyAction,
     })
     task.status = data.status ?? 'Inbox'
-    task.deadline = data.deadline
+    task.scheduledDate = data.scheduledDate
+    task.scheduledTime = data.scheduledTime?.trim() || undefined
+    task.location = data.location?.trim() || undefined
+    task.deadline = data.scheduledDate
     task.done = task.status === 'Done'
     persist([task, ...tasks])
     setShowForm(false)
@@ -363,6 +391,10 @@ export default function TaskInbox() {
         mode: data.mode ?? 'Focus',
         status: data.status ?? 'Inbox',
         estimatedMinutes: data.estimatedMinutes,
+        scheduledDate: data.scheduledDate,
+        scheduledTime: data.scheduledTime?.trim() || undefined,
+        location: data.location?.trim() || undefined,
+        deadline: data.scheduledDate,
         category: categoryFromArea(data.area ?? 'Other'),
         nextTinyAction,
         nextAction: nextTinyAction,
@@ -534,7 +566,10 @@ export default function TaskInbox() {
       ) : (
         <div className="task-list">
           {filtered.map(task => {
-            const dl = deadlineTag(task.deadline)
+            const effectiveDate = taskEffectiveDate(task)
+            const dl = deadlineTag(effectiveDate)
+            const whenLine = formatTaskWhenLine(task)
+            const locationLine = formatTaskLocationLine(task)
             const isLargeTask = task.estimatedMinutes >= 90
             const totalEstimateLabel = `${task.estimatedMinutes} min total`
             const inTodayQueue = isTaskScheduledForDate(task, today)
@@ -550,6 +585,9 @@ export default function TaskInbox() {
                       ...task,
                       taskKind: kind,
                       area: task.area ?? areaFromCategory(task.category),
+                      scheduledDate: task.scheduledDate ?? task.deadline?.slice(0, 10),
+                      scheduledTime: task.scheduledTime,
+                      location: task.location,
                     }}
                     onSave={data => updateTask(task.id, data)}
                     onCancel={() => setEditingId(null)}
@@ -587,7 +625,7 @@ export default function TaskInbox() {
                             Large task
                           </span>
                         )}
-                        {dl && (
+                        {dl && !whenLine && (
                           <span className={`task-deadline ${dl.cls}`}>{dl.text}</span>
                         )}
                         <span className="text-xs text-muted">
@@ -598,6 +636,12 @@ export default function TaskInbox() {
                             : `${(task.estimatedMinutes / 60).toFixed(1)}h`}
                         </span>
                       </div>
+                      {(whenLine || locationLine) && (
+                        <div className="task-schedule-lines">
+                          {whenLine && <div className="task-when-line">{whenLine}</div>}
+                          {locationLine && <div className="task-location-line">{locationLine}</div>}
+                        </div>
+                      )}
                       {(task.nextTinyAction || task.nextAction) && (
                         <div className="task-next-action">
                           {task.nextTinyAction || task.nextAction}
