@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=LXGW+WenKai+Screen&family=Noto+Serif+SC:wght@500;600&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&family=Cormorant+Garamond:wght@400;500&family=Inter:wght@400;500;600;700&family=LXGW+WenKai+Screen&family=Noto+Serif+SC:wght@500;600&family=Zen+Kaku+Gothic+New:wght@300;400;500&display=swap');
 
 @font-face {
   font-family: 'Iris Handwriting Accent';
@@ -1191,7 +1191,7 @@ textarea {
 }
 
 .task-card.task-done {
-  opacity: 0.45;
+  opacity: 0.68;
 }
 
 .task-card.task-done .task-title {
@@ -9585,23 +9585,39 @@ body,
   }
 }
 
-/* ── Iris quiet luxury beige polish ──────────────────────── */
+/* ── Iris Phase 1 workspace refresh (tokens) ─────────────── */
 :root {
-  --color-bg: #F7F1EA;
-  --color-bg-wash: #FBF7F1;
-  --color-surface: #FFFDF8;
-  --color-surface-soft: #F1E7DC;
-  --color-card: #FFFBF5;
-  --color-card-warm: #F8EEE4;
-  --color-accent: #D8BBA6;
-  --color-accent-strong: #9D725E;
-  --color-accent-soft: #EFE0D5;
-  --color-text: #342721;
-  --color-text-muted: #75655B;
-  --color-text-soft: #9A8B80;
-  --color-border: #E7D9CC;
-  --color-border-soft: rgba(166, 134, 114, 0.18);
-  --color-shadow: rgba(88, 64, 50, 0.08);
+  --color-bg: #F6F0E8;
+  --color-bg-wash: #FBF7F2;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F8F1EA;
+  --color-card: #FFFFFF;
+  --color-card-warm: #F5EBE2;
+  --accent-primary: #B8897F;
+  --accent-primary-hover: #A9786F;
+  --accent-soft: #F4E7E3;
+  --accent-border: #E5CFC8;
+  --accent-text: #6F4E45;
+  --color-accent: var(--accent-primary);
+  --color-accent-strong: var(--accent-primary-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-muted: var(--accent-border);
+  --color-warm-accent: #9D725E;
+  --color-warm-soft: #F3E8DF;
+  --color-media-rose: #C98F8A;
+  --color-media-soft: #F8EDEB;
+  --color-text: #2A2522;
+  --color-text-muted: #7A726A;
+  --color-text-soft: #7A726A;
+  --color-border: #E8DFD6;
+  --color-border-soft: rgba(232, 223, 214, 0.95);
+  --color-shadow: rgba(90, 62, 52, 0.08);
+  --color-success: #6F957D;
+  --color-success-bg: #EEF6F1;
+  --color-warning: #B39A62;
+  --color-warning-bg: #FBF6EA;
+  --color-danger: #A96D6D;
+  --color-danger-bg: #F9EEEE;
 
   --bg-page: var(--color-bg);
   --bg-card: var(--color-card);
@@ -9611,29 +9627,29 @@ body,
   --surface: var(--color-card);
   --surface-2: var(--color-surface-soft);
   --border: var(--color-border);
-  --border-strong: #D2BFAA;
+  --border-strong: #CFC8BE;
   --text: var(--color-text);
   --text-2: var(--color-text-muted);
-  --text-3: var(--color-text-soft);
-  --text-hint: var(--color-text-soft);
-  --section-label: #A28F80;
+  --text-3: #7A726A;
+  --text-hint: #7A726A;
+  --section-label: #7A726A;
   --accent: var(--color-accent);
   --accent-light: var(--color-accent-soft);
   --accent-bg: var(--color-accent-soft);
-  --accent-border: var(--color-accent);
-  --accent-text: #6D4B3C;
-  --accent-2: var(--accent-text);
-  --reward-accent: var(--color-accent-strong);
+  --accent-2: var(--color-accent-strong);
+  --reward-accent: var(--color-warm-accent);
   --rose-border: var(--color-border-soft);
-  --cream-shadow: 0 18px 48px var(--color-shadow);
-  --shadow-sm: 0 8px 22px rgba(88, 64, 50, 0.055);
-  --shadow: 0 16px 42px rgba(88, 64, 50, 0.075);
-  --shadow-md: 0 24px 64px rgba(88, 64, 50, 0.09);
+  --cream-shadow: 0 14px 40px var(--color-shadow);
+  --shadow-sm: 0 8px 24px rgba(90, 62, 52, 0.06);
+  --shadow: 0 14px 40px rgba(90, 62, 52, 0.09);
+  --shadow-md: 0 24px 60px rgba(90, 62, 52, 0.11);
   --radius-sm: 12px;
   --radius: 18px;
   --radius-lg: 26px;
   --control-height: 44px;
   --control-radius: 999px;
+  --font-workspace: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Zen Kaku Gothic New', system-ui, sans-serif;
+  --font-display-workspace: 'Bricolage Grotesque', 'Inter', 'PingFang SC', system-ui, sans-serif;
 }
 
 html {
@@ -9646,8 +9662,9 @@ body,
 .app-header,
 .nav-tabs {
   background:
-    radial-gradient(circle at 20% 0%, rgba(255, 253, 248, 0.86), transparent 34rem),
-    linear-gradient(180deg, var(--color-bg-wash) 0%, var(--color-bg) 42%, #F4EDE4 100%);
+    radial-gradient(circle at 10% 0%, rgba(244, 231, 227, 0.28), transparent 26rem),
+    radial-gradient(circle at 92% 4%, rgba(250, 246, 241, 0.42), transparent 22rem),
+    linear-gradient(180deg, var(--color-bg-wash) 0%, var(--color-bg) 100%);
   color: var(--color-text);
 }
 
@@ -9661,9 +9678,9 @@ body,
 }
 
 .app-header {
-  border-bottom: 1px solid rgba(231, 217, 204, 0.62);
+  border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(18px);
-  background: rgba(247, 241, 234, 0.86);
+  background: rgba(251, 247, 242, 0.9);
 }
 
 .app-header h1,
@@ -9676,12 +9693,13 @@ body,
 .iris365-countdown-main h3,
 .iris365-stats-card h3 {
   color: var(--color-text);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-family: var(--font-display-workspace);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .page-title {
-  font-size: clamp(1.5rem, 2.7vw, 2.15rem);
+  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
 }
 
 .page-subtitle,
@@ -9707,37 +9725,41 @@ body,
 .dopamine-swap-step > span,
 .dopamine-suggestion-section > span {
   color: var(--section-label);
-  font-size: 0.69rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 .nav-tabs {
   min-height: 56px;
-  border-bottom: 1px solid rgba(231, 217, 204, 0.72);
+  border-bottom: 1px solid var(--color-border);
   gap: 0.35rem;
+  background: transparent;
 }
 
 .nav-tab {
   min-height: 44px;
   border-radius: 999px;
-  color: var(--color-text-soft);
+  color: var(--color-text-muted);
   font-size: 0.86rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   padding-inline: 0.85rem;
+  text-transform: none;
 }
 
 .nav-tab:hover {
-  background: rgba(255, 253, 248, 0.72);
+  background: var(--accent-soft);
   color: var(--color-text);
 }
 
 .nav-tab.active {
-  background: rgba(255, 253, 248, 0.86);
+  background: var(--accent-soft);
   color: var(--accent-text);
-  border-bottom-color: transparent;
-  box-shadow: inset 0 0 0 1px rgba(157, 114, 94, 0.18);
+  border: 1px solid var(--accent-border);
+  border-bottom-color: var(--accent-border);
+  box-shadow: none;
+  font-weight: 600;
 }
 
 .card,
@@ -9786,10 +9808,9 @@ body,
 .study-timer-card,
 .study-review-card,
 .study-proof-draft-card {
-  border: 1px solid var(--color-border-soft);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(250, 244, 236, 0.92));
+  background: var(--color-card);
   box-shadow: var(--shadow-sm);
 }
 
@@ -9805,11 +9826,9 @@ body,
 }
 
 .grounding-banner {
-  border: 1px solid rgba(166, 134, 114, 0.16);
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 88% 18%, rgba(216, 187, 166, 0.2), transparent 16rem),
-    linear-gradient(135deg, #FFFCF7 0%, #F7EEE5 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
   box-shadow: var(--shadow-sm);
 }
 
@@ -9859,19 +9878,27 @@ body,
 .btn-generate,
 .pomo-btn-primary,
 .pomo-toggle-btn.pomo-toggle-primary,
-.english-listening-draw-card .btn-primary {
-  border: 1px solid rgba(157, 114, 94, 0.22);
-  background: linear-gradient(180deg, #C8A48D 0%, var(--color-accent-strong) 100%);
+.english-listening-draw-card .btn-primary,
+.block-queue-action-primary,
+.home-block-primary-action {
+  border: 1px solid var(--accent-primary);
+  background: var(--accent-primary);
   color: #FFFDF8;
-  box-shadow: 0 12px 24px rgba(122, 86, 68, 0.16);
+  box-shadow: 0 8px 20px rgba(184, 137, 127, 0.22);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 .btn-primary:hover,
 .btn-generate:hover,
 .pomo-btn-primary:hover,
 .pomo-toggle-btn.pomo-toggle-primary:hover,
-.english-listening-draw-card .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #B99178 0%, #815947 100%);
+.english-listening-draw-card .btn-primary:hover:not(:disabled),
+.block-queue-action-primary:hover,
+.home-block-primary-action:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
   color: #FFFDF8;
 }
 
@@ -9879,16 +9906,18 @@ body,
 .pomo-btn-ghost,
 .english-listening-draw-card .btn-secondary,
 .start-today-card .btn-primary {
-  border: 1px solid rgba(166, 134, 114, 0.24);
-  background: rgba(255, 253, 248, 0.76);
-  color: var(--accent-text);
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
   box-shadow: none;
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 .btn-secondary:hover,
 .pomo-btn-ghost:hover,
 .english-listening-draw-card .btn-secondary:hover:not(:disabled) {
-  border-color: rgba(157, 114, 94, 0.38);
+  border-color: var(--color-accent-muted);
   background: var(--color-accent-soft);
   color: var(--color-text);
 }
@@ -9909,9 +9938,9 @@ textarea,
 .iris365-proof-form input,
 .iris365-proof-form select,
 .iris365-proof-form textarea {
-  border: 1px solid rgba(166, 134, 114, 0.22);
-  border-radius: 16px;
-  background: rgba(255, 253, 248, 0.78);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-card);
   color: var(--color-text);
   min-height: 44px;
 }
@@ -9928,9 +9957,9 @@ textarea:focus,
 .form-group textarea:focus,
 .time-block-follow-up textarea:focus,
 .pomo-quick-input:focus {
-  outline: 2px solid rgba(157, 114, 94, 0.22);
-  border-color: rgba(157, 114, 94, 0.48);
-  background: #FFFDF8;
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent-primary);
+  background: var(--color-card);
 }
 
 .badge,
@@ -9947,7 +9976,6 @@ textarea:focus,
 .btn-option.selected-low,
 .btn-option.selected-medium,
 .btn-option.selected-high,
-.filter-chip.active,
 .block-queue-status,
 .queue-badge-priority,
 .queue-badge-type,
@@ -9956,10 +9984,12 @@ textarea:focus,
 .iris365-low-energy-status,
 .iris365-weekly-summary span,
 .iris365-recent-pills span {
-  border: 1px solid rgba(166, 134, 114, 0.22);
-  background: rgba(241, 231, 220, 0.76);
-  color: var(--accent-text);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
   border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .day-type-card,
@@ -9991,16 +10021,15 @@ textarea:focus,
 .dopamine-outcome-grid button:hover,
 .iris365-rating button.active,
 .iris365-proof-filter button.active {
-  border-color: rgba(157, 114, 94, 0.42);
-  background: var(--color-accent-soft);
-  color: var(--color-text);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
 .next-action-card,
 .next-best-block-card {
-  background:
-    radial-gradient(circle at 92% 8%, rgba(216, 187, 166, 0.2), transparent 14rem),
-    linear-gradient(135deg, #FFFDF8 0%, #F6EBE0 100%);
+  background: var(--color-card);
+  border-color: var(--color-border);
 }
 
 .focus-garden,
@@ -10017,46 +10046,39 @@ textarea:focus,
 .focus-sparkline span,
 .pomo-progress-fill,
 .task-progress-bar span,
-.iris365-progress-bar span {
-  background: linear-gradient(180deg, #D8BBA6, #9D725E);
+.iris365-progress-bar span,
+.study-progress-bar span,
+.english-output-progress span,
+.study-active-session-progress span {
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-primary-hover));
 }
 
-.pomo-body {
-  fill: #E8D4C3;
-}
-
-.pomo-cheek,
-.pomo-kiss-hearts,
-.pomo-sparkles {
-  fill: #C09A84;
-}
-
-.time-block {
-  border-left-color: rgba(157, 114, 94, 0.32);
-}
-
-.time-block-focus,
-.priority-item {
-  border-left-color: var(--color-accent-strong);
-}
-
-.time-block-type-focus {
-  background: var(--color-accent-soft);
-  color: var(--accent-text);
+.task-progress-bar,
+.pomo-progress-bar,
+.iris365-progress-bar,
+.study-progress-bar,
+.study-active-session-progress,
+.english-output-progress {
+  height: 8px;
+  min-height: 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  overflow: hidden;
 }
 
 .task-checkbox {
-  border-color: rgba(157, 114, 94, 0.38);
+  border-color: var(--color-border-strong);
 }
 
 .task-checkbox.checked {
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent-strong);
+  background: var(--accent-soft);
+  border-color: var(--accent-primary);
 }
 
 .task-checkbox.checked::after {
-  border-left-color: var(--color-accent-strong);
-  border-bottom-color: var(--color-accent-strong);
+  border-left-color: var(--accent-primary-hover);
+  border-bottom-color: var(--accent-primary-hover);
 }
 
 .dopamine-suggestion-section ol,
@@ -10069,8 +10091,8 @@ textarea:focus,
 .study-review-card,
 .home-block-card,
 .block-queue-card {
-  background: rgba(255, 253, 248, 0.7);
-  border-color: rgba(166, 134, 114, 0.16);
+  background: var(--color-card);
+  border-color: var(--color-border);
 }
 
 @media (max-width: 760px) {
@@ -10318,8 +10340,8 @@ textarea:focus,
   border-color: rgba(184, 148, 122, 0.2);
   border-radius: 30px;
   background:
-    linear-gradient(105deg, rgba(250, 246, 241, 0.76) 0%, rgba(255, 253, 248, 0.94) 42%, rgba(247, 240, 232, 0.76) 100%),
-    radial-gradient(circle at 78% 20%, rgba(239, 207, 200, 0.34), transparent 28%);
+    linear-gradient(105deg, rgba(251, 244, 236, 0.82) 0%, rgba(255, 251, 246, 0.96) 42%, rgba(248, 238, 228, 0.84) 100%),
+    radial-gradient(circle at 78% 20%, rgba(239, 207, 200, 0.38), transparent 28%);
   box-shadow:
     0 24px 60px rgba(59, 43, 37, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.62);
@@ -14453,7 +14475,7 @@ textarea:focus,
 .plan-schedule-panel{margin:0 1rem 1.2rem;max-width:920px}
 .study-hero-card-compact{margin-top:1rem}
 .badge-task-kind{background:rgba(185,131,143,.12);color:rgba(74,58,48,.78)}
-.badge-calendar-scheduled{background:rgba(96,140,170,.14);color:rgba(44,74,98,.92);border:1px solid rgba(96,140,170,.22)}
+.badge-calendar-scheduled{background:var(--accent-soft);color:var(--accent-text);border:1px solid var(--accent-border)}
 .task-schedule-backdrop{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(42,30,24,.28)}
 .task-schedule-modal{width:min(560px,100%);max-height:90vh;overflow:auto;padding:1.15rem 1.25rem;border-radius:22px;border:1px solid rgba(185,131,143,.24);background:linear-gradient(165deg,rgba(255,252,246,.98),rgba(247,238,229,.94));box-shadow:0 24px 60px rgba(90,62,52,.16)}
 .task-schedule-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.85rem}
@@ -14472,3 +14494,285 @@ textarea:focus,
 .study-hero-card-compact .study-target-number{font-size:1.6rem}
 .home-status-card-compact{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .active-session-compact-bar .btn-primary{margin-left:auto}
+
+/* ── Phase 1: Workspace visual refresh (overrides) ───────── */
+
+/* Focus Mode: preserve serif timer; warm Complete only */
+.today-active-timer,
+.study-timer-face > span {
+  font-family: var(--font-display);
+}
+
+.today-active-session-hero .today-active-actions .btn-primary {
+  border-color: var(--color-warm-accent);
+  background: linear-gradient(180deg, #C8A48D 0%, var(--color-warm-accent) 100%);
+  color: #FFFDF8;
+  box-shadow: 0 12px 24px rgba(157, 114, 94, 0.18);
+}
+
+.today-active-session-hero .today-active-actions .btn-primary:hover {
+  background: linear-gradient(180deg, #B99178 0%, #815947 100%);
+  color: #FFFDF8;
+}
+
+.today-active-progress span {
+  background: linear-gradient(90deg, var(--color-warm-accent), #C8A48D);
+}
+
+/* Reduce decorative emphasis on Today */
+.today-next-image-panel::before,
+.today-next-coffee,
+.today-next-notebook {
+  display: none;
+}
+
+.today-next-image-panel {
+  min-height: 0;
+  background: transparent;
+}
+
+.home-secondary-panel summary::before {
+  display: none;
+}
+
+.today-next-useful-card h3,
+.today-start-panel-copy h3,
+.today-next-useful-card h3 {
+  font-family: var(--font-display-workspace);
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.today-next-useful-card .btn-primary,
+.today-start-actions .btn-primary,
+.today-start-choice-row .btn-primary {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: #FFFDF8;
+  box-shadow: 0 8px 20px rgba(184, 137, 127, 0.22);
+}
+
+.today-next-useful-card .btn-primary:hover,
+.today-start-actions .btn-primary:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+}
+
+.block-queue-next-hero {
+  background: var(--color-card);
+  border-color: var(--color-border);
+}
+
+.block-queue-actions-more summary,
+.time-block-actions-more summary {
+  color: var(--accent-text);
+}
+
+/* Media tab: rose accent */
+.media-tab-page {
+  --media-bg: var(--color-bg);
+  --media-surface: var(--color-card);
+  --media-border: var(--color-border);
+  --media-text: var(--color-text);
+  --media-muted: var(--color-text-muted);
+  --media-accent: var(--color-media-rose);
+  --media-accent-soft: var(--color-media-soft);
+}
+
+.media-tab-page .btn-primary,
+.media-tab-page .life-card-heading .btn-primary {
+  border: 1px solid var(--color-media-rose);
+  background: var(--color-media-rose);
+  color: #FFFFFF;
+  box-shadow: 0 8px 20px rgba(201, 143, 138, 0.2);
+}
+
+.media-tab-page .btn-primary:hover,
+.media-tab-page .life-card-heading .btn-primary:hover {
+  background: #B87E79;
+  border-color: #B87E79;
+}
+
+.media-tab-page .life-filter-row button.active,
+.media-tab-page .life-chip-group button.active {
+  background: var(--color-media-soft);
+  border-color: rgba(201, 143, 138, 0.35);
+  color: var(--color-text);
+}
+
+.media-tab-page .recommendation-card,
+.media-tab-page .life-log-card,
+.media-tab-page .life-system-card {
+  background: var(--color-card);
+  border-color: var(--color-border);
+}
+
+/* Semantic badges */
+.filter-chip.active,
+.badge-today-queue,
+.badge-calendar-scheduled {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-text);
+}
+
+.badge-task-kind {
+  background: var(--color-warm-soft);
+  border-color: rgba(157, 114, 94, 0.2);
+  color: var(--color-warm-accent);
+}
+
+.task-deadline.deadline-urgent {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid rgba(169, 109, 109, 0.25);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+}
+
+.task-deadline.deadline-soon {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border: 1px solid rgba(179, 154, 98, 0.25);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+}
+
+.scope-status.connected {
+  background: var(--color-success-bg);
+  border-color: rgba(111, 149, 125, 0.28);
+  color: var(--color-success);
+}
+
+.scope-status.not-connected {
+  background: var(--color-warning-bg);
+  border-color: rgba(179, 154, 98, 0.28);
+  color: var(--color-warning);
+}
+
+.block-queue-status-done,
+.queue-badge-priority-must {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: rgba(111, 149, 125, 0.25);
+}
+
+.block-queue-status-in_progress {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: var(--accent-border);
+}
+
+/* Life / exercise cards */
+.life-system-card,
+.movement-mission-card {
+  background: var(--color-card);
+  border-color: var(--color-border);
+}
+
+.life-system-card h3,
+.movement-mission-card h3 {
+  font-family: var(--font-workspace);
+}
+
+/* Study focus hero: keep warm cockpit, white-adjacent */
+.study-focus-hero {
+  background: var(--color-card);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.study-focus-step-head svg,
+.study-step-num {
+  color: var(--accent-text);
+}
+
+.study-step-num {
+  background: var(--accent-soft);
+}
+
+.study-focus-step-start.ready .study-step-num {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+.task-schedule-modal {
+  background: var(--color-card);
+  border-color: var(--color-border);
+}
+
+/* Progress bar height overrides (earlier rules) */
+.task-progress-bar {
+  height: 8px;
+}
+
+.task-progress-bar span {
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-primary-hover));
+}
+
+.iris365-progress-bar {
+  height: 10px;
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.iris365-progress-bar span {
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-primary-hover));
+}
+
+.today-progress-pill strong {
+  color: var(--color-text);
+}
+
+/* Nav mobile dock */
+@media (max-width: 760px) {
+  .nav-tabs {
+    border-color: var(--color-border);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 12px 32px rgba(90, 62, 52, 0.1);
+  }
+
+  .nav-tab.active {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    border-color: var(--accent-border);
+  }
+}
+
+/* Button base: sentence case */
+.btn,
+.nav-tab {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-family: var(--font-workspace);
+}
+
+.btn-ghost {
+  color: var(--color-text-muted);
+}
+
+.btn-ghost:hover {
+  color: var(--color-text);
+  background: var(--color-surface-soft);
+}
+
+.pomo-body {
+  fill: #E8D4C3;
+}
+
+.pomo-cheek,
+.pomo-kiss-hearts,
+.pomo-sparkles {
+  fill: #C09A84;
+}
+
+.time-block-focus,
+.priority-item {
+  border-left-color: var(--accent-primary);
+}
+
+.time-block-type-focus {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
