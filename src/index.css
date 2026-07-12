@@ -331,10 +331,12 @@ body {
 
 .page-subtitle {
   max-width: 640px;
+  font-family: var(--font-workspace, 'Inter', system-ui, sans-serif);
   font-size: 14px;
   color: var(--text-2);
   font-weight: 400;
-  line-height: 1.8;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
 }
 
 .grounding-banner {
@@ -4677,9 +4679,9 @@ textarea {
 }
 
 .segmented-control button.active {
-  background: #F0E8DC;
-  border: 1px solid #C4B090;
-  color: #2E2218;
+  background: var(--accent-soft, #F4E7E3);
+  border: 1px solid var(--accent-border, #E5CFC8);
+  color: var(--accent-text, #6F4E45);
   font-weight: 500;
   box-shadow: none;
 }
@@ -6150,9 +6152,9 @@ textarea {
 .study-template-card {
   width: 100%;
   padding: 1rem;
-  border: 0.5px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: #FFFCF9;
+  background: var(--color-card-elevated, #FFFCF9);
   text-align: left;
   color: var(--text);
   cursor: pointer;
@@ -6280,6 +6282,22 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 0.85rem;
+}
+
+.study-custom-picker-inline {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.study-custom-picker-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.study-custom-picker-inline .hub-support-copy {
+  margin: 0;
 }
 
 .study-review-shell {
@@ -9589,9 +9607,10 @@ body,
 :root {
   --color-bg: #F6F0E8;
   --color-bg-wash: #FBF7F2;
-  --color-surface: #FFFFFF;
+  --color-surface: #FDF8F4;
   --color-surface-soft: #F8F1EA;
-  --color-card: #FFFFFF;
+  --color-card: #FDF8F4;
+  --color-card-elevated: #FFFCF9;
   --color-card-warm: #F5EBE2;
   --accent-primary: #B8897F;
   --accent-primary-hover: #A9786F;
@@ -13700,16 +13719,30 @@ textarea:focus,
 .media-tab-page .page-subtitle,
 .media-helper,
 .media-subtitle,
-.media-description {
-  color: rgba(87, 70, 60, 0.68);
+.media-description,
+.hub-support-copy {
+  font-family: var(--font-workspace);
+  color: var(--color-text-muted);
   font-weight: 400;
-  line-height: 1.7;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
 }
 
-.media-helper {
+.media-helper,
+.hub-support-copy {
   margin: 0.2rem 0 0;
   max-width: 42rem;
-  font-size: 0.9rem;
+  font-size: 14px;
+}
+
+.hub-card-kicker {
+  margin: 0 0 0.15rem;
+  font-family: var(--font-workspace);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: var(--color-text-muted);
 }
 
 .media-helper-cn {
@@ -13723,21 +13756,20 @@ textarea:focus,
 .media-tab-page .recommendation-card h3,
 .media-tab-page .life-log-card h3 {
   color: var(--media-text);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-family: var(--font-display-workspace, var(--font-workspace));
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .media-form-title {
-  font-family: var(--font-cn-soft);
-  font-size: clamp(1.18rem, 1.5vw, 1.42rem);
+  font-size: clamp(1.05rem, 1.4vw, 1.25rem);
   line-height: 1.45;
 }
 
 .media-tab-page .life-system-card {
-  background:
-    linear-gradient(135deg, rgba(250, 246, 241, 0.98), rgba(247, 240, 232, 0.82));
-  border-color: var(--media-border);
-  box-shadow: 0 18px 46px rgba(93, 70, 54, 0.045);
+  background: var(--color-card);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .media-tab-page .media-form-card {
@@ -13867,21 +13899,22 @@ textarea:focus,
 
 .life-system-card,
 .movement-mission-card {
-  background: rgba(255, 253, 248, 0.78);
-  border: 1px solid rgba(166, 134, 114, 0.12);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
   border-radius: 24px;
   padding: 1rem;
+  box-shadow: 0 10px 28px rgba(90, 62, 52, 0.035);
 }
 
 .life-system-card h3,
 .movement-mission-card h3 {
   margin: 0.3rem 0 0.45rem;
   color: var(--color-text);
-  font-family: var(--font-cn-soft);
+  font-family: var(--font-display-workspace, var(--font-workspace));
   font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  line-height: 1.55;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.45;
 }
 
 .life-system-card p,
@@ -13889,24 +13922,25 @@ textarea:focus,
 .life-log-card p,
 .life-mini-card span {
   color: var(--color-text-muted);
-  font-family: var(--font-cn-soft);
-  line-height: 1.65;
+  font-family: var(--font-workspace);
+  font-size: 14px;
+  line-height: 1.75;
 }
 
 .exercise-tab-page .life-card-heading h3,
 .exercise-tab-page .life-mini-card strong,
 .exercise-tab-page .recommendation-card h3 {
-  font-family: var(--font-cn-soft);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-family: var(--font-display-workspace, var(--font-workspace));
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .exercise-tab-page .life-mini-card span,
 .exercise-tab-page .recommendation-card li,
 .exercise-tab-page .movement-mission-card p {
-  font-family: var(--font-cn-soft);
+  font-family: var(--font-workspace);
   font-weight: 400;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   line-height: 1.75;
 }
 
@@ -13997,10 +14031,11 @@ textarea:focus,
 .life-stat-grid div,
 .life-mini-card,
 .life-log-card {
-  background: rgba(255, 252, 249, 0.72);
-  border: 1px solid rgba(166, 134, 114, 0.1);
+  background: var(--color-card-elevated, #FDF8F4);
+  border: 1px solid rgba(232, 223, 214, 0.62);
   border-radius: 20px;
   padding: 0.85rem;
+  box-shadow: none;
 }
 
 .recommendation-card ul,
@@ -14009,8 +14044,8 @@ textarea:focus,
   margin: 0.6rem 0 0;
   padding-left: 1.1rem;
   color: var(--color-text-muted);
-  font-family: var(--font-cn-soft);
-  line-height: 1.65;
+  font-family: var(--font-workspace);
+  line-height: 1.75;
 }
 
 .life-stat-grid.compact {
@@ -14027,7 +14062,10 @@ textarea:focus,
 
 .life-stat-grid span {
   color: var(--color-text-muted);
-  font-size: 0.75rem;
+  font-family: var(--font-workspace);
+  font-size: 13px;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
 }
 
 .life-card-list {
@@ -14424,7 +14462,7 @@ textarea:focus,
 .study-secondary-details > .english-output-journey-card,
 .study-secondary-details > .english-listening-draw-card,
 .study-secondary-details > .english-reference-card{margin-top:.5rem;margin-bottom:.35rem}
-.study-focus-hero{margin-bottom:1.2rem;padding:1.35rem 1.4rem;border:1px solid rgba(198,168,148,.42);border-radius:24px;background:linear-gradient(165deg,rgba(255,252,246,.98),rgba(247,238,229,.88));box-shadow:0 18px 42px rgba(90,62,52,.07)}
+.study-focus-hero{margin-bottom:1.2rem;padding:1.35rem 1.4rem;border:1px solid var(--color-border);border-radius:24px;background:linear-gradient(165deg,var(--color-card) 0%,var(--color-surface-soft) 100%);box-shadow:var(--shadow-sm)}
 .study-focus-step{padding:1rem 0;border-top:1px solid rgba(185,131,143,.14)}
 .study-focus-step:first-child{padding-top:0;border-top:0}
 .study-focus-step-head{display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.85rem}
@@ -14774,5 +14812,199 @@ textarea:focus,
 
 .time-block-type-focus {
   background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* ── Phase 1b: Softer cards + unified English secondary copy ── */
+
+:root {
+  --color-card: #FAF4ED;
+  --color-surface: #FAF4ED;
+  --color-card-elevated: #FDF8F4;
+  --shadow-sm: 0 6px 20px rgba(90, 62, 52, 0.035);
+}
+
+.card,
+.plan-header,
+.reality-card,
+.actual-log-card,
+.notion-export-card,
+.generation-status-card,
+.today-focus-section,
+.start-now-card,
+.focus-block-card,
+.start-today-card,
+.next-action-card,
+.focus-garden,
+.pomo-box,
+.inline-form,
+.task-card,
+.opp-card,
+.bill-card,
+.template-card,
+.calendar-integration-card,
+.settings-slideover,
+.home-status-card,
+.next-best-block-card,
+.home-block-queue,
+.home-block-card,
+.block-queue-section,
+.block-queue-card,
+.block-queue-next-hero,
+.iris365-countdown-card,
+.iris365-checkin-card,
+.iris365-foundation-card,
+.iris365-growth-card,
+.iris365-details-card,
+.iris365-stimulus-card,
+.iris365-stats-card,
+.iris365-recent-card,
+.iris365-weekly-card,
+.iris365-proof-card,
+.study-hero-card,
+.english-output-journey-card,
+.english-listening-draw-card,
+.expression-hub-import-card,
+.study-active-session-banner,
+.study-timer-card,
+.study-review-card,
+.study-proof-draft-card,
+.life-system-card,
+.movement-mission-card,
+.media-tab-page .recommendation-card,
+.media-tab-page .life-log-card {
+  background: var(--color-card);
+  border-color: rgba(232, 223, 214, 0.72);
+  box-shadow: var(--shadow-sm);
+}
+
+.life-stat-grid div,
+.life-mini-card,
+.life-log-card,
+.recommendation-card,
+.study-template-card,
+.block-queue-card,
+.block-queue-card-done {
+  background: var(--color-card-elevated);
+  border-color: rgba(232, 223, 214, 0.58);
+  box-shadow: none;
+}
+
+.section-label,
+.hub-card-kicker {
+  font-family: var(--font-workspace);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: var(--color-text-muted);
+}
+
+.page-subtitle,
+.media-helper,
+.hub-support-copy,
+.card p,
+.next-action-card p,
+.start-today-card p,
+.block-queue-header p,
+.block-queue-card-main p,
+.study-focus-step-head p,
+.study-template-header p,
+.life-system-card p,
+.movement-mission-card p,
+.life-empty,
+.iris365-empty-copy {
+  font-family: var(--font-workspace);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
+}
+
+.life-system-card h3,
+.movement-mission-card h3,
+.media-section-title,
+.exercise-tab-page .life-card-heading h3 {
+  font-family: var(--font-display-workspace, var(--font-workspace));
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.study-focus-hero {
+  background: linear-gradient(165deg, var(--color-card) 0%, var(--color-surface-soft) 100%);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary,
+.filter-chip:not(.active),
+.media-shortcut-row a {
+  background: var(--color-card-elevated);
+  border-color: var(--color-border);
+}
+
+.life-form-grid input,
+.life-form-grid select,
+.life-form-grid textarea,
+.task-schedule-form input,
+.task-schedule-form textarea {
+  background: var(--color-card-elevated);
+  border-color: var(--color-border);
+}
+
+/* Iris 365 + Tasks: softer corners, coordinated beige tabs */
+
+.iris365-countdown-card,
+.iris365-checkin-card,
+.iris365-daily-system-card,
+.iris365-daily-proof-card,
+.iris365-foundation-card,
+.iris365-growth-card,
+.iris365-details-card,
+.iris365-stimulus-card,
+.iris365-stats-card,
+.iris365-recent-card,
+.iris365-proof-card {
+  border-radius: 24px;
+  border-color: rgba(232, 223, 214, 0.68);
+  box-shadow: var(--shadow-sm);
+}
+
+.iris365-countdown-stats div,
+.iris365-stat-grid div,
+.iris365-prestart-note,
+.iris365-low-energy-toggle,
+.iris365-proof-anchor,
+.iris365-skill-roadmap-card article {
+  border-radius: 16px;
+  border-color: rgba(232, 223, 214, 0.55);
+  background: var(--color-card-elevated);
+  box-shadow: none;
+}
+
+.iris365-progress-bar {
+  border-radius: 999px;
+  border-color: rgba(232, 223, 214, 0.5);
+  background: var(--color-surface-soft);
+}
+
+.segmented-control {
+  background: var(--color-card);
+  border: 1px solid rgba(232, 223, 214, 0.72);
+  border-radius: 999px;
+  padding: 0.3rem;
+  box-shadow: none;
+}
+
+.segmented-control button {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--color-text-muted);
+}
+
+.segmented-control button.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
   color: var(--accent-text);
 }

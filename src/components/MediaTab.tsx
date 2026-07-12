@@ -99,9 +99,9 @@ export default function MediaTab() {
       <section className="life-system-card media-log-section media-log-primary">
         <div className="life-card-heading">
           <div>
-            <div className="section-label">Your media log</div>
+            <p className="hub-card-kicker">Your media log</p>
             <h3 className="media-section-title">{entries.length} item{entries.length === 1 ? '' : 's'}</h3>
-            <p className="media-helper">Was it actually good for me?</p>
+            <p className="page-subtitle media-helper">Was it actually good for me?</p>
           </div>
           <button className="btn-primary" type="button" onClick={() => setShowAddForm(value => !value)}>
             <Plus size={14} />

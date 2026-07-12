@@ -74,6 +74,9 @@ const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 const COURSERA_EXPIRY_DATE = '2026-09-23'
 const COURSERA_CATEGORY: StudyCategory = 'Coursera AI Pathway'
 
+type StudyPickerOption = StudyCategory | 'Custom'
+const STUDY_PICKER_OPTIONS: StudyPickerOption[] = ['Custom', ...STUDY_CATEGORIES]
+
 type StudyProofDraft = Pick<Iris365ProofItem, 'date' | 'category' | 'title' | 'description' | 'linkOrFile' | 'sourceSessionId'>
 
 interface EnglishReferenceSection {
@@ -370,7 +373,7 @@ function restoreActiveStudySession(): StudyActiveSession | null {
 export default function StudyDashboard() {
   const today = getLocalDateKey()
   const [target, setTarget] = useState<DailyStudyTarget>(() => loadDailyStudyTarget(today))
-  const [selectedCategory, setSelectedCategory] = useState<StudyCategory>('English Output')
+  const [selectedPicker, setSelectedPicker] = useState<StudyPickerOption>('Custom')
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [customHours, setCustomHours] = useState(() => String(target.targetMinutes / 60))
   const [copied, setCopied] = useState<string | null>(null)
@@ -414,8 +417,10 @@ export default function StudyDashboard() {
     : 0
 
   const visibleTemplates = useMemo(
-    () => STUDY_TASK_LIBRARY.filter(template => template.category === selectedCategory),
-    [selectedCategory],
+    () => selectedPicker === 'Custom'
+      ? []
+      : STUDY_TASK_LIBRARY.filter(template => template.category === selectedPicker),
+    [selectedPicker],
   )
   const selectedTemplate = STUDY_TASK_LIBRARY.find(template => template.id === selectedTemplateId) ?? null
   const activeTimer = activeSession ? timerFromStudySession(activeSession) : null
@@ -433,12 +438,17 @@ export default function StudyDashboard() {
   const outputLongTermPercent = Math.min(100, (outputJourney.totalReps / ENGLISH_OUTPUT_LONG_TERM_TARGET) * 100)
   const latestListeningDraw = latestEnglishListeningDraw(listeningDrawState)
   const listeningDrawRedrawsRemaining = Math.max(0, listeningDrawState.redrawLimit - listeningDrawState.redrawsUsed)
-  const hasSelectedTask = Boolean(selectedQueueTask || selectedTemplate)
-  const selectedTaskTitle = selectedQueueTask?.title ?? selectedTemplate?.title ?? null
-  const selectedTaskCategory = selectedQueueTask?.category ?? selectedTemplate?.category ?? null
+  const hasSelectedCustomTask = selectedPicker === 'Custom' && customTask.title.trim().length > 0
+  const hasSelectedTask = Boolean(selectedQueueTask || selectedTemplate || hasSelectedCustomTask)
+  const selectedTaskTitle = selectedQueueTask?.title
+    ?? selectedTemplate?.title
+    ?? (hasSelectedCustomTask ? customTask.title.trim() : null)
+  const selectedTaskCategory = selectedQueueTask?.category
+    ?? selectedTemplate?.category
+    ?? (hasSelectedCustomTask ? customTask.category : null)
   const previewDuration = selectedQueueTask?.durationMinutes
     ?? selectedTemplate?.defaultDuration
-    ?? (Number(customTimerMinutes) || 25)
+    ?? (hasSelectedCustomTask ? (Number(customTask.duration) || 25) : (Number(customTimerMinutes) || 25))
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowMs(Date.now()), 1000)
@@ -473,7 +483,7 @@ export default function StudyDashboard() {
     const handoff = consumeStudyTaskHandoff()
     if (!handoff) return
     setSelectedQueueTask(handoff)
-    setSelectedCategory(handoff.category)
+    setSelectedPicker(handoff.category)
     setSelectedTemplateId('')
     setCustomTimerMinutes(String(handoff.durationMinutes || 25))
     setCustomTask({
@@ -504,11 +514,14 @@ export default function StudyDashboard() {
     updateTargetMinutes(Math.round(parsed * 60))
   }
 
-  function selectCategory(category: StudyCategory) {
-    setSelectedCategory(category)
+  function selectPicker(picker: StudyPickerOption) {
+    setSelectedPicker(picker)
     setSelectedTemplateId('')
     setSelectedQueueTask(null)
     setSessionStartMessage(null)
+    if (picker === 'Custom') {
+      setCustomTimerMinutes(customTask.duration || '25')
+    }
   }
 
   async function copyText(label: string, text: string) {
@@ -659,9 +672,9 @@ export default function StudyDashboard() {
     setSessionStartMessage(null)
   }
 
-  function startCustomSession() {
-    const duration = Number(customTask.duration)
-    const durationMinutes = Number.isFinite(duration) && duration > 0 ? duration : 25
+  function startCustomSessionWithDuration(durationMinutes?: number) {
+    const parsed = durationMinutes ?? Number(customTask.duration)
+    const durationMinutesFinal = Number.isFinite(parsed) && parsed > 0 ? parsed : 25
     const title = customTask.title.trim()
     if (!title) {
       setSessionStartMessage('Add a custom task title first.')
@@ -672,7 +685,7 @@ export default function StudyDashboard() {
     const sessionId = crypto.randomUUID()
     const timerSession = timerEngine.start(
       `manual-study:${customTaskId}`,
-      durationMinutes,
+      durationMinutesFinal,
       'study',
       { id: sessionId, startedAt: new Date(start).toISOString() },
     )
@@ -682,8 +695,8 @@ export default function StudyDashboard() {
       title,
       category: customTask.category,
       sessionStartTime: start,
-      durationMinutes,
-      expectedEndTime: start + durationMinutes * 60_000,
+      durationMinutes: durationMinutesFinal,
+      expectedEndTime: start + durationMinutesFinal * 60_000,
       pausedAccumulatedMs: 0,
       status: 'running',
       noteDestination: customTask.noteDestination || 'Obsidian/Study/Inbox.md',
@@ -700,13 +713,17 @@ export default function StudyDashboard() {
       customTaskId,
       title,
       category: customTask.category,
-      durationMinutes,
+      durationMinutes: durationMinutesFinal,
       noteDestination: session.noteDestination,
       notes: customTask.notes,
       activeSession: session,
     })
     persistActiveSession(session)
     setSessionStartMessage(null)
+  }
+
+  function startCustomSession() {
+    startCustomSessionWithDuration(Number(customTask.duration) || 25)
   }
 
   function startQueueHandoffSession(durationMinutes: number) {
@@ -761,6 +778,10 @@ export default function StudyDashboard() {
   function startSelectedStudySession(durationMinutes: number) {
     if (selectedQueueTask) {
       startQueueHandoffSession(durationMinutes)
+      return
+    }
+    if (selectedPicker === 'Custom') {
+      startCustomSessionWithDuration(durationMinutes)
       return
     }
     if (!selectedTemplate) {
@@ -1020,17 +1041,65 @@ export default function StudyDashboard() {
     return (
       <>
         <div className="study-category-grid study-category-grid-compact" aria-label="Study categories">
-          {STUDY_CATEGORIES.map(category => (
+          {STUDY_PICKER_OPTIONS.map(option => (
             <button
-              key={category}
+              key={option}
               type="button"
-              className={`study-category-chip ${selectedCategory === category ? 'active' : ''}`}
-              onClick={() => selectCategory(category)}
+              className={`study-category-chip ${selectedPicker === option ? 'active' : ''}`}
+              onClick={() => selectPicker(option)}
             >
-              {category}
+              {option}
             </button>
           ))}
         </div>
+        {selectedPicker === 'Custom' ? (
+          <div className="study-custom-picker-inline">
+            <div className="form-group">
+              <label htmlFor="study-picker-custom-title">Task title</label>
+              <input
+                id="study-picker-custom-title"
+                value={customTask.title}
+                onChange={event => setCustomTask(prev => ({ ...prev, title: event.target.value }))}
+                placeholder="e.g. Write cyber assessment intro"
+              />
+            </div>
+            <div className="study-custom-picker-row">
+              <div className="form-group">
+                <label htmlFor="study-picker-custom-category">Category</label>
+                <select
+                  id="study-picker-custom-category"
+                  value={customTask.category}
+                  onChange={event => setCustomTask(prev => ({
+                    ...prev,
+                    category: event.target.value as StudyCategory,
+                  }))}
+                >
+                  {STUDY_CATEGORIES.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="study-picker-custom-duration">Default duration</label>
+                <select
+                  id="study-picker-custom-duration"
+                  value={customTask.duration}
+                  onChange={event => {
+                    const duration = event.target.value
+                    setCustomTask(prev => ({ ...prev, duration }))
+                    setCustomTimerMinutes(duration)
+                  }}
+                >
+                  <option value="25">25 min</option>
+                  <option value="50">50 min</option>
+                  <option value="75">75 min</option>
+                  <option value="90">90 min</option>
+                </select>
+              </div>
+            </div>
+            <p className="hub-support-copy">Add a title, then start the timer below. Notes and Obsidian path are in the full form further down.</p>
+          </div>
+        ) : (
         <div className="study-template-list study-template-list-compact">
           {visibleTemplates.map(template => (
             <button
@@ -1054,6 +1123,7 @@ export default function StudyDashboard() {
             </button>
           ))}
         </div>
+        )}
       </>
     )
   }
@@ -1124,7 +1194,7 @@ export default function StudyDashboard() {
             <span className="study-step-num" aria-hidden="true">1</span>
             <div>
               <strong>Pick a task</strong>
-              <p>Choose one focus block from the library, or use a task sent from Today.</p>
+              <p>Choose custom, a library block, or a task sent from Today.</p>
             </div>
           </div>
           {renderTaskPickerStep()}
@@ -1544,7 +1614,7 @@ export default function StudyDashboard() {
       </details>
 
       <details className="study-secondary-details">
-        <summary>Custom one-off task</summary>
+        <summary>Custom one-off task — full form</summary>
       <section className="card">
         <div className="card-header">
           <div>
