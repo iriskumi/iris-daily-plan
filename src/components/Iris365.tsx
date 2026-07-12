@@ -16,7 +16,6 @@ import {
   getIris365WeekEntries,
   getIris365WeekStart,
   getIris365DopamineWeekStats,
-  IRIS_365_END_DATE,
   IRIS_365_HIGH_STIMULUS_PATTERNS,
   IRIS_365_PROOF_CATEGORIES,
   IRIS_365_START_DATE,
@@ -892,45 +891,28 @@ export default function Iris365() {
         <p className="page-subtitle">Build the foundation first. Small daily proof, not perfection.</p>
       </div>
 
-      <section className="iris365-countdown-card">
+      <section className="iris365-countdown-card iris365-countdown-card-compact">
         <div className="iris365-countdown-main">
           <div className="card-title-row">
             <CalendarDays size={17} />
-            <h3>Iris 365</h3>
+            <h3>{preStart ? 'Starts tomorrow' : `Day ${dayNumber} / 365`}</h3>
           </div>
-          <p>{preStart ? 'Starts tomorrow' : `Day ${dayNumber} / 365`}</p>
-          <strong>{preStart ? 'Get ready: choose your first tiny proof.' : phase.title}</strong>
-          <div className="iris365-motto">
-            <span>Build the foundation first.</span>
-            <span>Small daily proof, not perfection.</span>
-          </div>
+          <p>{phase.title}</p>
           <div className="iris365-progress-bar" aria-label={`Iris 365 progress ${progress}%`}>
             <span style={{ width: `${progress}%` }} />
           </div>
         </div>
-        <div className="iris365-countdown-stats">
-          <div>
-            <span>{formatDate(IRIS_365_START_DATE)}</span>
-            <small>Start date</small>
-          </div>
-          <div>
-            <span>{formatDate(IRIS_365_END_DATE)}</span>
-            <small>End date</small>
-          </div>
+        <div className="iris365-countdown-stats iris365-countdown-stats-compact">
           <div>
             <span>{daysRemaining}</span>
-            <small>days remaining</small>
+            <small>days left</small>
           </div>
           <div>
             <span>{progress}%</span>
-            <small>overall progress</small>
+            <small>progress</small>
           </div>
           <div>
             <span>Phase {phase.id}</span>
-            <small>{phase.title}</small>
-          </div>
-          <div>
-            <span>Day {phase.startDay}-{phase.endDay}</span>
             <small>{phase.focus}</small>
           </div>
         </div>
@@ -1109,6 +1091,9 @@ export default function Iris365() {
 
           {!preStart && (
             <>
+              <details className="hub-secondary-details iris365-secondary-details">
+                <summary>More check-ins, context &amp; urge tools</summary>
+
               <section className="iris365-growth-card">
                 <div className="card-header">
                   <div>
@@ -1445,6 +1430,7 @@ export default function Iris365() {
                   </label>
                 </details>
               </section>
+              </details>
             </>
           )}
         </div>
@@ -1567,6 +1553,9 @@ export default function Iris365() {
           ))}
         </section>
       </details>
+
+      <details className="hub-secondary-details iris365-archive-details">
+        <summary>Proof archive &amp; recent entries</summary>
 
       <section className="iris365-recent-card">
         <div className="card-header">
@@ -1694,6 +1683,7 @@ export default function Iris365() {
           )}
         </div>
       </section>
+      </details>
     </div>
   )
 }

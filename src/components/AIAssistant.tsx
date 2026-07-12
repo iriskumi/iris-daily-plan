@@ -614,6 +614,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         </div>
       )}
 
+      <details className="hub-secondary-details">
+        <summary>Reference &amp; connection details</summary>
       <div className="card mt-2">
         <div className="card-title" style={{ marginBottom: '0.6rem' }}>What connects here</div>
         <ul className="plan-list" style={{ lineHeight: 1.8 }}>
@@ -633,6 +635,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         <Bot size={14} style={{ color: 'var(--text-3)' }} />
         <span className="text-xs text-muted">Iris Daily Plan Hub v0.1 · No data leaves your device</span>
       </div>
+      </details>
     </div>
   )
 }

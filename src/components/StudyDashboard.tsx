@@ -433,6 +433,12 @@ export default function StudyDashboard() {
   const outputLongTermPercent = Math.min(100, (outputJourney.totalReps / ENGLISH_OUTPUT_LONG_TERM_TARGET) * 100)
   const latestListeningDraw = latestEnglishListeningDraw(listeningDrawState)
   const listeningDrawRedrawsRemaining = Math.max(0, listeningDrawState.redrawLimit - listeningDrawState.redrawsUsed)
+  const hasSelectedTask = Boolean(selectedQueueTask || selectedTemplate)
+  const selectedTaskTitle = selectedQueueTask?.title ?? selectedTemplate?.title ?? null
+  const selectedTaskCategory = selectedQueueTask?.category ?? selectedTemplate?.category ?? null
+  const previewDuration = selectedQueueTask?.durationMinutes
+    ?? selectedTemplate?.defaultDuration
+    ?? (Number(customTimerMinutes) || 25)
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowMs(Date.now()), 1000)
@@ -993,65 +999,211 @@ export default function StudyDashboard() {
     }
   }
 
-  function renderStudyTimerSection() {
-    return (
-      <section className="study-timer-card" id="study-focus-timer">
-        <div className="study-timer-header">
+  function renderTaskPickerStep() {
+    if (selectedQueueTask) {
+      return (
+        <div className="study-queue-task-selected">
           <div>
-            <div className="section-label">Selected task</div>
-            <h3>{selectedQueueTask?.title ?? selectedTemplate?.title ?? 'Choose a study task'}</h3>
-            <p>
-              {selectedQueueTask
-                ? `${selectedQueueTask.source === 'plan-queue' ? 'Plan queue' : 'Today queue'} · ${selectedQueueTask.category} · Study runs the timer.`
-                : 'Start a 25 or 50 minute focus session from the selected task.'}
-            </p>
-            {selectedQueueTask && (
-              <button type="button" className="study-change-task-link" onClick={() => setSelectedQueueTask(null)}>
-                Change task
+            <span className="study-queue-task-source">
+              {selectedQueueTask.source === 'plan-queue' ? 'From Plan queue' : 'From Today queue'}
+            </span>
+            <h4>{selectedQueueTask.title}</h4>
+            <p>{selectedQueueTask.category} · {selectedQueueTask.durationMinutes || 25} min suggested</p>
+          </div>
+          <button type="button" className="study-change-task-link" onClick={() => setSelectedQueueTask(null)}>
+            Pick from library instead
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <div className="study-category-grid study-category-grid-compact" aria-label="Study categories">
+          {STUDY_CATEGORIES.map(category => (
+            <button
+              key={category}
+              type="button"
+              className={`study-category-chip ${selectedCategory === category ? 'active' : ''}`}
+              onClick={() => selectCategory(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+        <div className="study-template-list study-template-list-compact">
+          {visibleTemplates.map(template => (
+            <button
+              key={template.id}
+              type="button"
+              className={`study-template-card study-template-card-compact ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
+              onClick={() => {
+                setSelectedTemplateId(template.id)
+                setSelectedQueueTask(null)
+                setSessionStartMessage(null)
+                setCustomTimerMinutes(String(template.defaultDuration))
+              }}
+            >
+              <div className="study-template-header">
+                <div>
+                  <h3>{template.title}</h3>
+                  <p>{template.defaultDuration} min · {template.energy} energy</p>
+                </div>
+                {selectedTemplate?.id === template.id && <span>Selected</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      </>
+    )
+  }
+
+  function renderSelectedTaskPreview() {
+    if (!selectedTemplate || selectedQueueTask) return null
+    return (
+      <details className="study-task-preview-details">
+        <summary>Task details &amp; copy shortcuts</summary>
+        <aside className="study-selected-panel" aria-label="Selected study task preview">
+          <div className="study-duration-row">
+            <span>{selectedTemplate.defaultDuration} min default</span>
+            {selectedTemplate.alternativeDurations.map(duration => (
+              <span key={duration}>{duration} min</span>
+            ))}
+          </div>
+          <div className="study-preview-block">
+            <strong>Resource</strong>
+            <p>{selectedTemplate.resourceSuggestion}</p>
+          </div>
+          <div className="study-preview-block">
+            <strong>Method</strong>
+            <p>{selectedTemplate.studyMethod}</p>
+          </div>
+          <div className="study-preview-block">
+            <strong>Obsidian</strong>
+            <p>{selectedTemplate.noteDestination}</p>
+          </div>
+          {selectedTemplate.subtasks.length > 0 && (
+            <ul className="study-subtask-list">
+              {selectedTemplate.subtasks.map(subtask => (
+                <li key={subtask}>{subtask}</li>
+              ))}
+            </ul>
+          )}
+          <div className="study-copy-row">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => copyText('path', selectedTemplate.noteDestination)}
+            >
+              {copied === 'path' ? <Check size={14} /> : <Copy size={14} />}
+              {copied === 'path' ? 'Copied' : 'Copy note path'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => copyText('summary', templateSummary())}
+            >
+              {copied === 'summary' ? <Check size={14} /> : <Clipboard size={14} />}
+              {copied === 'summary' ? 'Copied' : 'Copy task summary'}
+            </button>
+          </div>
+        </aside>
+      </details>
+    )
+  }
+
+  function renderStudyFocusHero() {
+    const timerPreview = hasSelectedTask
+      ? `${String(previewDuration).padStart(2, '0')}:00`
+      : '--:--'
+
+    return (
+      <section className="study-focus-hero" id="study-focus-timer">
+        <div className="study-focus-step study-focus-step-picker" id="study-task-picker">
+          <div className="study-focus-step-head">
+            <span className="study-step-num" aria-hidden="true">1</span>
+            <div>
+              <strong>Pick a task</strong>
+              <p>Choose one focus block from the library, or use a task sent from Today.</p>
+            </div>
+          </div>
+          {renderTaskPickerStep()}
+        </div>
+
+        <div className={`study-focus-step study-focus-step-start ${hasSelectedTask ? 'ready' : 'idle'}`}>
+          <div className="study-focus-step-head">
+            <span className="study-step-num" aria-hidden="true">2</span>
+            <div>
+              <strong>Start focus</strong>
+              <p>
+                {hasSelectedTask && selectedTaskTitle
+                  ? `${selectedTaskTitle}${selectedTaskCategory ? ` · ${selectedTaskCategory}` : ''}`
+                  : 'Select a task above, then start the timer.'}
+              </p>
+            </div>
+            <Clock size={18} />
+          </div>
+
+          <div className="study-timer-face">
+            <span>{timerPreview}</span>
+            <small>{hasSelectedTask ? 'Planned duration · timer starts on click' : 'Waiting for task selection'}</small>
+            <div className="study-progress-bar" aria-label="Timer progress 0%">
+              <span style={{ width: '0%' }} />
+            </div>
+          </div>
+
+          <div className="study-timer-controls">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!hasSelectedTask}
+              title={hasSelectedTask ? undefined : 'Pick a task first'}
+              onClick={() => startSelectedStudySession(25)}
+            >
+              <Play size={14} />
+              Start 25-min Study
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={!hasSelectedTask}
+              title={hasSelectedTask ? undefined : 'Pick a task first'}
+              onClick={() => startSelectedStudySession(50)}
+            >
+              <Play size={14} />
+              Start 50-min Study
+            </button>
+            <div className="study-timer-custom">
+              <input
+                aria-label="Custom focus duration minutes"
+                type="number"
+                min="1"
+                step="1"
+                value={customTimerMinutes}
+                disabled={!hasSelectedTask}
+                onChange={event => setCustomTimerMinutes(event.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={!hasSelectedTask}
+                onClick={startCustomDurationSession}
+              >
+                Start custom Study
               </button>
-            )}
+            </div>
           </div>
-          <Clock size={18} />
+          {sessionStartMessage && (
+            <div className="study-start-message">
+              <span>{sessionStartMessage}</span>
+              <button type="button" className="study-change-task-link" onClick={showChooseTaskMessage}>
+                Show task list
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="study-timer-face">
-          <span>--:--</span>
-          <div className="study-progress-bar" aria-label="Timer progress 0%">
-            <span style={{ width: '0%' }} />
-          </div>
-        </div>
-
-        <div className="study-timer-controls">
-          <button type="button" className="btn btn-primary" onClick={() => startSelectedStudySession(25)}>
-            <Play size={14} />
-            Start 25-min Study
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => startSelectedStudySession(50)}>
-            <Play size={14} />
-            Start 50-min Study
-          </button>
-          <div className="study-timer-custom">
-            <input
-              aria-label="Custom focus duration minutes"
-              type="number"
-              min="1"
-              step="1"
-              value={customTimerMinutes}
-              onChange={event => setCustomTimerMinutes(event.target.value)}
-            />
-            <button type="button" className="btn btn-secondary" onClick={startCustomDurationSession}>
-              Start custom Study
-            </button>
-          </div>
-        </div>
-        {sessionStartMessage && (
-          <div className="study-start-message">
-            <span>{sessionStartMessage}</span>
-            <button type="button" className="study-change-task-link" onClick={showChooseTaskMessage}>
-              Choose task
-            </button>
-          </div>
-        )}
+        {renderSelectedTaskPreview()}
       </section>
     )
   }
@@ -1090,8 +1242,10 @@ export default function StudyDashboard() {
 
       {activeSession && renderActiveSessionCompactBanner()}
 
-      {!activeSession && renderStudyTimerSection()}
+      {!activeSession && renderStudyFocusHero()}
 
+      <details className="hub-secondary-details study-secondary-details">
+        <summary>Daily study target &amp; progress</summary>
       <section className="study-hero-card study-hero-card-compact">
         <div className="study-hero-main">
           <div className="card-title-row">
@@ -1137,6 +1291,7 @@ export default function StudyDashboard() {
           </div>
         </div>
       </section>
+      </details>
 
       <details className="study-secondary-details">
         <summary>Projects &amp; targets (Coursera, course plan)</summary>
@@ -1177,6 +1332,9 @@ export default function StudyDashboard() {
         </ol>
       </section>
       </details>
+
+      <details className="study-secondary-details">
+        <summary>English practice tools</summary>
 
       <section className="english-output-journey-card english-output-journey-card-compact">
         <div className="english-output-journey-main">
@@ -1383,108 +1541,10 @@ export default function StudyDashboard() {
           ))}
         </div>
       </section>
+      </details>
 
-      <section className="card" id="study-task-picker">
-        <div className="card-header">
-          <div>
-            <div className="section-label">Task library</div>
-            <div className="card-title">Study Task Picker</div>
-          </div>
-          <BookOpen size={16} />
-        </div>
-
-        <div className="study-category-grid" aria-label="Study categories">
-          {STUDY_CATEGORIES.map(category => (
-            <button
-              key={category}
-              type="button"
-              className={`study-category-chip ${selectedCategory === category ? 'active' : ''}`}
-              onClick={() => selectCategory(category)}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        <div className="study-picker-layout">
-          <div className="study-template-list">
-            {visibleTemplates.map(template => (
-              <button
-                key={template.id}
-                type="button"
-                className={`study-template-card ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
-                onClick={() => {
-                  setSelectedTemplateId(template.id)
-                  setSelectedQueueTask(null)
-                  setSessionStartMessage(null)
-                }}
-              >
-                <div className="study-template-header">
-                  <div>
-                    <h3>{template.title}</h3>
-                    <p>
-                      {template.defaultDuration} min default · {template.energy} energy · {template.type}
-                    </p>
-                  </div>
-                  <span>{template.eveningFriendly ? 'Evening OK' : 'Daytime better'}</span>
-                </div>
-                <p className="study-template-method">{template.studyMethod}</p>
-              </button>
-            ))}
-          </div>
-
-          {selectedTemplate && (
-            <aside className="study-selected-panel" aria-label="Selected study task preview">
-              <div className="section-label">Selected task</div>
-              <h3>{selectedTemplate.title}</h3>
-              <div className="study-duration-row">
-                <span>{selectedTemplate.defaultDuration} min default</span>
-                {selectedTemplate.alternativeDurations.map(duration => (
-                  <span key={duration}>{duration} min</span>
-                ))}
-              </div>
-              <div className="study-preview-block">
-                <strong>Resource</strong>
-                <p>{selectedTemplate.resourceSuggestion}</p>
-              </div>
-              <div className="study-preview-block">
-                <strong>Method</strong>
-                <p>{selectedTemplate.studyMethod}</p>
-              </div>
-              <div className="study-preview-block">
-                <strong>Obsidian</strong>
-                <p>{selectedTemplate.noteDestination}</p>
-              </div>
-              {selectedTemplate.subtasks.length > 0 && (
-                <ul className="study-subtask-list">
-                  {selectedTemplate.subtasks.map(subtask => (
-                    <li key={subtask}>{subtask}</li>
-                  ))}
-                </ul>
-              )}
-              <div className="study-copy-row">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => copyText('path', selectedTemplate.noteDestination)}
-                >
-                  {copied === 'path' ? <Check size={14} /> : <Copy size={14} />}
-                  {copied === 'path' ? 'Copied' : 'Copy note path'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => copyText('summary', templateSummary())}
-                >
-                  {copied === 'summary' ? <Check size={14} /> : <Clipboard size={14} />}
-                  {copied === 'summary' ? 'Copied' : 'Copy task summary'}
-                </button>
-              </div>
-            </aside>
-          )}
-        </div>
-      </section>
-
+      <details className="study-secondary-details">
+        <summary>Custom one-off task</summary>
       <section className="card">
         <div className="card-header">
           <div>
@@ -1580,7 +1640,10 @@ export default function StudyDashboard() {
           </button>
         </div>
       </section>
+      </details>
 
+      <details className="study-secondary-details">
+        <summary>Daily study log &amp; review</summary>
       <section className="card study-review-section">
         <div className="card-header">
           <div>
@@ -1865,6 +1928,7 @@ export default function StudyDashboard() {
           </div>
         )}
       </section>
+      </details>
     </div>
   )
 }

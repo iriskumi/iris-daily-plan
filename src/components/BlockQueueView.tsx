@@ -163,9 +163,7 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
         <div>
           <div className="section-label">Block Queue</div>
           <h3>Today’s flexible blocks</h3>
-          <p>
-            Plan 决定今天做什么；Study 负责计时和完成记录。
-          </p>
+          <p>Pick the next block, start in Study. Plan decides what; Study runs the timer.</p>
         </div>
         <div className="block-queue-mode">
           <label htmlFor="day-mode-select">Day mode</label>
@@ -183,36 +181,9 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
         </div>
       </div>
 
-      <div className="block-queue-overview">
-        <div className="block-queue-stat">
-          <span>{modeConfig?.label ?? 'Normal Day'}</span>
-          <small>selected mode</small>
-        </div>
-        <div className="block-queue-stat">
-          <span>{queue.targetBlocks}</span>
-          <small>target blocks</small>
-        </div>
-        <div className="block-queue-stat">
-          <span>{overview.completedBlocks}</span>
-          <small>completed</small>
-        </div>
-        <div className="block-queue-stat">
-          <span>{overview.remainingBlocks}</span>
-          <small>remaining</small>
-        </div>
-        <div className="block-queue-stat">
-          <span>{completedStudyMinutes}</span>
-          <small>session minutes</small>
-        </div>
-        <div className="block-queue-stat">
-          <span>{overview.mustDone}/{overview.mustTotal}</span>
-          <small>must-do</small>
-        </div>
-      </div>
-
-      <div className="block-queue-next">
+      <div className="block-queue-next block-queue-next-hero">
         <div>
-          <div className="section-label">Suggested next block</div>
+          <div className="section-label">Start here</div>
           <strong>{nextBlock ? queueSessionTitle(nextBlock, 25) : 'No active blocks left'}</strong>
           <span>
             {nextBlock
@@ -242,6 +213,25 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
             </button>
           </>
         )}
+      </div>
+
+      <div className="block-queue-overview block-queue-overview-compact">
+        <div className="block-queue-stat">
+          <span>{overview.completedBlocks}/{queue.targetBlocks}</span>
+          <small>blocks done</small>
+        </div>
+        <div className="block-queue-stat">
+          <span>{completedStudyMinutes}</span>
+          <small>session min</small>
+        </div>
+        <div className="block-queue-stat">
+          <span>{overview.mustDone}/{overview.mustTotal}</span>
+          <small>must-do</small>
+        </div>
+        <div className="block-queue-stat">
+          <span>{modeConfig?.label ?? 'Normal Day'}</span>
+          <small>mode</small>
+        </div>
       </div>
 
       {message && <div className="block-queue-message">{message}</div>}
@@ -289,53 +279,34 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
                 <div className="block-queue-actions" aria-label={`Actions for ${block.title}`}>
                   <button
                     type="button"
-                    onClick={() => openQueueBlockInStudy(block)}
+                    className="block-queue-action-primary"
+                    onClick={() => {
+                      const result = startStudySessionFromQueueBlock(block, 25)
+                      setMessage(result.message)
+                    }}
                   >
+                    <Play size={13} />
+                    Start 25 min
+                  </button>
+                  <button type="button" onClick={() => openQueueBlockInStudy(block)}>
                     <Play size={13} />
                     Open in Study
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => completeWithoutTimer(block)}
-                  >
+                  <button type="button" onClick={() => completeWithoutTimer(block)}>
                     <Check size={13} />
-                    Done without timer
+                    Done
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => hideBlockForToday(block, 'later')}
-                  >
-                    Later
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateBlock(block.id, { status: 'skipped' }, 'Block skipped. Move to the next useful block.')}
-                  >
-                    Skip
-                  </button>
-                  <button type="button" onClick={() => convertBlock(block)}>
-                    <RotateCcw size={13} />
-                    Convert to 25-min version
-                  </button>
-                  <button type="button" onClick={() => hideBlockForToday(block, 'removed')}>
-                    Remove from today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveBlock(index, -1)}
-                    disabled={index === 0}
-                    aria-label={`Move ${block.title} up`}
-                  >
-                    <ArrowUp size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveBlock(index, 1)}
-                    disabled={index === blocks.length - 1}
-                    aria-label={`Move ${block.title} down`}
-                  >
-                    <ArrowDown size={13} />
-                  </button>
+                  <details className="block-queue-actions-more">
+                    <summary>More</summary>
+                    <div className="block-queue-actions-secondary">
+                      <button type="button" onClick={() => hideBlockForToday(block, 'later')}>Later</button>
+                      <button type="button" onClick={() => updateBlock(block.id, { status: 'skipped' }, 'Block skipped. Move to the next useful block.')}>Skip</button>
+                      <button type="button" onClick={() => convertBlock(block)}><RotateCcw size={13} />Convert to 25 min</button>
+                      <button type="button" onClick={() => hideBlockForToday(block, 'removed')}>Remove from today</button>
+                      <button type="button" onClick={() => moveBlock(index, -1)} disabled={index === 0} aria-label={`Move ${block.title} up`}><ArrowUp size={13} /></button>
+                      <button type="button" onClick={() => moveBlock(index, 1)} disabled={index === blocks.length - 1} aria-label={`Move ${block.title} down`}><ArrowDown size={13} /></button>
+                    </div>
+                  </details>
                 </div>
               </article>
             )

@@ -47,6 +47,7 @@ export default function MediaTab() {
   const [draft, setDraft] = useState(initialDraft)
   const [filter, setFilter] = useState<MediaFilter>('All')
   const [message, setMessage] = useState('')
+  const [showAddForm, setShowAddForm] = useState(false)
 
   const entries = useMemo(() => store.entries.filter(entry => matchesFilter(entry, filter)), [filter, store.entries])
 
@@ -65,6 +66,7 @@ export default function MediaTab() {
     const result = addMediaEntry(draft, store)
     setStore(result.store)
     setDraft(initialDraft)
+    setShowAddForm(false)
     setMessage(`${result.entry.title} saved.`)
   }
 
@@ -78,29 +80,54 @@ export default function MediaTab() {
     <div className="page media-tab-page">
       <div className="page-header">
         <h2 className="page-title">Media</h2>
-        <p className="page-subtitle">记录最近看过、听过、读过、想试试的东西。A cozy log for books, shows, podcasts, audiobooks, and comfort watching.</p>
+        <p className="page-subtitle">Browse your log first. Add entries when something is worth remembering.</p>
       </div>
 
-      <section className="life-system-card media-links-card">
-        <div>
-          <div className="section-label">Media shortcuts</div>
-          <h3 className="media-section-title">Cozy shelf, not homework</h3>
-          <p className="media-helper media-helper-cn">想找书、有声书，或者顺手打开表达练习。</p>
+      <div className="media-shortcut-row">
+        <a href="https://iris-book-finder.vercel.app/" target="_blank" rel="noreferrer">
+          <BookOpen size={16} />
+          Find books / audiobooks
+          <ExternalLink size={14} />
+        </a>
+        <a href="https://iris-expression-review-hub.vercel.app/" target="_blank" rel="noreferrer">
+          <Copy size={16} />
+          Expression Review Hub
+          <ExternalLink size={14} />
+        </a>
+      </div>
+
+      <section className="life-system-card media-log-section media-log-primary">
+        <div className="life-card-heading">
+          <div>
+            <div className="section-label">Your media log</div>
+            <h3 className="media-section-title">{entries.length} item{entries.length === 1 ? '' : 's'}</h3>
+            <p className="media-helper">Was it actually good for me?</p>
+          </div>
+          <button className="btn-primary" type="button" onClick={() => setShowAddForm(value => !value)}>
+            <Plus size={14} />
+            {showAddForm ? 'Hide form' : 'Add entry'}
+          </button>
         </div>
-        <div className="life-link-row">
-          <a href="https://iris-book-finder.vercel.app/" target="_blank" rel="noreferrer">
-            <BookOpen size={16} />
-            Find books / audiobooks
-            <ExternalLink size={14} />
-          </a>
-          <a href="https://iris-expression-review-hub.vercel.app/" target="_blank" rel="noreferrer">
-            <Copy size={16} />
-            Expression Review Hub
-            <ExternalLink size={14} />
-          </a>
+        <div className="life-filter-row">{MEDIA_FILTERS.map(item => <button key={item} type="button" className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div>
+        <div className="life-card-list">
+          {entries.length === 0 ? <p className="life-empty">No media here yet.</p> : entries.map(entry => (
+            <article className="life-log-card" key={entry.id}>
+              <div>
+                <h3>{entry.title}</h3>
+                <p>{entry.type} · {entry.language} · {entry.status} · {entry.sourcePlatform}</p>
+                {entry.notes && <small>{entry.notes}</small>}
+                <div className="life-tag-row">{[...entry.mood, ...entry.usefulness].map(tag => <span key={tag}>{tag}</span>)}</div>
+              </div>
+              <div className="life-log-actions">
+                <button type="button" onClick={() => navigator.clipboard.writeText(`${entry.title} — ${entry.type} — ${entry.status}`)}>Copy quick note</button>
+                <button type="button" onClick={() => copyMediaNote(entry)}>Copy Obsidian note</button>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
+      {showAddForm && (
       <section className="life-system-card media-form-card">
         <div className="life-card-heading">
           <div>
@@ -129,7 +156,10 @@ export default function MediaTab() {
           </div>
         </details>
       </section>
+      )}
 
+      <details className="hub-secondary-details">
+        <summary>Comfort shelves &amp; recommendations</summary>
       <section className="life-system-card media-pools-card">
         <div className="section-label">Comfort shelves</div>
         <p className="media-helper">Low-pressure places to look when you want something familiar, funny, or gentle.</p>
@@ -142,33 +172,8 @@ export default function MediaTab() {
           ))}
         </div>
       </section>
+      </details>
 
-      <section className="life-system-card media-log-section">
-        <div className="life-card-heading">
-          <div>
-            <div className="section-label">Media log</div>
-            <h3 className="media-section-title">{entries.length} item{entries.length === 1 ? '' : 's'}</h3>
-            <p className="media-helper">Was it actually good for me?</p>
-          </div>
-        </div>
-        <div className="life-filter-row">{MEDIA_FILTERS.map(item => <button key={item} type="button" className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div>
-        <div className="life-card-list">
-          {entries.length === 0 ? <p className="life-empty">No media here yet.</p> : entries.map(entry => (
-            <article className="life-log-card" key={entry.id}>
-              <div>
-                <h3>{entry.title}</h3>
-                <p>{entry.type} · {entry.language} · {entry.status} · {entry.sourcePlatform}</p>
-                {entry.notes && <small>{entry.notes}</small>}
-                <div className="life-tag-row">{[...entry.mood, ...entry.usefulness].map(tag => <span key={tag}>{tag}</span>)}</div>
-              </div>
-              <div className="life-log-actions">
-                <button type="button" onClick={() => navigator.clipboard.writeText(`${entry.title} — ${entry.type} — ${entry.status}`)}>Copy quick note</button>
-                <button type="button" onClick={() => copyMediaNote(entry)}>Copy Obsidian note</button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
       {message && <div className="start-now-message">{message}</div>}
     </div>
   )

@@ -79,45 +79,22 @@ export default function ExerciseTab() {
     <div className="page exercise-tab-page">
       <div className="page-header">
         <h2 className="page-title">Exercise</h2>
-        <p className="page-subtitle">Iris Movement System · Never miss twice.</p>
+        <p className="page-subtitle">Log movement first. Plans and routines are reference below.</p>
       </div>
 
-      <section className="life-system-card movement-mission-card">
-        <div className="section-label">Iris Movement System</div>
-        <h3>目标不是减肥，也不是三个月练出马甲线。</h3>
-        <p>目标是把身体恢复成能够支撑未来 5–10 年学习、工作、英语和 AI 项目的状态。</p>
-        <p>运动是 Life System 的一部分，不是另一个用来责备自己的任务。</p>
-      </section>
-
-      <section className="life-stat-grid">
+      <section className="life-stat-grid exercise-stat-grid-compact">
         <div><strong>{stats.todayMinutes}</strong><span>today min</span></div>
         <div><strong>{stats.thisWeekMinutes}</strong><span>week min</span></div>
         <div><strong>{stats.daysMovedThisWeek}</strong><span>days moved</span></div>
         <div><strong>{stats.monthlyChallengeProgress}</strong><span>monthly 10m days</span></div>
       </section>
 
-      <section className="life-system-card" id="exercise-movement-log">
+      <section className="life-system-card exercise-focus-card" id="exercise-movement-log">
         <div className="life-card-heading">
           <div>
-            <div className="section-label">Never miss twice</div>
-            <h3>{stats.neverMissTwiceStatus}</h3>
-            <p>Last movement: {stats.lastMovementDate || 'not logged yet'}</p>
-          </div>
-          <button className="btn-secondary" type="button" onClick={() => copyMovement()}><Copy size={14} />Copy Markdown</button>
-        </div>
-      </section>
-
-      <section className="life-system-card">
-        <div className="section-label">Monthly challenge</div>
-        <h3>{challenge.title}</h3>
-        <p>{challenge.goal}</p>
-      </section>
-
-      <section className="life-system-card">
-        <div className="life-card-heading">
-          <div>
-            <div className="section-label">Exercise check-in</div>
+            <div className="section-label">Step 1 · Log movement</div>
             <h3>Save today’s movement</h3>
+            <p>{stats.neverMissTwiceStatus} · Last: {stats.lastMovementDate || 'not logged yet'}</p>
           </div>
           <button className="btn-primary" type="button" onClick={saveMovement}><Plus size={14} />Save movement</button>
         </div>
@@ -130,6 +107,25 @@ export default function ExerciseTab() {
           <label className="life-field">Energy after<select value={draft.energyAfter} onChange={event => setDraft({ ...draft, energyAfter: event.target.value })}>{EXERCISE_ENERGY_AFTER.map(item => <option key={item}>{item}</option>)}</select></label>
           <label className="life-field wide">Notes<textarea value={draft.notes} onChange={event => setDraft({ ...draft, notes: event.target.value })} placeholder="One line is enough." /></label>
         </div>
+        <div className="exercise-form-footer">
+          <button className="btn-secondary" type="button" onClick={() => copyMovement()}><Copy size={14} />Copy Markdown</button>
+        </div>
+      </section>
+
+      <details className="hub-secondary-details">
+        <summary>Movement reference (mission, weekly plan, strength routines)</summary>
+
+      <section className="life-system-card movement-mission-card">
+        <div className="section-label">Iris Movement System</div>
+        <h3>目标不是减肥，也不是三个月练出马甲线。</h3>
+        <p>目标是把身体恢复成能够支撑未来 5–10 年学习、工作、英语和 AI 项目的状态。</p>
+        <p>运动是 Life System 的一部分，不是另一个用来责备自己的任务。</p>
+      </section>
+
+      <section className="life-system-card">
+        <div className="section-label">Monthly challenge</div>
+        <h3>{challenge.title}</h3>
+        <p>{challenge.goal}</p>
       </section>
 
       <section className="life-system-card">
@@ -146,6 +142,8 @@ export default function ExerciseTab() {
           <div className="recommendation-card"><h3>Morning Walk Reset</h3><ol><li>Wake up</li><li>Drink water</li><li>Holmesglen Reserve 20–30 min</li><li>Shower</li><li>Breakfast</li><li>Open Iris Daily Hub</li><li>Start first deep work / study task</li></ol></div>
         </div>
       </section>
+      </details>
+
       {message && <div className="start-now-message">{message}</div>}
     </div>
   )

@@ -393,7 +393,7 @@ export default function TaskInbox() {
               <span style={{ width: `${Math.round(doneRatio * 100)}%` }} />
             </div>
             <p className="page-subtitle">
-              {pendingCount} pending · {doneCount} done · add to today's queue to work on a task
+              {pendingCount} pending · {doneCount} done · Add to today → Start in Study
             </p>
           </div>
           <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -552,19 +552,27 @@ export default function TaskInbox() {
                       {isActiveTask(task) && (
                         <div className="task-action-row">
                           {!inTodayQueue ? (
-                            <button type="button" className="btn btn-secondary task-action-btn" onClick={() => addTaskToToday(task.id)}>
+                            <button type="button" className="btn btn-primary task-action-btn" onClick={() => addTaskToToday(task.id)}>
                               <CalendarPlus size={13} />
                               Add to today
                             </button>
                           ) : (
-                            <button type="button" className="btn btn-secondary task-action-btn" onClick={() => removeTaskFromToday(task.id)}>
-                              Remove from today
+                            <>
+                              <button type="button" className="btn btn-primary task-action-btn" onClick={() => openTaskInStudy(task)}>
+                                <BookOpen size={13} />
+                                Open in Study
+                              </button>
+                              <button type="button" className="btn btn-secondary task-action-btn" onClick={() => removeTaskFromToday(task.id)}>
+                                Remove from today
+                              </button>
+                            </>
+                          )}
+                          {inTodayQueue ? null : (
+                            <button type="button" className="btn btn-secondary task-action-btn" onClick={() => openTaskInStudy(task)}>
+                              <BookOpen size={13} />
+                              Open in Study
                             </button>
                           )}
-                          <button type="button" className="btn btn-primary task-action-btn" onClick={() => openTaskInStudy(task)}>
-                            <BookOpen size={13} />
-                            Open in Study
-                          </button>
                         </div>
                       )}
                     </div>

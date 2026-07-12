@@ -663,7 +663,7 @@ export default function StartNowDashboard({
         </section>
       ) : (
         <>
-          <section className="today-start-panel">
+          <section className="today-start-panel today-start-panel-compact">
             <div className={`today-start-photo-panel ${hasCustomHeroImage ? 'has-custom-image' : ''}`}>
               {hasCustomHeroImage ? (
                 <HeroImageViewport image={heroImage} className="today-hero-image-viewport" />
@@ -689,30 +689,48 @@ export default function StartNowDashboard({
               <h2>Start</h2>
               <p>先开始一个小块。</p>
             </div>
-            <div className="today-start-actions">
-              <button type="button" className="today-start-action-card primary" onClick={openStudyStart}>
-                <span className="start-action-card__icon"><BookOpen size={20} /></span>
-                <span className="start-action-card__content">
-                  <span className="start-action-card__label">Study</span>
-                  <span className="start-action-card__helper">Start a focus session</span>
-                </span>
-              </button>
-              <button type="button" className="today-start-action-card" onClick={openEnglishStart}>
-                <span className="start-action-card__icon"><Mic size={20} /></span>
-                <span className="start-action-card__content">
-                  <span className="start-action-card__label">English</span>
-                  <span className="start-action-card__helper">Listening or output</span>
-                </span>
-              </button>
-              <button type="button" className="today-start-action-card" onClick={openExerciseLog}>
-                <span className="start-action-card__icon"><Dumbbell size={20} /></span>
-                <span className="start-action-card__content">
-                  <span className="start-action-card__label">Exercise</span>
-                  <span className="start-action-card__helper">Log movement</span>
-                </span>
-              </button>
-            </div>
           </section>
+
+          <section className="today-next-useful-card today-next-prominent">
+            <div className="today-next-copy">
+              <span className="today-soft-label">Next</span>
+              <h3>{nextTitle}</h3>
+              <div className="today-next-chips">
+                <span>{nextCategory}</span>
+                <span>{nextDuration} min</span>
+              </div>
+            </div>
+            <button type="button" className="btn btn-primary today-next-primary" onClick={handleNextUsefulThing}>
+              <Play size={15} />
+              {nextBlock ? 'Start 25 min' : 'Open Study'}
+            </button>
+            {nextBlock && (
+              <button type="button" className="today-next-secondary" onClick={() => openQueueBlockInStudy(nextBlock)}>
+                Custom duration in Study
+              </button>
+            )}
+          </section>
+
+          <div className="today-start-actions today-start-actions-compact">
+            <button type="button" className="today-start-action-card" onClick={openStudyStart}>
+              <span className="start-action-card__icon"><BookOpen size={18} /></span>
+              <span className="start-action-card__content">
+                <span className="start-action-card__label">Study</span>
+              </span>
+            </button>
+            <button type="button" className="today-start-action-card" onClick={openEnglishStart}>
+              <span className="start-action-card__icon"><Mic size={18} /></span>
+              <span className="start-action-card__content">
+                <span className="start-action-card__label">English</span>
+              </span>
+            </button>
+            <button type="button" className="today-start-action-card" onClick={openExerciseLog}>
+              <span className="start-action-card__icon"><Dumbbell size={18} /></span>
+              <span className="start-action-card__content">
+                <span className="start-action-card__label">Exercise</span>
+              </span>
+            </button>
+          </div>
 
           <div className="today-progress-strip" aria-label="Today progress">
             {progressItems.map(item => (
@@ -771,28 +789,6 @@ export default function StartNowDashboard({
             </>
           ) : (
             <WeekBars days={weekStudyBars} unit="m" className="today-week-bars muted" />
-          )}
-        </section>
-      )}
-
-      {!activeSession && !activeStudySession && (
-        <section className="today-next-useful-card">
-          <div className="today-next-copy">
-            <span className="today-soft-label">Next</span>
-            <h3>{nextTitle}</h3>
-            <div className="today-next-chips">
-              <span>{nextCategory}</span>
-              <span>{nextDuration} min</span>
-            </div>
-          </div>
-          <button type="button" className="btn btn-primary today-next-primary" onClick={handleNextUsefulThing}>
-            <Play size={15} />
-            {nextBlock ? 'Start 25 min' : 'Open Study'}
-          </button>
-          {nextBlock && (
-            <button type="button" className="today-next-secondary" onClick={() => openQueueBlockInStudy(nextBlock)}>
-              Custom duration in Study
-            </button>
           )}
         </section>
       )}

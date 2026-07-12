@@ -14366,6 +14366,65 @@ textarea:focus,
 .badge-today-queue{background:rgba(185,131,143,.16);color:var(--color-accent-strong);border:1px solid rgba(185,131,143,.22)}
 .study-secondary-details{margin:1rem 0;border-radius:16px;border:1px solid rgba(185,131,143,.12);background:rgba(255,253,248,.6);padding:.35rem .85rem}
 .study-secondary-details summary{cursor:pointer;font-weight:600;color:rgba(74,58,48,.82);padding:.55rem 0}
+.study-secondary-details > section,
+.study-secondary-details > .english-output-journey-card,
+.study-secondary-details > .english-listening-draw-card,
+.study-secondary-details > .english-reference-card{margin-top:.5rem;margin-bottom:.35rem}
+.study-focus-hero{margin-bottom:1.2rem;padding:1.35rem 1.4rem;border:1px solid rgba(198,168,148,.42);border-radius:24px;background:linear-gradient(165deg,rgba(255,252,246,.98),rgba(247,238,229,.88));box-shadow:0 18px 42px rgba(90,62,52,.07)}
+.study-focus-step{padding:1rem 0;border-top:1px solid rgba(185,131,143,.14)}
+.study-focus-step:first-child{padding-top:0;border-top:0}
+.study-focus-step-head{display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.85rem}
+.study-focus-step-head > div{flex:1;min-width:0}
+.study-focus-step-head strong{display:block;color:var(--text);font-size:1rem;font-weight:600}
+.study-focus-step-head p{margin:.18rem 0 0;color:var(--text-2);font-size:.86rem;line-height:1.45}
+.study-focus-step-head svg{color:var(--accent);flex-shrink:0;margin-top:.15rem}
+.study-step-num{width:1.7rem;height:1.7rem;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;background:rgba(185,131,143,.16);color:var(--accent);flex-shrink:0}
+.study-focus-step-start.ready .study-step-num{background:var(--accent);color:#fff}
+.study-focus-step-start.idle .study-timer-face > span{color:rgba(74,58,48,.35)}
+.study-focus-step-start.idle .study-timer-controls .btn:disabled{opacity:.48;cursor:not-allowed}
+.study-category-grid-compact{margin-top:.15rem}
+.study-template-list-compact{max-height:240px;overflow-y:auto;padding-right:.15rem;margin-top:.65rem}
+.study-template-card-compact{padding:.75rem .85rem}
+.study-template-card-compact .study-template-header{margin-bottom:0}
+.study-template-card-compact .study-template-header h3{font-size:.94rem}
+.study-template-card-compact .study-template-header p{font-size:.78rem;margin-top:.12rem}
+.study-queue-task-selected{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:.85rem 1rem;border:1px solid rgba(185,131,143,.24);border-radius:18px;background:rgba(255,253,248,.92)}
+.study-queue-task-selected h4{margin:.2rem 0 .15rem;font-size:1rem;color:var(--text)}
+.study-queue-task-selected p{margin:0;color:var(--text-2);font-size:.84rem}
+.study-queue-task-source{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
+.study-task-preview-details{margin-top:.85rem;border-top:1px dashed rgba(185,131,143,.22);padding-top:.65rem}
+.study-task-preview-details summary{cursor:pointer;font-size:.88rem;font-weight:600;color:rgba(74,58,48,.78);padding:.35rem 0}
+.study-task-preview-details .study-selected-panel{margin-top:.55rem;padding:0;border:0;background:transparent}
+.hub-secondary-details{margin:1rem 0;border-radius:16px;border:1px solid rgba(185,131,143,.12);background:rgba(255,253,248,.6);padding:.35rem .85rem}
+.hub-secondary-details summary{cursor:pointer;font-weight:600;color:rgba(74,58,48,.82);padding:.55rem 0}
+.hub-secondary-details > section,
+.hub-secondary-details > .life-system-card,
+.hub-secondary-details > .page{margin-top:.5rem;margin-bottom:.35rem}
+.today-start-panel-compact{display:grid;grid-template-columns:minmax(88px,120px) minmax(0,1fr);gap:.85rem;align-items:center;margin-bottom:.65rem}
+.today-start-panel-compact .today-start-actions{display:none}
+.today-next-prominent{margin-bottom:.55rem;border:1px solid rgba(185,131,143,.28);border-radius:22px;padding:1rem 1.1rem;background:linear-gradient(165deg,rgba(255,252,246,.98),rgba(247,238,229,.9));box-shadow:0 14px 34px rgba(90,62,52,.06)}
+.today-start-actions-compact{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem;margin-bottom:.75rem}
+.today-start-actions-compact .today-start-action-card{min-height:52px;padding:.55rem .65rem;justify-content:center}
+.today-start-actions-compact .start-action-card__content{align-items:center;text-align:center}
+.block-queue-next-hero{margin:1rem 0;padding:1rem 1.1rem;border:1px solid rgba(185,131,143,.28);border-radius:20px;background:linear-gradient(165deg,rgba(255,252,246,.98),rgba(247,238,229,.88))}
+.block-queue-overview-compact{grid-template-columns:repeat(4,minmax(0,1fr));gap:.45rem;margin-bottom:.85rem}
+.block-queue-overview-compact .block-queue-stat{padding:.45rem .55rem;min-width:0}
+.block-queue-action-primary{font-weight:600}
+.block-queue-actions-more{display:inline-flex;align-items:center}
+.block-queue-actions-more summary{cursor:pointer;font-size:.82rem;font-weight:600;color:var(--accent);list-style:none}
+.block-queue-actions-secondary{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.45rem}
+.time-block-actions-primary{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-bottom:.55rem}
+.time-block-actions-more{display:inline-flex;align-items:center}
+.time-block-actions-more summary{cursor:pointer;font-size:.82rem;font-weight:600;color:var(--accent);list-style:none}
+.time-block-actions-secondary{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.45rem}
+.media-shortcut-row{display:flex;flex-wrap:wrap;gap:.55rem;margin-bottom:1rem}
+.media-shortcut-row a{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .7rem;border-radius:999px;border:1px solid rgba(185,131,143,.18);background:rgba(255,253,248,.88);color:var(--text);font-size:.84rem;text-decoration:none}
+.media-log-primary{margin-bottom:1rem}
+.exercise-focus-card{margin-bottom:1rem}
+.exercise-stat-grid-compact{margin-bottom:.85rem}
+.exercise-form-footer{margin-top:.65rem}
+.iris365-countdown-card-compact .iris365-countdown-stats-compact{grid-template-columns:repeat(3,minmax(0,1fr))}
+.plan-schedule-panel{margin:0 1rem 1.2rem;max-width:920px}
 .study-hero-card-compact{margin-top:1rem}
 .study-hero-card-compact .study-target-number{font-size:1.6rem}
 .home-status-card-compact{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}

@@ -1155,6 +1155,8 @@ function PlanWorkspace({
       <div className="page plan-page">
         <BlockQueueView onOpenStudy={onOpenStudy} />
       </div>
+      <details className="hub-secondary-details plan-schedule-panel">
+        <summary>Daily schedule, checklists &amp; review</summary>
       <DailyPlanView
         plan={plan}
         onGenerate={onGenerate}
@@ -1163,6 +1165,7 @@ function PlanWorkspace({
         onReducePlan={onReducePlan}
         onPlanChange={onPlanChange}
       />
+      </details>
       <div className="page plan-task-tools">
         <section className="home-secondary-panel plan-open-tasks-card">
           <div>

@@ -844,14 +844,19 @@ export default function DailyPlanView({
               )}
             </div>
             <div className="time-block-body">
-              <div className="time-block-actions" aria-label={`Actions for ${getTimeBlockTitle(block)}`}>
+              <div className="time-block-actions time-block-actions-primary" aria-label={`Actions for ${getTimeBlockTitle(block)}`}>
+                <button type="button" onClick={() => startBlockAsFocus(block)}><Play size={13} /> Start focus</button>
                 <button type="button" disabled={isEditing} onClick={event => { event.stopPropagation(); beginBlockEdit(block, i) }}><Pencil size={13} /> Edit</button>
-                <button type="button" onClick={() => duplicateBlock(i)}><CopyPlus size={13} /> Duplicate</button>
-                <button type="button" onClick={() => deleteBlock(i)}><Trash2 size={13} /> Delete</button>
-                <button type="button" onClick={() => moveBlock(i, -1)} disabled={i === 0} aria-label="Move block up"><ArrowUp size={13} /></button>
-                <button type="button" onClick={() => moveBlock(i, 1)} disabled={i === plan.timeBlocks.length - 1} aria-label="Move block down"><ArrowDown size={13} /></button>
-                <button type="button" onClick={() => addBlockAfter(i)}><Plus size={13} /> Add after</button>
-                <button type="button" onClick={() => startBlockAsFocus(block)}><Play size={13} /> Start timeline focus</button>
+                <details className="time-block-actions-more">
+                  <summary>More</summary>
+                  <div className="time-block-actions-secondary">
+                    <button type="button" onClick={() => duplicateBlock(i)}><CopyPlus size={13} /> Duplicate</button>
+                    <button type="button" onClick={() => deleteBlock(i)}><Trash2 size={13} /> Delete</button>
+                    <button type="button" onClick={() => moveBlock(i, -1)} disabled={i === 0} aria-label="Move block up"><ArrowUp size={13} /></button>
+                    <button type="button" onClick={() => moveBlock(i, 1)} disabled={i === plan.timeBlocks.length - 1} aria-label="Move block down"><ArrowDown size={13} /></button>
+                    <button type="button" onClick={() => addBlockAfter(i)}><Plus size={13} /> Add after</button>
+                  </div>
+                </details>
               </div>
               {draftBlock ? (
                 <div className="time-block-edit-form">
@@ -904,6 +909,9 @@ export default function DailyPlanView({
           )
         })}
       </div>
+
+      <details className="hub-secondary-details plan-secondary-details">
+        <summary>Checklists, reminders &amp; guardrails</summary>
 
       {/* Must-do + Optional */}
       {plan.mustDo.length > 0 && (
@@ -1001,6 +1009,10 @@ export default function DailyPlanView({
           </ul>
         </div>
       </div>
+      </details>
+
+      <details className="hub-secondary-details plan-secondary-details">
+        <summary>Daily review &amp; Notion export</summary>
 
       <div className="plan-section">
         <div className="plan-section-title">Daily Reality</div>
@@ -1208,6 +1220,7 @@ export default function DailyPlanView({
           </div>
         </div>
       </div>
+      </details>
     </div>
   )
 }
