@@ -1,6 +1,5 @@
-import { dayBlockFromTask } from './blockQueue'
 import { getLocalDateKey } from './focus'
-import { loadDayBlockQueue, saveDayBlockQueue } from './storage'
+import { scheduleTaskForToday } from './queueTaskHelpers'
 import {
   createExternalInboxTask,
   findExternalInboxTask,
@@ -158,28 +157,7 @@ function inputFromPayload(
 }
 
 export function addExternalTaskToToday(task: Task, date = getLocalDateKey()): void {
-  const queue = loadDayBlockQueue(date)
-  const existing = queue.blocks.find(block => block.sourceTaskId === task.id || block.unifiedTaskId === task.id)
-  if (existing && !existing.hiddenToday) return
-  const now = new Date().toISOString()
-  const nextOrder = queue.blocks.reduce((max, block) => Math.max(max, block.order), -1) + 1
-  const block = {
-    ...dayBlockFromTask(task, date, nextOrder),
-    unifiedTaskId: task.id,
-    tags: [...new Set(['iris-job-search', ...dayBlockFromTask(task, date, nextOrder).tags])],
-    hiddenToday: false,
-    hiddenTodayReason: undefined,
-    hiddenTodayAt: undefined,
-    updatedAt: now,
-  }
-  saveDayBlockQueue({
-    ...queue,
-    blocks: [
-      ...queue.blocks.filter(item => item.sourceTaskId !== task.id && item.unifiedTaskId !== task.id),
-      block,
-    ],
-    updatedAt: now,
-  })
+  scheduleTaskForToday(task.id, date)
   writeInboxTaskToTaskStore(task)
 }
 

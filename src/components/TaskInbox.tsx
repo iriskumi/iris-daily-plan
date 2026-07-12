@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, X, Check, Timer } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check, CalendarPlus, BookOpen } from 'lucide-react'
 import type {
   Task,
   TaskCategory,
@@ -9,8 +9,14 @@ import type {
   TaskStatus,
 } from '../types'
 import { archiveOldTasks, loadTasks, saveTasks } from '../storage'
-import { getDaysUntil } from '../planner'
-import PomodoroTimer from './PomodoroTimer'
+import { getLocalDateKey } from '../focus'
+import { createStudyHandoffFromQueueBlock, saveStudyTaskHandoff } from '../studyHandoff'
+import {
+  ensureQueueBlockForTask,
+  isTaskScheduledForDate,
+  scheduleTaskForToday,
+  unscheduleTaskFromToday,
+} from '../queueTaskHelpers'
 import {
   TASK_AREAS,
   TASK_ENERGIES,
@@ -23,6 +29,7 @@ import {
   tinyActionForTask,
 } from '../focusBlocks'
 import { DURATION_GROUPS, isStandardDuration, longBlockHint } from '../durations'
+import { getDaysUntil } from '../planner'
 
 const CATEGORIES: { id: TaskCategory; label: string }[] = [
   { id: 'assessment', label: 'Assessment' },
@@ -263,12 +270,38 @@ export default function TaskInbox() {
   const [filter, setFilter] = useState<Filter>(ALL_FILTER)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [timerOpenId, setTimerOpenId] = useState<string | null>(null)
-  const [timerDurations, setTimerDurations] = useState<Record<string, number>>({})
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const today = getLocalDateKey()
 
   function persist(updated: Task[]) {
     setTasks(updated)
     saveTasks(updated)
+  }
+
+  function addTaskToToday(taskId: string) {
+    const task = scheduleTaskForToday(taskId, today)
+    if (task) {
+      setTasks(loadTasks())
+      setActionMessage(`Added "${task.title}" to today's queue.`)
+    }
+  }
+
+  function removeTaskFromToday(taskId: string) {
+    unscheduleTaskFromToday(taskId, today)
+    setTasks(loadTasks())
+    setActionMessage('Removed from today\'s queue.')
+  }
+
+  function openTaskInStudy(task: Task) {
+    const scheduled = isTaskScheduledForDate(task, today)
+      ? task
+      : scheduleTaskForToday(task.id, today)
+    if (!scheduled) return
+    setTasks(loadTasks())
+    const block = ensureQueueBlockForTask(scheduled, today)
+    saveStudyTaskHandoff(createStudyHandoffFromQueueBlock(block, 'today-queue'))
+    window.dispatchEvent(new CustomEvent('iris-open-tab', { detail: { tab: 'study' } }))
+    setActionMessage(`Opened "${task.title}" in Study. Press Start when ready.`)
   }
 
   function addTask(data: TaskFormData) {
@@ -360,10 +393,7 @@ export default function TaskInbox() {
               <span style={{ width: `${Math.round(doneRatio * 100)}%` }} />
             </div>
             <p className="page-subtitle">
-              {pendingCount} pending · {doneCount} done
-            </p>
-            <p className="page-subtitle">
-              Pomodoro sessions are separate from Study Sessions unless started from Study.
+              {pendingCount} pending · {doneCount} done · add to today's queue to work on a task
             </p>
           </div>
           <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -429,6 +459,8 @@ export default function TaskInbox() {
         )}
       </div>
 
+      {actionMessage && <div className="start-now-message">{actionMessage}</div>}
+
       {filtered.length === 0 ? (
         <div className="empty-state">
           <svg className="empty-state-check" viewBox="0 0 48 48" aria-hidden="true">
@@ -452,10 +484,9 @@ export default function TaskInbox() {
         <div className="task-list">
           {filtered.map(task => {
             const dl = deadlineTag(task.deadline)
-            const timerOpen = timerOpenId === task.id
             const isLargeTask = task.estimatedMinutes >= 90
             const totalEstimateLabel = `${task.estimatedMinutes} min total`
-            const timerDuration = timerDurations[task.id] ?? task.pomodoroLength ?? task.estimatedMinutes ?? 50
+            const inTodayQueue = isTaskScheduledForDate(task, today)
 
             return (
               <div key={task.id}>
@@ -486,14 +517,12 @@ export default function TaskInbox() {
                         <span className="badge">
                           {task.status ?? (task.done ? 'Done' : 'Inbox')}
                         </span>
+                        {inTodayQueue && (
+                          <span className="badge badge-today-queue">In today</span>
+                        )}
                         {isLargeTask && (
                           <span className="badge">
                             Large task
-                          </span>
-                        )}
-                        {task.pomodoroEnabled && (
-                          <span className="pomo-badge-inline">
-                            {isLargeTask ? totalEstimateLabel : `${task.pomodoroLength ?? task.estimatedMinutes}m`}
                           </span>
                         )}
                         {dl && (
@@ -520,57 +549,23 @@ export default function TaskInbox() {
                         </ul>
                       )}
 
-                      {/* Pomodoro timer section */}
-                      {task.pomodoroEnabled && isActiveTask(task) && (
-                        <div className="pomo-toggle-row">
-                          {isLargeTask ? (
-                            <>
-                              <button
-                                className={`pomo-toggle-btn pomo-toggle-primary ${timerOpen && timerDuration === 25 ? 'active' : ''}`}
-                                onClick={() => {
-                                  setTimerDurations(prev => ({ ...prev, [task.id]: 25 }))
-                                  setTimerOpenId(timerOpen && timerDuration === 25 ? null : task.id)
-                                }}
-                              >
-                                <Timer size={12} />
-                                {timerOpen && timerDuration === 25 ? 'Hide Pomodoro' : 'Start 25-min Pomodoro'}
-                              </button>
-                              <button
-                                className={`pomo-toggle-btn ${timerOpen && timerDuration === 50 ? 'active' : ''}`}
-                                onClick={() => {
-                                  setTimerDurations(prev => ({ ...prev, [task.id]: 50 }))
-                                  setTimerOpenId(timerOpen && timerDuration === 50 ? null : task.id)
-                                }}
-                              >
-                                <Timer size={12} />
-                                {timerOpen && timerDuration === 50 ? 'Hide Pomodoro' : 'Start 50-min Pomodoro'}
-                              </button>
-                            </>
+                      {isActiveTask(task) && (
+                        <div className="task-action-row">
+                          {!inTodayQueue ? (
+                            <button type="button" className="btn btn-secondary task-action-btn" onClick={() => addTaskToToday(task.id)}>
+                              <CalendarPlus size={13} />
+                              Add to today
+                            </button>
                           ) : (
-                            <button
-                              className={`pomo-toggle-btn pomo-toggle-primary ${timerOpen ? 'active' : ''}`}
-                              onClick={() => setTimerOpenId(timerOpen ? null : task.id)}
-                            >
-                              <Timer size={12} />
-                              {timerOpen ? 'Hide Pomodoro' : 'Start Pomodoro'}
+                            <button type="button" className="btn btn-secondary task-action-btn" onClick={() => removeTaskFromToday(task.id)}>
+                              Remove from today
                             </button>
                           )}
+                          <button type="button" className="btn btn-primary task-action-btn" onClick={() => openTaskInStudy(task)}>
+                            <BookOpen size={13} />
+                            Open in Study
+                          </button>
                         </div>
-                      )}
-
-                      {timerOpen && task.pomodoroEnabled && isActiveTask(task) && (
-                        <PomodoroTimer
-                          pomodoroLength={timerDuration}
-                          breakLength={task.breakLength ?? 10}
-                          sessions={task.pomodoroSessions ?? 1}
-                          taskId={task.id}
-                          taskTitle={task.title}
-                          category={task.category}
-                          onMarkDone={() => {
-                            toggleDone(task.id)
-                            setTimerOpenId(null)
-                          }}
-                        />
                       )}
                     </div>
                     <div className="task-actions">
@@ -579,7 +574,6 @@ export default function TaskInbox() {
                         onClick={() => {
                           setEditingId(task.id)
                           setShowForm(false)
-                          setTimerOpenId(null)
                         }}
                         title="Edit"
                       >

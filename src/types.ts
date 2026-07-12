@@ -321,6 +321,8 @@ export interface Task {
   applicationId?: string
   company?: string
   jobTitle?: string
+  /** When set, task appears in that date's block queue. */
+  scheduledForDate?: string
 }
 
 export interface FocusBlock {

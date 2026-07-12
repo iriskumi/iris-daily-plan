@@ -14,7 +14,8 @@ import type {
   TaskMode,
 } from './types'
 import { getDaysUntil } from './planner'
-import { isActiveTask, normalizeTask } from './focusBlocks'
+import { normalizeTask } from './focusBlocks'
+import { tasksEligibleForQueueMerge } from './queueTaskHelpers'
 
 export const DAY_MODE_CONFIGS: Record<DayMode, DayModeConfig> = {
   'full-day': {
@@ -200,10 +201,8 @@ export function createDayBlockQueue(input: {
   const now = input.now ?? new Date()
   const suggestedMode = suggestDayMode(now)
   const mode = input.mode ?? suggestedMode
-  const activeBlocks = input.tasks
-    .map(normalizeTask)
-    .filter(isActiveTask)
-    .map((task, index) => dayBlockFromTask(task, input.date, index))
+  const eligibleTasks = tasksEligibleForQueueMerge(input.tasks, input.date, [])
+  const activeBlocks = eligibleTasks.map((task, index) => dayBlockFromTask(task, input.date, index))
 
   const blocks = sortBlocksForQueue(activeBlocks)
   const createdAt = now.toISOString()
@@ -229,23 +228,20 @@ export function mergeQueueWithTasks(queue: DayBlockQueue, tasks: Task[]): DayBlo
   const now = new Date().toISOString()
   const highestOrder = queue.blocks.reduce((max, block) => Math.max(max, block.order), -1)
   let nextOrder = highestOrder + 1
-  const migratedBlocks = tasks
-    .map(normalizeTask)
-    .filter(isActiveTask)
-    .map((task, index): DayBlock | null => {
-      const existing = existingByTaskId.get(task.id)
-      if (existing?.hiddenToday) return existing
-      const migrated = dayBlockFromTask(task, queue.date, existing ? existing.order : nextOrder + index)
-      return existing
-        ? {
-            ...migrated,
-            ...existing,
-            title: existing.title || migrated.title,
-            updatedAt: existing.updatedAt || migrated.updatedAt,
-          }
-        : migrated
-    })
-    .filter((block): block is DayBlock => Boolean(block))
+  const eligibleTasks = tasksEligibleForQueueMerge(tasks, queue.date, queue.blocks)
+  const migratedBlocks = eligibleTasks.map((task, index): DayBlock => {
+    const existing = existingByTaskId.get(task.id)
+    if (existing?.hiddenToday) return existing
+    const migrated = dayBlockFromTask(task, queue.date, existing ? existing.order : nextOrder + index)
+    return existing
+      ? {
+          ...migrated,
+          ...existing,
+          title: existing.title || migrated.title,
+          updatedAt: existing.updatedAt || migrated.updatedAt,
+        }
+      : migrated
+  })
 
   const manualBlocks = queue.blocks.filter(block => !block.sourceTaskId)
   return {
@@ -337,12 +333,16 @@ export function minimumViableBlock(block: DayBlock): DayBlock {
   }
 }
 
-export function queueOverview(queue: DayBlockQueue): {
+export function queueOverview(
+  queue: DayBlockQueue,
+  sessionMinutesToday = 0,
+): {
   completedBlocks: number
   remainingBlocks: number
   completedFocusMinutes: number
   mustDone: number
   mustTotal: number
+  markedDoneWithoutTimer: number
 } {
   const visibleBlocks = queue.blocks.filter(block => !block.hiddenToday)
   const doneBlocks = visibleBlocks.filter(block => block.status === 'done')
@@ -350,10 +350,10 @@ export function queueOverview(queue: DayBlockQueue): {
   return {
     completedBlocks: doneBlocks.length,
     remainingBlocks: visibleBlocks.filter(block => block.status !== 'done' && block.status !== 'skipped').length,
-    // Queue blocks are candidates only. Focus minutes are counted from completed Study/Timer sessions.
-    completedFocusMinutes: 0,
+    completedFocusMinutes: sessionMinutesToday,
     mustDone: mustBlocks.filter(block => block.status === 'done').length,
     mustTotal: mustBlocks.length,
+    markedDoneWithoutTimer: doneBlocks.length,
   }
 }
 

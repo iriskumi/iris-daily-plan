@@ -9,6 +9,7 @@ import {
   targetBlocksForMode,
 } from '../blockQueue'
 import { createStudyHandoffFromQueueBlock, queueSessionTitle, saveStudyTaskHandoff } from '../studyHandoff'
+import { startStudySessionFromQueueBlock } from '../blockQueueStudySession'
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
 import { loadStudySessionRecordsForDate } from '../studyStorage'
@@ -69,13 +70,13 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
     () => sortedBlocks.filter(block => !block.hiddenToday),
     [sortedBlocks],
   )
-  const overview = queueOverview({ ...queue, blocks })
   const completedStudyMinutes = useMemo(
     () => loadStudySessionRecordsForDate(queue.date)
       .filter(session => session.status === 'completed')
       .reduce((sum, session) => sum + session.actualMinutes, 0),
     [queue.date, message],
   )
+  const overview = queueOverview({ ...queue, blocks }, completedStudyMinutes)
   const nextBlock = suggestNextBlock({ ...queue, blocks })
   const modeConfig = DAY_MODES.find(mode => mode.id === queue.mode)
 
@@ -216,18 +217,30 @@ export default function BlockQueueView({ onOpenStudy }: { onOpenStudy?: () => vo
           <span>
             {nextBlock
               ? `${labelFromToken(nextBlock.priority)} · ${nextBlock.estimatedMinutes} min · ${labelFromToken(nextBlock.energyLevel)} energy${nextBlock.estimatedMinutes >= 90 ? ' · Large task' : ''}`
-              : 'Add a task or reopen a skipped block when needed.'}
+              : 'Add a task from Tasks, then return here.'}
           </span>
         </div>
         {nextBlock && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => openQueueBlockInStudy(nextBlock)}
-          >
-            <Play size={14} />
-            Open in Study
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                const result = startStudySessionFromQueueBlock(nextBlock, 25)
+                setMessage(result.message)
+              }}
+            >
+              <Play size={14} />
+              Start 25 min
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => openQueueBlockInStudy(nextBlock)}
+            >
+              Custom in Study
+            </button>
+          </>
         )}
       </div>
 

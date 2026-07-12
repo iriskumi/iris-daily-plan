@@ -67,6 +67,7 @@ import type { Iris365ProofCategory, Iris365ProofItem } from '../iris365Types'
 import type { EnglishListeningDrawMode, EnglishListeningDrawResult } from '../englishListeningDraw'
 import type { TimerSession } from '../timerEngineTypes'
 import { consumeStudyTaskHandoff, type StudyTaskHandoff } from '../studyHandoff'
+import { markQueueBlockDoneFromSession } from '../queueTaskHelpers'
 
 const QUICK_TARGETS = [3, 5, 6, 8]
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
@@ -767,6 +768,9 @@ export default function StudyDashboard() {
     writeStudySessionToTaskStore(record)
     if (record.status === 'completed') {
       setOutputJourney(addStudySessionEnglishOutputRep(record))
+      if (record.sourceImportId) {
+        markQueueBlockDoneFromSession(record.sourceImportId, today)
+      }
       if (canSaveSessionAsProof(record) && !findIris365ProofByStudySession(record.id, proofStore)) {
         setPendingProofSession(record)
       }
@@ -999,13 +1003,15 @@ export default function StudyDashboard() {
         <div className="section-label">Study cockpit</div>
         <h2 className="page-title">Study Dashboard</h2>
         <p className="page-subtitle">
-          A focused place for study targets, session templates, and Obsidian-ready notes.
+          Pick a task, start the timer, complete one block. Everything else is reference.
         </p>
       </div>
 
       {activeSession && renderActiveSessionCompactBanner()}
 
-      <section className="study-hero-card">
+      {!activeSession && renderStudyTimerSection()}
+
+      <section className="study-hero-card study-hero-card-compact">
         <div className="study-hero-main">
           <div className="card-title-row">
             <Target size={16} />
@@ -1051,6 +1057,8 @@ export default function StudyDashboard() {
         </div>
       </section>
 
+      <details className="study-secondary-details">
+        <summary>Projects &amp; targets (Coursera, course plan)</summary>
       <section className={`coursera-scholarship-card ${courseraStatus.severity}`}>
         <div className="coursera-scholarship-main">
           <div className="section-label">High priority study project</div>
@@ -1087,8 +1095,9 @@ export default function StudyDashboard() {
           <li>Google Cloud Generative AI Leader</li>
         </ol>
       </section>
+      </details>
 
-      <section className="english-output-journey-card">
+      <section className="english-output-journey-card english-output-journey-card-compact">
         <div className="english-output-journey-main">
           <div className="section-label">English Output Journey</div>
           <h3>English Output Journey</h3>
@@ -1261,8 +1270,6 @@ export default function StudyDashboard() {
           </div>
         )}
       </section>
-
-      {!activeSession && renderStudyTimerSection()}
 
       <section className="card" id="study-task-picker">
         <div className="card-header">

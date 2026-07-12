@@ -1,9 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Play, Plus, Search } from 'lucide-react'
 import type {
-  DailyCheckin,
-  FocusBlock,
-  RankedCheckinTask,
   RecommendedWindow,
   Task,
   TaskArea,
@@ -11,15 +8,13 @@ import type {
   TaskTemplate,
 } from '../types'
 import {
-  loadCheckin,
   loadTaskTemplates,
   loadTasks,
-  saveCheckin,
-  saveFocusBlock,
   saveTaskTemplates,
   saveTasks,
 } from '../storage'
 import { getLocalDateKey } from '../focus'
+import { scheduleTaskForToday } from '../queueTaskHelpers'
 import { categoryFromArea, normalizeTask } from '../focusBlocks'
 import {
   DEFAULT_TASK_TEMPLATES,
@@ -42,30 +37,6 @@ function getTaskTemplates(): TaskTemplate[] {
   ]
   if (JSON.stringify(merged) !== JSON.stringify(saved)) saveTaskTemplates(merged)
   return merged
-}
-
-function rankedEstimate(minutes: number): RankedCheckinTask['estimatedMinutes'] {
-  return minutes
-}
-
-function defaultCheckin(date: string): DailyCheckin {
-  return {
-    date,
-    dailyPlanBase: 'english-ai-cyber-growth',
-    dayType: 'normal',
-    wakeUpTime: '09:00',
-    sleepTarget: '22:30',
-    energyLevel: 'medium',
-    rankedTasks: [],
-    morningMainTask: '',
-    morningSecondaryTask1: '',
-    morningSecondaryTask2: '',
-    morningSmallLifeTask: '',
-    availableFocusTime: 'English + AI/Cyber Growth Day scaffold',
-    fixedCommitments: '',
-    planningInstructions: '',
-    notes: '',
-  }
 }
 
 function taskFromTemplate(template: TaskTemplate): Task {
@@ -98,28 +69,6 @@ function taskFromTemplate(template: TaskTemplate): Task {
     createdAt: now,
     updatedAt: now,
   })
-}
-
-function focusBlockFromTemplate(template: TaskTemplate, task: Task): FocusBlock {
-  const now = new Date()
-  const plannedEnd = new Date(now.getTime() + template.estimatedMinutes * 60 * 1000)
-  return {
-    id: crypto.randomUUID(),
-    date: getLocalDateKey(now),
-    startTime: now.toISOString(),
-    plannedEndTime: plannedEnd.toISOString(),
-    minutes: template.estimatedMinutes,
-    taskId: task.id,
-    taskTitle: template.title,
-    area: template.area,
-    mode: template.mode,
-    energy: template.energy,
-    firstTinyAction: template.firstTinyAction,
-    status: 'Doing',
-    notes: `Started from template: ${template.defaultBlockType}`,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  }
 }
 
 interface TemplateCardProps {
@@ -203,31 +152,15 @@ export default function RecurringTemplates() {
 
   function addToToday(template: TaskTemplate): Task {
     const task = addToInbox(template)
-    const date = getLocalDateKey()
-    const checkin = loadCheckin(date) ?? defaultCheckin(date)
-    const rankedTasks = checkin.rankedTasks ?? []
-    saveCheckin({
-      ...checkin,
-      rankedTasks: [
-        ...rankedTasks,
-        {
-          id: crypto.randomUUID(),
-          taskId: task.id,
-          title: template.title,
-          area: template.area,
-          estimatedMinutes: rankedEstimate(template.estimatedMinutes),
-          orderIndex: rankedTasks.length,
-        },
-      ],
-    })
-    showToast(`Added "${template.title}" to Today’s to-do.`)
+    scheduleTaskForToday(task.id, getLocalDateKey())
+    showToast(`Added "${template.title}" to today's queue.`)
     return task
   }
 
   function startTemplate(template: TaskTemplate) {
-    const task = addToInbox(template)
-    saveFocusBlock(focusBlockFromTemplate(template, task))
-    showToast(`Started "${template.title}" as a Focus Block.`)
+    addToToday(template)
+    window.dispatchEvent(new CustomEvent('iris-open-tab', { detail: { tab: 'study' } }))
+    showToast(`Added "${template.title}" to today's queue. Open Study to start.`)
   }
 
   function toggleGroup(group: string) {

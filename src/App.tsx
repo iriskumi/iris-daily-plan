@@ -845,13 +845,13 @@ export default function App() {
         </div>
       )}
 
-      {showCompactActiveBar && activeStudySession && (
+      {showCompactActiveBar && activeStudySession && tab !== 'today' && (
         <div className="active-session-compact-bar">
           <span>Active</span>
           <strong>{activeStudySession.title}</strong>
           <small>{compactActiveRemaining}</small>
-          <button type="button" className="btn btn-secondary" onClick={() => goToTab('study')}>
-            Open
+          <button type="button" className="btn btn-primary" onClick={() => goToTab('today')}>
+            Return to session
           </button>
         </div>
       )}
@@ -1412,6 +1412,9 @@ function TodayCommandCentre({
           eveningNote={isEvening ? 'Evening mode: quiet input and light review.' : ''}
           onOpenStudy={onOpenStudy}
           onOpenExercise={onOpenExercise}
+          onOpenPlan={() => {
+            window.dispatchEvent(new CustomEvent('iris-open-tab', { detail: { tab: 'plan' } }))
+          }}
         />
         {showEmbeddedPlan && (
           <details

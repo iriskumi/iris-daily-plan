@@ -15,7 +15,16 @@ import {
   type TodayHeroImageSettings,
   type TodayHeroObjectFit,
 } from '../appearanceSettings'
+import { startStudySessionFromQueueBlock } from '../blockQueueStudySession'
+import {
+  englishOutputRepsForDate,
+  englishOutputRepsForLastSevenDays,
+  loadEnglishOutputJourney,
+} from '../englishOutputJourney'
 import { loadExerciseLog } from '../exerciseStorage'
+import { markQueueBlockDoneFromSession } from '../queueTaskHelpers'
+import { createStudyHandoffFromQueueBlock, saveStudyTaskHandoff } from '../studyHandoff'
+import WeekBars, { lastSevenDayKeys, weekdayLabel } from './WeekBars'
 import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
 import { addStudySessionRecord, clearActiveStudySession, loadActiveStudySession, loadStudySessionRecordsForDate, saveActiveStudySession, STUDY_ACTIVE_SESSION_CHANGED_EVENT } from '../studyStorage'
@@ -34,9 +43,10 @@ export type TodayStartModule = 'note' | 'done' | 'queue'
 interface StartNowDashboardProps {
   onOpenStudy?: () => void
   onOpenExercise?: () => void
+  onOpenPlan?: () => void
   nextBlock?: DayBlock | null
-  onStartNextBlock?: () => void
   queueCount?: number
+  sessionMinutesToday?: number
   expandedModule?: TodayStartModule | null
   onExpandedModuleChange?: (module: TodayStartModule | null) => void
   todayNote?: {
@@ -182,9 +192,10 @@ function clamp(value: number, min: number, max: number) {
 export default function StartNowDashboard({
   onOpenStudy,
   onOpenExercise,
+  onOpenPlan,
   nextBlock,
-  onStartNextBlock,
   queueCount = 0,
+  sessionMinutesToday = 0,
   expandedModule = null,
   onExpandedModuleChange,
   todayNote,
@@ -205,7 +216,20 @@ export default function StartNowDashboard({
   const [abandonConfirmOpen, setAbandonConfirmOpen] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
-  const irisDay = useMemo(() => getIris365DayNumber(), [])
+  const [completionToast, setCompletionToast] = useState<string | null>(null)
+  const outputJourney = useMemo(() => loadEnglishOutputJourney(), [studySessions, completionToast])
+  const englishRepsToday = englishOutputRepsForDate(outputJourney, today)
+  const englishRepsWeek = englishOutputRepsForLastSevenDays(outputJourney)
+  const weekStudyBars = useMemo(() => {
+    const keys = lastSevenDayKeys()
+    return keys.map(dateKey => ({
+      label: weekdayLabel(dateKey, today),
+      value: loadStudySessionRecordsForDate(dateKey)
+        .filter(session => session.status === 'completed')
+        .reduce((sum, session) => sum + session.actualMinutes, 0),
+      isToday: dateKey === today,
+    }))
+  }, [today, studySessions, completionToast])
   const summary = studyDoneSummary(studySessions)
   const movementMinutes = exerciseEntries.reduce((sum, entry) => sum + entry.durationMinutes, 0)
   const doneItems = [
@@ -258,16 +282,59 @@ export default function StartNowDashboard({
     }
   }, [])
 
+  const irisDay = useMemo(() => getIris365DayNumber(), [])
+
+  function showCompletionToast(text: string) {
+    setCompletionToast(text)
+    window.setTimeout(() => setCompletionToast(null), 5000)
+  }
+
+  function persistActiveStudySession(session: StudyActiveSession | null) {
+    setActiveStudySession(session)
+    if (session) {
+      saveActiveStudySession(session)
+      timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerFromStudySession(session))
+      updateActiveSession({ status: session.status === 'paused' ? 'paused' : 'active' })
+      return
+    }
+    clearActiveStudySession()
+    timerEngine.clear(STUDY_TIMER_ENGINE_KEY)
+    clearActiveSession()
+    refreshDone()
+  }
+
+  function startQueueBlock25(block: DayBlock) {
+    const existing = loadActiveStudySession()
+    if (existing) {
+      setMessage(`Already focusing: ${existing.title}`)
+      return
+    }
+    const result = startStudySessionFromQueueBlock(block, 25)
+    if (!result.success || !result.session) {
+      setMessage(result.message)
+      return
+    }
+    const session = studySessionWithTimer(
+      result.session,
+      result.session.timerSession ?? timerFromStudySession(result.session),
+    )
+    persistActiveStudySession(session)
+    setMessage(null)
+  }
+
+  function openQueueBlockInStudy(block: DayBlock) {
+    saveStudyTaskHandoff(createStudyHandoffFromQueueBlock(block, 'today-queue'))
+    onOpenStudy?.()
+  }
+
   function openStudyStart() {
     const existing = loadActiveStudySession()
     if (existing) {
       setMessage(`A Study Session is already active: ${existing.title}.`)
-      onOpenStudy?.()
       return
     }
-    if (nextBlock && onStartNextBlock) {
-      onStartNextBlock()
-      setMessage(`Opened "${nextBlock.title}" in Study. Press Start there when ready.`)
+    if (nextBlock) {
+      startQueueBlock25(nextBlock)
       return
     }
     if (typeof sessionStorage !== 'undefined') {
@@ -294,11 +361,10 @@ export default function StartNowDashboard({
 
   function handleNextUsefulThing() {
     if (activeStudySession) {
-      onOpenStudy?.()
       return
     }
-    if (nextBlock && onStartNextBlock) {
-      onStartNextBlock()
+    if (nextBlock) {
+      startQueueBlock25(nextBlock)
       return
     }
     onOpenStudy?.()
@@ -324,20 +390,6 @@ export default function StartNowDashboard({
   function copyActiveStudyNoteDestination() {
     if (!activeStudySession?.noteDestination || !navigator.clipboard) return
     void navigator.clipboard.writeText(activeStudySession.noteDestination)
-  }
-
-  function persistActiveStudySession(session: StudyActiveSession | null) {
-    setActiveStudySession(session)
-    if (session) {
-      saveActiveStudySession(session)
-      timerEngine.save(STUDY_TIMER_ENGINE_KEY, timerFromStudySession(session))
-      updateActiveSession({ status: session.status === 'paused' ? 'paused' : 'active' })
-      return
-    }
-    clearActiveStudySession()
-    timerEngine.clear(STUDY_TIMER_ENGINE_KEY)
-    clearActiveSession()
-    refreshDone()
   }
 
   function pauseActiveStudySession() {
@@ -383,9 +435,16 @@ export default function StartNowDashboard({
     }
     addStudySessionRecord(record)
     writeStudySessionToTaskStore(record)
-    if (record.status === 'completed') addStudySessionEnglishOutputRep(record)
+    if (record.status === 'completed') {
+      addStudySessionEnglishOutputRep(record)
+      if (record.sourceImportId) {
+        markQueueBlockDoneFromSession(record.sourceImportId, today)
+      }
+      showCompletionToast(`+${record.actualMinutes} min · ${record.category}`)
+    }
     persistActiveStudySession(null)
     setMessage(status === 'completed' ? 'Session completed.' : 'Session abandoned.')
+    refreshDone()
   }
 
   function openHeroPanel() {
@@ -461,10 +520,10 @@ export default function StartNowDashboard({
 
   const doneCount = summary.completed.length + exerciseEntries.length
   const progressItems = [
-    { label: 'Study', value: `${summary.studyMinutes}m` },
-    { label: 'English', value: `${summary.englishReps} rep${summary.englishReps === 1 ? '' : 's'}` },
-    { label: 'Move', value: `${movementMinutes}m` },
-    { label: 'Sessions', value: String(summary.completed.length) },
+    { label: 'Study', value: `${summary.studyMinutes}m`, highlight: summary.studyMinutes > 0 },
+    { label: 'English', value: `${englishRepsToday} rep${englishRepsToday === 1 ? '' : 's'}`, highlight: englishRepsToday > 0 },
+    { label: 'Move', value: `${movementMinutes}m`, highlight: movementMinutes > 0 },
+    { label: 'Sessions', value: String(summary.completed.length), highlight: summary.completed.length > 0 },
   ]
 
   const moduleRows = [
@@ -638,14 +697,53 @@ export default function StartNowDashboard({
 
           <div className="today-progress-strip" aria-label="Today progress">
             {progressItems.map(item => (
-              <span key={item.label} className="today-progress-pill">
+              <span key={item.label} className={`today-progress-pill ${item.highlight ? 'has-value' : ''}`}>
                 <strong>{item.label}</strong>
                 {item.value}
               </span>
             ))}
             <span className="today-progress-pill muted">Day {irisDay}</span>
+            {englishRepsWeek > 0 && (
+              <span className="today-progress-pill muted">{englishRepsWeek} reps this week</span>
+            )}
           </div>
         </>
+      )}
+
+      {completionToast && (
+        <div className="today-completion-toast" role="status" aria-live="polite">
+          <CheckCircle2 size={16} />
+          {completionToast}
+        </div>
+      )}
+
+      {!activeStudySession && (
+        <section className="today-done-evidence" aria-label="Today completed evidence">
+          <div className="today-done-evidence-header">
+            <span className="today-soft-label">Done</span>
+            <h3>{doneCount > 0 ? `${doneCount} completed today` : 'Nothing logged yet'}</h3>
+            <p className="today-done-evidence-sub">
+              {sessionMinutesToday > 0 ? `${sessionMinutesToday} session min · ` : ''}
+              {doneCount > 0 ? 'Real timed work and movement only.' : 'Complete a session or log movement.'}
+            </p>
+          </div>
+          {doneCount > 0 ? (
+            <>
+              <div className="today-done-chips">
+                {doneItems.slice(0, 5).map(item => (
+                  <article key={item.id} className="today-done-chip">
+                    <span className="today-done-chip-time">{item.time}</span>
+                    <strong>{item.title}</strong>
+                    <small>{item.meta}</small>
+                  </article>
+                ))}
+              </div>
+              <WeekBars days={weekStudyBars} unit="m" className="today-week-bars" />
+            </>
+          ) : (
+            <WeekBars days={weekStudyBars} unit="m" className="today-week-bars muted" />
+          )}
+        </section>
       )}
 
       {!activeSession && !activeStudySession && (
@@ -658,21 +756,22 @@ export default function StartNowDashboard({
               <span>{nextDuration} min</span>
             </div>
           </div>
-          <div className="today-next-image-panel" aria-hidden="true">
-            <span className="today-next-coffee" />
-            <span className="today-next-notebook" />
-          </div>
-          <button type="button" className="btn btn-primary" onClick={handleNextUsefulThing}>
+          <button type="button" className="btn btn-primary today-next-primary" onClick={handleNextUsefulThing}>
             <Play size={15} />
-            {activeStudySession ? 'Open active session' : nextBlock ? 'Open in Study' : 'Open Study'}
+            {nextBlock ? 'Start 25 min' : 'Open Study'}
           </button>
+          {nextBlock && (
+            <button type="button" className="today-next-secondary" onClick={() => openQueueBlockInStudy(nextBlock)}>
+              Custom duration in Study
+            </button>
+          )}
         </section>
       )}
 
       {!activeStudySession && (
         <>
           <div className="today-module-row" aria-label="Today modules">
-            {moduleRows.map(row => (
+            {moduleRows.filter(row => row.id !== 'done').map(row => (
               <button
                 key={row.id}
                 type="button"
@@ -704,33 +803,35 @@ export default function StartNowDashboard({
             </section>
           )}
 
-          {expandedModule === 'done' && (
-            <section className="today-module-panel today-done-card">
-              <div className="today-done-header">
-                <div>
-                  <span className="today-soft-label">Done</span>
-                  <h3>看得见的进展。</h3>
-                </div>
-                <button type="button" className="btn btn-secondary" onClick={refreshDone}>Refresh</button>
+          {expandedModule === 'queue' && (
+            <section className="today-module-panel today-queue-summary">
+              <div className="today-queue-summary-copy">
+                <span className="today-soft-label">Today queue</span>
+                <h3>{queueCount} block{queueCount === 1 ? '' : 's'} selected</h3>
+                <p>
+                  {sessionMinutesToday > 0
+                    ? `${sessionMinutesToday} min from completed sessions today.`
+                    : 'Queue is your menu — only finished sessions count.'}
+                </p>
               </div>
-              <div className="today-done-grid">
-                <div><strong>{summary.studyMinutes}</strong><span>Study min</span></div>
-                <div><strong>{summary.englishReps}</strong><span>English reps</span></div>
-                <div><strong>{summary.englishOutputMinutes}/{summary.englishInputMinutes}</strong><span>English out/in</span></div>
-                <div><strong>{movementMinutes}</strong><span>Move min</span></div>
-                <div><strong>{summary.adminMinutes}</strong><span>Admin min</span></div>
-              </div>
-              <div className="today-done-list">
-                {doneItems.length > 0 ? doneItems.slice(0, 8).map(item => (
-                  <div key={item.id}>
-                    <span>{item.time}</span>
-                    <strong>{item.title}</strong>
-                    <small>{item.meta}</small>
+              {nextBlock && (
+                <div className="today-queue-summary-next">
+                  <strong>{nextBlock.title}</strong>
+                  <div className="today-queue-summary-actions">
+                    <button type="button" className="btn btn-primary" onClick={() => startQueueBlock25(nextBlock)}>
+                      <Play size={14} /> Start 25 min
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => openQueueBlockInStudy(nextBlock)}>
+                      Custom in Study
+                    </button>
                   </div>
-                )) : (
-                  <p>完成后才会记录。</p>
-                )}
-              </div>
+                </div>
+              )}
+              {onOpenPlan && (
+                <button type="button" className="today-queue-plan-link" onClick={onOpenPlan}>
+                  Edit queue in Plan →
+                </button>
+              )}
             </section>
           )}
         </>

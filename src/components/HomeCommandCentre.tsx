@@ -11,7 +11,8 @@ import type {
   DayMode,
   EnergyLevel,
 } from '../types'
-import { DAY_MODE_CONFIGS, minimumViableBlock, queueOverview, suggestNextBlock, targetBlocksForMode } from '../blockQueue'
+import { DAY_MODE_CONFIGS, minimumViableBlock, queueOverview, suggestNextBlock } from '../blockQueue'
+import { startStudySessionFromQueueBlock } from '../blockQueueStudySession'
 import { createStudyHandoffFromQueueBlock, queueSessionTitle, saveStudyTaskHandoff } from '../studyHandoff'
 import { getLocalDateKey } from '../focus'
 import { loadDayBlockQueue, saveDayBlockQueue } from '../storage'
@@ -215,34 +216,6 @@ const QUICK_ADD_CATEGORY_ORDER = [
 
 type QuickAddGroup = typeof QUICK_ADD_CATEGORY_ORDER[number]
 
-const DAY_MODE_OPTIONS: Array<{ value: DayMode; label: string }> = [
-  { value: 'full-day', label: 'Full Day' },
-  { value: 'normal-day', label: 'Normal Day' },
-  { value: 'late-start-day', label: 'Late Start' },
-  { value: 'rescue-day', label: 'Rescue Day' },
-  { value: 'evening-class', label: 'Evening Class' },
-  { value: 'saturday-class', label: 'Saturday Class' },
-  { value: 'work-shift', label: 'Work Shift' },
-  { value: 'admin-catchup', label: 'Admin Catch-Up' },
-]
-
-const ENERGY_OPTIONS: Array<{ value: EnergyLevel; label: string }> = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-]
-
-const MAIN_FOCUS_OPTIONS: Array<{ value: BlockTaskArea; label: string }> = [
-  { value: 'cyber', label: 'Cyber' },
-  { value: 'ai_project', label: 'AI Project' },
-  { value: 'english', label: 'English' },
-  { value: 'japanese', label: 'Japanese' },
-  { value: 'sql_data', label: 'SQL / Excel' },
-  { value: 'life_admin', label: 'Admin' },
-  { value: 'reading', label: 'Reading' },
-  { value: 'health', label: 'Health' },
-]
-
 const PRIORITY_FILTERS = ['all', 'must', 'should', 'could'] as const
 const STATUS_FILTERS = ['all', 'not_started', 'in_progress', 'done', 'skipped'] as const
 const ENERGY_FILTERS = ['all', 'high', 'medium', 'low'] as const
@@ -371,16 +344,6 @@ function reorderBlocks(blocks: DayBlock[], index: number, direction: -1 | 1): Da
   return next.map((block, order) => ({ ...block, order, updatedAt: now }))
 }
 
-function reasonForBlock(block: DayBlock | null, energy?: EnergyLevel, mainFocus?: BlockTaskArea): string {
-  if (!block) return 'Nothing is waiting in the queue right now.'
-  if (mainFocus && block.area === mainFocus) return `This matches your main focus: ${labelFromToken(mainFocus)}.`
-  if (block.priority === 'must') return 'This is a must-do block, so it should happen before softer options.'
-  if (energy === 'low' || block.energyLevel === 'low') return 'This is useful without asking too much energy.'
-  if (block.dueDate) return 'This has a due date, so it is better to move it forward now.'
-  if (new Date().getHours() >= 17) return 'Evening is better for lighter/admin/review work.'
-  return 'This is the next useful block based on priority and queue order.'
-}
-
 function templateToBlock(template: QuickAddTemplate, queue: DayBlockQueue): DayBlock {
   const now = new Date().toISOString()
   return {
@@ -436,6 +399,7 @@ export default function HomeCommandCentre({
   eveningNote,
   onOpenStudy,
   onOpenExercise,
+  onOpenPlan,
 }: {
   currentEnergy?: EnergyLevel
   todayNote?: {
@@ -445,6 +409,7 @@ export default function HomeCommandCentre({
   eveningNote?: string
   onOpenStudy?: () => void
   onOpenExercise?: () => void
+  onOpenPlan?: () => void
 }) {
   const [queue, setQueue] = useState<DayBlockQueue>(() => loadDayBlockQueue(getLocalDateKey()))
   const [selectedGroup, setSelectedGroup] = useState<QuickAddGroup>('English Output')
@@ -483,19 +448,18 @@ export default function HomeCommandCentre({
   const selectedMainFocus = queue.mainFocus
   const isEveningMode = new Date().getHours() >= 17
   const isRescueMode = queue.mode === 'rescue-day'
-  const overview = queueOverview(queueForDisplay)
   const completedStudyMinutes = useMemo(
     () => loadStudySessionRecordsForDate(queue.date)
       .filter(session => session.status === 'completed')
       .reduce((sum, session) => sum + session.actualMinutes, 0),
     [queue.date, message],
   )
+  const overview = queueOverview(queueForDisplay, completedStudyMinutes)
   const filterCount = activeFilterCount(filters)
   const nextBlock = suggestNextBlock(queueForDisplay, new Date(), {
     currentEnergy: selectedEnergy,
     mainFocus: selectedMainFocus,
   })
-  const reason = reasonForBlock(nextBlock, selectedEnergy, selectedMainFocus)
 
   function persist(nextQueue: DayBlockQueue, nextMessage?: string) {
     saveDayBlockQueue(nextQueue)
@@ -518,31 +482,6 @@ export default function HomeCommandCentre({
       blocks: queue.blocks.map(block => block.id === blockId ? recipe(block) : block),
       updatedAt: new Date().toISOString(),
     }, nextMessage)
-  }
-
-  function updateDayMode(mode: DayMode) {
-    persist({
-      ...queue,
-      mode,
-      targetBlocks: targetBlocksForMode(mode),
-      updatedAt: new Date().toISOString(),
-    }, `${dayModeLabel(mode)} selected.`)
-  }
-
-  function updateEnergy(currentEnergy: EnergyLevel) {
-    persist({
-      ...queue,
-      currentEnergy,
-      updatedAt: new Date().toISOString(),
-    }, `Energy set to ${currentEnergy}.`)
-  }
-
-  function updateMainFocus(mainFocus: BlockTaskArea) {
-    persist({
-      ...queue,
-      mainFocus,
-      updatedAt: new Date().toISOString(),
-    }, `Main focus set to ${labelFromToken(mainFocus)}.`)
   }
 
   function moveBlock(index: number, direction: -1 | 1) {
@@ -580,6 +519,15 @@ export default function HomeCommandCentre({
     saveStudyTaskHandoff(createStudyHandoffFromQueueBlock(block, 'today-queue'))
     setMessage('Opened in Study. Choose 25, 50, or custom there.')
     onOpenStudy?.()
+  }
+
+  function startQueueBlock25(block: DayBlock) {
+    const result = startStudySessionFromQueueBlock(block, 25)
+    if (!result.success) {
+      setMessage(result.message)
+      return
+    }
+    setMessage('25-min session started. Focus on Today.')
   }
 
   function hideBlockForToday(block: DayBlock, reason: 'later' | 'removed') {
@@ -700,9 +648,10 @@ export default function HomeCommandCentre({
       <StartNowDashboard
         onOpenStudy={onOpenStudy}
         onOpenExercise={onOpenExercise}
+        onOpenPlan={onOpenPlan}
         nextBlock={nextBlock}
-        onStartNextBlock={nextBlock ? () => openQueueBlockInStudy(nextBlock) : undefined}
         queueCount={blocks.length}
+        sessionMinutesToday={completedStudyMinutes}
         expandedModule={expandedTodayModule}
         onExpandedModuleChange={setExpandedTodayModule}
         todayNote={todayNote}
@@ -710,99 +659,17 @@ export default function HomeCommandCentre({
       />
 
       {expandedTodayModule === 'queue' && (
-        <section className="today-module-panel today-queue-panel" aria-label="Today block queue">
-
-      <div className="home-status-card">
+        <section className="today-module-panel today-queue-panel today-queue-panel-compact" aria-label="Today block queue">
+      <div className="home-status-card home-status-card-compact">
         <div className="home-status-summary">
-          <div className="section-label">Today status</div>
-          <h3>{dayModeLabel(queue.mode)}</h3>
-          <p>Energy: {selectedEnergy}{selectedMainFocus ? ` · Focus: ${labelFromToken(selectedMainFocus)}` : ''}</p>
+          <div className="section-label">Queue editor</div>
+          <h3>{dayModeLabel(queue.mode)} · {blocks.length} blocks</h3>
+          <p>{completedStudyMinutes} session min today · {overview.remainingBlocks} left in menu</p>
         </div>
-        <div className="home-status-grid">
-          <div><strong>{overview.completedBlocks}/{queue.targetBlocks}</strong><span>blocks</span></div>
-          <div><strong>{completedStudyMinutes}</strong><span>session min</span></div>
-          <div><strong>{overview.mustDone}/{overview.mustTotal}</strong><span>must-do</span></div>
-          <div><strong>{overview.remainingBlocks}</strong><span>left</span></div>
-        </div>
-        <div className="home-status-controls">
-          <div className="home-status-control">
-            <span>Day Mode</span>
-            <div className="home-chip-row">
-              {DAY_MODE_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={queue.mode === option.value ? 'active' : ''}
-                  onClick={() => updateDayMode(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="home-status-control">
-            <span>Energy</span>
-            <div className="home-chip-row home-chip-row-compact">
-              {ENERGY_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={selectedEnergy === option.value ? 'active' : ''}
-                  onClick={() => updateEnergy(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="home-status-control">
-            <span>Main Focus</span>
-            <div className="home-chip-row">
-              {MAIN_FOCUS_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={selectedMainFocus === option.value ? 'active' : ''}
-                  onClick={() => updateMainFocus(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="next-best-block-card">
-        <div className="next-best-block-copy">
-          <div className="section-label">Next best block</div>
-          <h2>{nextBlock ? queueSessionTitle(nextBlock, 25) : 'Choose one useful block'}</h2>
-          <p>{reason}</p>
-          {nextBlock && (
-            <div className="next-best-meta">
-              <span>{labelFromToken(nextBlock.area)}</span>
-              {nextBlock.project && <span>{nextBlock.project}</span>}
-              <span>{nextBlock.priority}</span>
-              <span>{nextBlock.estimatedMinutes} min</span>
-              {nextBlock.estimatedMinutes >= 90 && <span className="home-large-task-label">Large task</span>}
-            </div>
-          )}
-          {nextBlock && nextBlock.estimatedMinutes >= 90 && (
-            <p className="next-best-original-title">Original: {nextBlock.title}</p>
-          )}
-        </div>
-        {nextBlock && (
-          <div className="next-best-actions">
-            <button className="btn btn-primary" type="button" onClick={() => openQueueBlockInStudy(nextBlock)}>
-              <Play size={14} />
-              Open in Study
-            </button>
-            <span className="next-best-helper">Plan chooses the task. Study runs the session.</span>
-          </div>
+        {onOpenPlan && (
+          <button type="button" className="btn btn-secondary" onClick={onOpenPlan}>Full queue in Plan</button>
         )}
       </div>
-
-      {message && <div className="home-queue-message">{message}</div>}
 
       <div className="home-block-queue">
         <div className="home-section-heading">
@@ -927,7 +794,8 @@ export default function HomeCommandCentre({
                 {block.notes && <p className="home-block-note">{block.notes}</p>}
               </div>
               <div className="home-block-actions">
-                <button type="button" className="home-block-primary-action" onClick={() => openQueueBlockInStudy(block)}><Play size={13} />Open in Study</button>
+                <button type="button" className="home-block-primary-action" onClick={() => startQueueBlock25(block)}><Play size={13} />Start 25 min</button>
+                <button type="button" onClick={() => openQueueBlockInStudy(block)}>Custom in Study</button>
                 <button type="button" onClick={() => completeWithoutTimer(block)}><Check size={13} />Done without timer</button>
                 <button type="button" onClick={() => hideBlockForToday(block, 'later')}>Later</button>
                 <button type="button" onClick={() => skipBlock(block)}>Skip</button>
