@@ -492,6 +492,15 @@ export function writeStudySessionToTaskStore(record: StudySessionRecord): void {
   })
 }
 
+export function removeTaskStoreSession(sessionId: string): void {
+  const store = mutableTaskStore()
+  saveTaskStore({
+    ...store,
+    sessions: store.sessions.filter(session => session.id !== sessionId),
+    activeTimer: store.activeTimer?.id === sessionId ? undefined : store.activeTimer,
+  })
+}
+
 export function writeFocusBlockSessionToTaskStore(input: {
   block: FocusBlock
   focusSession?: FocusSession

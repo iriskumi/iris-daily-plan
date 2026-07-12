@@ -93,6 +93,14 @@ export function addExerciseEntry(input: Omit<ExerciseLogEntry, 'id' | 'createdAt
   return { entry, store: nextStore }
 }
 
+export function deleteExerciseEntry(entryId: string, store = loadExerciseLog()) {
+  const nextStore = {
+    entries: store.entries.filter(entry => entry.id !== entryId),
+  }
+  saveExerciseLog(nextStore)
+  return nextStore
+}
+
 export function exerciseStats(entries: ExerciseLogEntry[], today = getLocalDateKey()) {
   const todayMinutes = entries
     .filter(entry => entry.date === today)

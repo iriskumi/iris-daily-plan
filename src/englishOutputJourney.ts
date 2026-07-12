@@ -180,6 +180,18 @@ export function addStudySessionEnglishOutputRep(
   return loadEnglishOutputJourney()
 }
 
+export function removeStudySessionEnglishOutputRep(
+  sessionId: string,
+  current = loadEnglishOutputJourney(),
+): EnglishOutputJourney {
+  const next: EnglishOutputJourney = {
+    ...current,
+    history: current.history.filter(item => item.sessionId !== sessionId),
+  }
+  saveEnglishOutputJourney(next)
+  return loadEnglishOutputJourney()
+}
+
 export function addManualEnglishOutputRep(note: string, current = loadEnglishOutputJourney()): EnglishOutputJourney {
   const now = new Date().toISOString()
   const next: EnglishOutputJourney = {

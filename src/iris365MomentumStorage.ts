@@ -19,8 +19,8 @@ export interface Iris365MomentumStore {
 }
 
 const STORAGE_KEY = 'iris-365-log'
-export const IRIS365_MOMENTUM_START_DATE = '2026-07-08'
-export const IRIS365_MOMENTUM_END_DATE = '2027-07-06'
+export const IRIS365_MOMENTUM_START_DATE = '2026-07-13'
+export const IRIS365_MOMENTUM_END_DATE = '2027-07-12'
 
 export const MONTHLY_MOMENTUM_PLAN: Record<string, { theme: string; focus: string[]; reminder: string }> = {
   '2026-07': {

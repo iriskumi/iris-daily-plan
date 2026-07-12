@@ -30,8 +30,8 @@ import type { StudySessionRecord } from './studyTypes'
 const STORAGE_KEY = 'iris-365'
 const SCHEMA_VERSION = 1
 const JOURNEY_DAYS = 365
-export const IRIS_365_START_DATE = '2026-07-08'
-export const IRIS_365_END_DATE = '2027-07-07'
+export const IRIS_365_START_DATE = '2026-07-13'
+export const IRIS_365_END_DATE = '2027-07-12'
 
 export const IRIS_365_DEFAULT_MOTTO = 'Build the foundation first. Small daily proof, not perfection.'
 

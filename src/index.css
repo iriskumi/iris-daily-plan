@@ -5685,6 +5685,118 @@ textarea {
   background: var(--vanilla-linen);
 }
 
+.english-reference-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.05rem;
+  border: 1px solid var(--rose-border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(250, 244, 236, 0.82));
+  box-shadow: var(--shadow-sm);
+}
+
+.english-reference-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.english-reference-header h3 {
+  margin: 0.2rem 0 0.25rem;
+  color: var(--color-text);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.english-reference-header p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.english-reference-header > span {
+  align-self: flex-start;
+  padding: 0.32rem 0.72rem;
+  border: 1px solid rgba(185, 131, 143, 0.16);
+  border-radius: 999px;
+  background: rgba(246, 225, 229, 0.45);
+  color: var(--color-accent-strong);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.english-reference-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.english-reference-section {
+  border: 1px solid rgba(185, 131, 143, 0.13);
+  border-radius: 16px;
+  background: rgba(255, 252, 249, 0.62);
+}
+
+.english-reference-section summary {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.8rem 0.9rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.english-reference-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.english-reference-section summary span {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.english-reference-section summary small {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.english-reference-items {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0 0.9rem 0.9rem;
+}
+
+.english-reference-items article {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.78rem;
+  border-radius: 14px;
+  background: rgba(246, 239, 232, 0.46);
+}
+
+.english-reference-items article div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  align-items: baseline;
+}
+
+.english-reference-items strong {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.english-reference-items span {
+  color: var(--color-accent-strong);
+  font-size: 0.82rem;
+}
+
+.english-reference-items p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
 .expression-hub-import-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -14228,10 +14340,13 @@ textarea:focus,
 .today-done-evidence-header h3{margin:.2rem 0 .35rem;font-size:1.15rem;color:var(--color-text)}
 .today-done-evidence-sub{margin:0;font-size:.88rem;color:rgba(74,58,48,.78)}
 .today-done-chips{display:grid;gap:.55rem;margin-top:.85rem}
-.today-done-chip{display:grid;grid-template-columns:auto 1fr;gap:.15rem .65rem;padding:.65rem .75rem;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(185,131,143,.12)}
+.today-done-chip{display:grid;grid-template-columns:1fr auto;align-items:center;gap:.65rem;padding:.65rem .75rem;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(185,131,143,.12)}
+.today-done-chip-main{display:grid;grid-template-columns:auto 1fr;gap:.15rem .65rem;min-width:0}
 .today-done-chip-time{grid-row:span 2;align-self:center;font-size:.78rem;font-weight:600;color:var(--color-accent-strong);min-width:3.2rem}
 .today-done-chip strong{font-size:.92rem;line-height:1.35}
 .today-done-chip small{grid-column:2;color:rgba(74,58,48,.72);font-size:.78rem}
+.today-done-delete{display:inline-grid;place-items:center;width:2rem;height:2rem;border:1px solid rgba(185,131,143,.14);border-radius:999px;background:rgba(255,252,249,.7);color:rgba(116,85,75,.58);cursor:pointer}
+.today-done-delete:hover{border-color:rgba(185,131,143,.3);background:rgba(246,225,229,.55);color:var(--color-text)}
 .today-completion-toast{display:flex;align-items:center;gap:.5rem;margin-top:.75rem;padding:.7rem .9rem;border-radius:14px;background:rgba(185,131,143,.14);border:1px solid rgba(185,131,143,.28);color:var(--color-text);font-weight:600;font-size:.92rem}
 .today-next-useful-card{display:grid;gap:.65rem;align-items:start}
 .today-next-secondary{border:none;background:none;padding:0;color:rgba(74,58,48,.72);font-size:.84rem;text-decoration:underline;cursor:pointer;justify-self:start}

@@ -20,17 +20,18 @@ import {
   englishOutputRepsForDate,
   englishOutputRepsForLastSevenDays,
   loadEnglishOutputJourney,
+  removeStudySessionEnglishOutputRep,
 } from '../englishOutputJourney'
-import { loadExerciseLog } from '../exerciseStorage'
+import { deleteExerciseEntry, loadExerciseLog } from '../exerciseStorage'
 import { markQueueBlockDoneFromSession } from '../queueTaskHelpers'
 import { createStudyHandoffFromQueueBlock, saveStudyTaskHandoff } from '../studyHandoff'
 import WeekBars, { lastSevenDayKeys, weekdayLabel } from './WeekBars'
 import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
-import { addStudySessionRecord, clearActiveStudySession, loadActiveStudySession, loadStudySessionRecordsForDate, saveActiveStudySession, STUDY_ACTIVE_SESSION_CHANGED_EVENT } from '../studyStorage'
+import { addStudySessionRecord, clearActiveStudySession, loadActiveStudySession, loadStudySessionRecords, loadStudySessionRecordsForDate, saveActiveStudySession, saveStudySessionRecords, STUDY_ACTIVE_SESSION_CHANGED_EVENT } from '../studyStorage'
 import { addStudySessionEnglishOutputRep } from '../englishOutputJourney'
 import type { StudyActiveSession, StudySessionRecord } from '../studyTypes'
-import { writeStudySessionToTaskStore } from '../taskStore'
+import { removeTaskStoreSession, writeStudySessionToTaskStore } from '../taskStore'
 import * as timerEngine from '../timerEngine'
 import type { TimerSession } from '../timerEngineTypes'
 import type { DayBlock } from '../types'
@@ -235,12 +236,14 @@ export default function StartNowDashboard({
   const doneItems = [
     ...summary.completed.map(session => ({
       id: session.id,
+      kind: 'study' as const,
       time: timeLabel(session.completedAt),
       title: session.title,
       meta: `${session.actualMinutes} min · ${session.category}`,
     })),
     ...exerciseEntries.map(entry => ({
       id: entry.id,
+      kind: 'exercise' as const,
       time: timeLabel(entry.createdAt),
       title: `${entry.movementType} movement`,
       meta: `${entry.durationMinutes} min · Movement`,
@@ -250,6 +253,22 @@ export default function StartNowDashboard({
   function refreshDone() {
     setStudySessions(loadStudySessionRecordsForDate(today))
     setExerciseEntries(loadExerciseLog().entries.filter(entry => entry.date === today))
+  }
+
+  function deleteDoneItem(item: { id: string; kind: 'study' | 'exercise'; title: string }) {
+    const confirmed = window.confirm(`Delete "${item.title}" from today’s completed list? This will remove its counted minutes.`)
+    if (!confirmed) return
+    if (item.kind === 'study') {
+      saveStudySessionRecords(loadStudySessionRecords().filter(session => session.id !== item.id))
+      removeStudySessionEnglishOutputRep(item.id)
+      removeTaskStoreSession(item.id)
+      refreshDone()
+      showCompletionToast('Completed Study session deleted.')
+      return
+    }
+    deleteExerciseEntry(item.id)
+    refreshDone()
+    showCompletionToast('Movement entry deleted.')
   }
 
   useEffect(() => {
@@ -732,9 +751,19 @@ export default function StartNowDashboard({
               <div className="today-done-chips">
                 {doneItems.slice(0, 5).map(item => (
                   <article key={item.id} className="today-done-chip">
-                    <span className="today-done-chip-time">{item.time}</span>
-                    <strong>{item.title}</strong>
-                    <small>{item.meta}</small>
+                    <div className="today-done-chip-main">
+                      <span className="today-done-chip-time">{item.time}</span>
+                      <strong>{item.title}</strong>
+                      <small>{item.meta}</small>
+                    </div>
+                    <button
+                      type="button"
+                      className="today-done-delete"
+                      aria-label={`Delete completed item ${item.title}`}
+                      onClick={() => deleteDoneItem(item)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </article>
                 ))}
               </div>

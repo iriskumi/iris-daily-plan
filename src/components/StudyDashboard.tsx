@@ -76,6 +76,87 @@ const COURSERA_CATEGORY: StudyCategory = 'Coursera AI Pathway'
 
 type StudyProofDraft = Pick<Iris365ProofItem, 'date' | 'category' | 'title' | 'description' | 'linkOrFile' | 'sourceSessionId'>
 
+interface EnglishReferenceSection {
+  title: string
+  purpose: string
+  items: Array<{
+    name: string
+    use: string
+    note: string
+  }>
+}
+
+const ENGLISH_REFERENCE_SECTIONS: EnglishReferenceSection[] = [
+  {
+    title: 'Level 1 · 完全不学习',
+    purpose: '让英语成为默认娱乐语言。不开暂停，不查词，不记笔记。',
+    items: [
+      { name: 'Modern Family 重看', use: '日常美语 / comfort input', note: '纯英语生活环境，不要把它变成作业。' },
+      { name: 'Brooklyn Nine-Nine', use: '嘴快 / banter / reaction', note: '练节奏，不追求高级词汇。' },
+      { name: 'Puckboys audiobook', use: '大量无压力输入', note: '你真的会听，这点比“优秀材料”更重要。' },
+      { name: 'BBC Earth', use: '替代短剧的 curiosity dopamine', note: '适合随便开着看，精神状态比短剧稳定。' },
+    ],
+  },
+  {
+    title: 'Level 2 · Shadowing',
+    purpose: '每次 5-15 分钟，只截 30-90 秒。重点是 stress / phrasing / pausing。',
+    items: [
+      { name: 'Modern Family', use: '日常解释、吐槽、small talk', note: '优先 Claire / Mitchell / Phil。Mitchell 很适合你的 cognitive style。' },
+      { name: 'BBC documentaries', use: '清晰表达、完整信息单位', note: 'David Attenborough 学停顿和清晰度，不模仿 persona。' },
+      { name: 'Fisk', use: 'professional but casual Australian English', note: 'Holmesglen 工作场景很实用。' },
+      { name: 'Born a Crime', use: 'storytelling naturally', note: '练讲故事，不是朗诵。' },
+      { name: 'WorkLife with Adam Grant', use: 'intellectual conversational English', note: '清晰、现代、适合跟读。' },
+      { name: 'The Diplomat', use: 'clarifying / disagreement / urgency', note: '高级但更可迁移到职场。' },
+    ],
+  },
+  {
+    title: 'Level 3 · 高级英语挖矿',
+    purpose: '每周 2-3 次，每集最多提取 5 个表达，不要挖 25 个。',
+    items: [
+      { name: 'Succession', use: 'language as power', note: '学潜台词、positioning、sarcasm，不适合全集 shadow。' },
+      { name: 'The Diplomat', use: 'language as problem-solving', note: '学 framing、pushing back、summarising complex information。' },
+      { name: 'Gruen', use: '观点表达 / bullshit detection', note: '比 Utopia 更可能适合你，适合学如何表达 opinion。' },
+      { name: 'The White Lotus', use: 'passive aggression / class-coded language', note: '适合分析“假装礼貌”的语言。' },
+      { name: 'Veep', use: 'rapid-fire sarcasm / wordplay', note: '语言很绝，但不要模仿人格。' },
+    ],
+  },
+  {
+    title: 'Australian English · 重新排序',
+    purpose: '不要把澳洲英语实用性压过“你愿不愿意反复听”。',
+    items: [
+      { name: 'Fisk', use: '澳洲职场 + casual English', note: '第一梯队，人物更可爱、对话短。' },
+      { name: 'Colin from Accounts', use: 'modern everyday Australian conversation', note: '比 Utopia 更生活化、更有人味。' },
+      { name: 'The Newsreader', use: '清晰正式澳洲英语', note: '更适合正式听力和时代背景。' },
+      { name: 'Gruen', use: '澳洲观点表达', note: '适合 marketing / psychology / language 分析。' },
+      { name: 'Utopia', use: '澳洲职场语言', note: '正式降级：不是不好，只是不必逼自己。' },
+    ],
+  },
+  {
+    title: 'Audiobook / Podcast',
+    purpose: '有声书和 podcast 按用途分，不混成一个排行榜。',
+    items: [
+      { name: 'Born a Crime', use: 'shadowing / storytelling', note: '练自然讲故事的高级能力。' },
+      { name: 'Project Hail Mary', use: 'explaining thought process', note: '适合 “here is the problem / if X is true...” 这种表达。' },
+      { name: 'Puckboys / CU Hockey / Eden Finley / Saxon James', use: '大量泛听', note: '你真的会听，负责让你待在英语里。' },
+      { name: 'WorkLife', use: 'shadowing', note: '★★★★★，现代知识型口语。' },
+      { name: 'No Stupid Questions', use: '展开一个 idea', note: '看两个人如何自然推进想法。' },
+      { name: 'Luke’s English Podcast', use: '学习型输入', note: '有时会像上英语课，不必做主力。' },
+    ],
+  },
+  {
+    title: 'Final Top 10 · 长期核心库',
+    purpose: '综合你本人、学习价值、可持续性。',
+    items: [
+      { name: 'BBC documentaries', use: 'hidden gem / 核心资源', note: '信息密度高，替代短剧，不靠狗血关系。' },
+      { name: 'Modern Family', use: '日常 shadowing', note: '最稳定。' },
+      { name: 'Succession', use: '高级英语分析', note: '学母语者的模糊、权力和潜台词。' },
+      { name: 'The Diplomat', use: '高级职场沟通', note: '比 Succession 更容易迁移到工作。' },
+      { name: 'Fisk / Gruen', use: '澳洲英语', note: 'Fisk 练职场，Gruen 练观点。' },
+      { name: 'Born a Crime / Puckboys / WorkLife', use: 'storytelling + 泛听 + 高质量口语', note: '组成你的英语媒体健身房。' },
+    ],
+  },
+]
+
 function formatHours(minutes: number): string {
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
@@ -1269,6 +1350,38 @@ export default function StudyDashboard() {
             <p>今天还没摸签。选一个模式，摸一张轻轻开始。</p>
           </div>
         )}
+      </section>
+
+      <section className="english-reference-card">
+        <div className="english-reference-header">
+          <div>
+            <div className="section-label">English reference</div>
+            <h3>English Media Matrix</h3>
+            <p>按用途选材料，不要把所有英语内容都变成任务。</p>
+          </div>
+          <span>抓重点</span>
+        </div>
+        <div className="english-reference-list">
+          {ENGLISH_REFERENCE_SECTIONS.map(section => (
+            <details key={section.title} className="english-reference-section">
+              <summary>
+                <span>{section.title}</span>
+                <small>{section.purpose}</small>
+              </summary>
+              <div className="english-reference-items">
+                {section.items.map(item => (
+                  <article key={`${section.title}-${item.name}`}>
+                    <div>
+                      <strong>{item.name}</strong>
+                      <span>{item.use}</span>
+                    </div>
+                    <p>{item.note}</p>
+                  </article>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
       </section>
 
       <section className="card" id="study-task-picker">
