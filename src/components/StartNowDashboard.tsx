@@ -1,4 +1,4 @@
-import { BookOpen, CheckCircle2, ChevronDown, Dumbbell, Image as ImageIcon, ListChecks, Mic, Pause, Pencil, Play, StickyNote, Trash2, X } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronDown, ClipboardList, Copy, Dumbbell, Folder, Image as ImageIcon, ListChecks, Mic, Pause, Pencil, Play, StickyNote, Target, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ACTIVE_SESSION_CHANGED_EVENT,
@@ -202,6 +202,7 @@ export default function StartNowDashboard({
   const [heroPanelOpen, setHeroPanelOpen] = useState(false)
   const [heroMessage, setHeroMessage] = useState<string | null>(null)
   const [processingHeroImage, setProcessingHeroImage] = useState(false)
+  const [abandonConfirmOpen, setAbandonConfirmOpen] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
   const irisDay = useMemo(() => getIris365DayNumber(), [])
@@ -235,7 +236,7 @@ export default function StartNowDashboard({
     const interval = window.setInterval(() => {
       setNow(Date.now())
       refresh()
-    }, 30_000)
+    }, 1000)
     window.addEventListener(ACTIVE_SESSION_CHANGED_EVENT, refresh)
     window.addEventListener(STUDY_ACTIVE_SESSION_CHANGED_EVENT, refresh)
     window.addEventListener('storage', refresh)
@@ -313,6 +314,16 @@ export default function StartNowDashboard({
       return
     }
     onOpenStudy?.()
+  }
+
+  function confirmAbandonActiveStudySession() {
+    setAbandonConfirmOpen(false)
+    completeActiveStudySession('abandoned')
+  }
+
+  function copyActiveStudyNoteDestination() {
+    if (!activeStudySession?.noteDestination || !navigator.clipboard) return
+    void navigator.clipboard.writeText(activeStudySession.noteDestination)
   }
 
   function persistActiveStudySession(session: StudyActiveSession | null) {
@@ -475,22 +486,30 @@ export default function StartNowDashboard({
     ? Math.min(100, Math.round(((activeStudySession.durationMinutes * 60_000 - activeStudyRemainingMs) / (activeStudySession.durationMinutes * 60_000)) * 100))
     : 0
   const activeStudySource = activeStudySession?.source ? labelFromToken(activeStudySession.source) : 'Study'
-  const activeStudyMethod = activeStudySession?.notes || activeStudySession?.resourceUsed || 'Stay with this one task.'
+  const activeStudyMethod = activeStudySession?.notes || activeStudySession?.resourceUsed || 'Follow the selected task method.'
   const activeStudyNoteDestination = activeStudySession?.noteDestination || 'Daily Study Log'
   const activeStudyNoteLabel = noteLabelFromDestination(activeStudyNoteDestination)
+  const activeStudyStatusLabel = activeStudySession?.status === 'paused'
+    ? 'PAUSED'
+    : activeStudyRemainingMs <= 5 * 60_000
+      ? 'FINAL 5 MIN'
+      : 'FOCUSING'
+  const activeStudyStatusClass = activeStudySession?.status === 'paused'
+    ? 'paused'
+    : activeStudyRemainingMs <= 5 * 60_000
+      ? 'final'
+      : 'focusing'
 
   return (
     <section className="start-now-dashboard today-start-flow" aria-label="Today start flow">
       {activeStudySession ? (
         <section className="today-active-session-hero" aria-label="Active focus session">
           <div className="today-active-session-main">
-            <span className="today-active-status-dot">FOCUS SESSION ACTIVE</span>
+            <span className={`today-active-status-dot ${activeStudyStatusClass}`}>{activeStudyStatusLabel}</span>
             <h2>{activeStudySession.title}</h2>
             <div className="today-active-meta">
               <span>{activeStudySession.category}</span>
               <span>{activeStudySession.durationMinutes} min</span>
-              <span>From {activeStudySource}</span>
-              {activeStudySession.status === 'paused' && <span>Paused</span>}
             </div>
             <div className="today-active-timer-card">
               <div className="today-active-timer" aria-label={`${activeStudyRemainingLabel} remaining`}>
@@ -501,35 +520,42 @@ export default function StartNowDashboard({
                 <div className="today-active-progress" aria-label={`Session progress ${activeStudyProgress}%`}>
                   <span style={{ width: `${activeStudyProgress}%` }} />
                 </div>
-                <span>{activeStudyRemainingLabel} remaining</span>
+                <span>{activeStudyRemainingLabel} left</span>
               </div>
             </div>
             <div className="today-active-session-metadata" aria-label="Session metadata">
-              <p className="today-active-session-method">
-                <span>Method:</span>
-                {activeStudyMethod}
-              </p>
-              <p className="today-active-session-note" title={activeStudyNoteDestination}>
-                <span>Note destination:</span>
-                {activeStudyNoteLabel}
-              </p>
-              <details className="today-active-session-details">
-                <summary>Session details</summary>
-                <dl>
-                  <div>
-                    <dt>Source</dt>
-                    <dd>{activeStudySource}</dd>
-                  </div>
-                  <div>
-                    <dt>Full note path</dt>
-                    <dd>{activeStudyNoteDestination}</dd>
-                  </div>
-                  <div>
-                    <dt>Method</dt>
-                    <dd>{activeStudyMethod}</dd>
-                  </div>
-                </dl>
-              </details>
+              <div className="today-active-session-meta-item">
+                <Target size={18} />
+                <div>
+                  <span>Source</span>
+                  <strong>{activeStudySource}</strong>
+                </div>
+              </div>
+              <div className="today-active-session-meta-item">
+                <ClipboardList size={18} />
+                <div>
+                  <span>Method</span>
+                  <strong>{activeStudyMethod}</strong>
+                </div>
+              </div>
+              <div className="today-active-session-meta-item">
+                <Folder size={18} />
+                <div>
+                  <span>Note destination</span>
+                  <strong title={activeStudyNoteDestination}>{activeStudyNoteLabel}</strong>
+                </div>
+                {activeStudyNoteDestination !== activeStudyNoteLabel && (
+                  <button
+                    type="button"
+                    className="today-active-copy-note"
+                    aria-label="Copy full note path"
+                    title={activeStudyNoteDestination}
+                    onClick={copyActiveStudyNoteDestination}
+                  >
+                    <Copy size={14} />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="today-active-actions">
               {activeStudySession.status === 'paused' ? (
@@ -547,13 +573,12 @@ export default function StartNowDashboard({
                 <CheckCircle2 size={15} />
                 Complete
               </button>
-              <button type="button" className="btn btn-secondary today-active-abandon" onClick={() => completeActiveStudySession('abandoned')}>
+              <button type="button" className="today-active-abandon" onClick={() => setAbandonConfirmOpen(true)}>
                 <X size={15} />
                 Abandon
               </button>
               <button type="button" className="btn btn-secondary today-active-study-link" onClick={openActiveSession}>
-                <Play size={15} />
-                Open in Study
+                Back to Study
               </button>
             </div>
           </div>
@@ -623,7 +648,7 @@ export default function StartNowDashboard({
         </>
       )}
 
-      {!activeSession && (
+      {!activeSession && !activeStudySession && (
         <section className="today-next-useful-card">
           <div className="today-next-copy">
             <span className="today-soft-label">Next</span>
@@ -644,72 +669,99 @@ export default function StartNowDashboard({
         </section>
       )}
 
-      <div className="today-module-row" aria-label="Today modules">
-        {moduleRows.map(row => (
-          <button
-            key={row.id}
-            type="button"
-            className={`today-module-chip ${expandedModule === row.id ? 'active' : ''}`}
-            onClick={() => toggleModule(row.id)}
-          >
-            {row.icon}
-            <span>{row.label}</span>
-            <small>{row.badge}</small>
-            <ChevronDown size={15} />
-          </button>
-        ))}
-      </div>
-
-      {expandedModule === 'note' && (
-        <section className="today-module-panel today-note-module">
-          <div className="today-note-lines">
-            {(todayNote?.lines?.length ? todayNote.lines : ['不用先规划完整一天。先开始一个小块。']).map(line => (
-              <p key={line}>{line}</p>
+      {!activeStudySession && (
+        <>
+          <div className="today-module-row" aria-label="Today modules">
+            {moduleRows.map(row => (
+              <button
+                key={row.id}
+                type="button"
+                className={`today-module-chip ${expandedModule === row.id ? 'active' : ''}`}
+                onClick={() => toggleModule(row.id)}
+              >
+                {row.icon}
+                <span>{row.label}</span>
+                <small>{row.badge}</small>
+                <ChevronDown size={15} />
+              </button>
             ))}
           </div>
-          {(todayNote?.caption || eveningNote) && (
-            <small>
-              {todayNote?.caption}
-              {todayNote?.caption && eveningNote ? ' · ' : ''}
-              {eveningNote}
-            </small>
-          )}
-        </section>
-      )}
 
-      {expandedModule === 'done' && (
-        <section className="today-module-panel today-done-card">
-          <div className="today-done-header">
-            <div>
-              <span className="today-soft-label">Done</span>
-              <h3>看得见的进展。</h3>
-            </div>
-            <button type="button" className="btn btn-secondary" onClick={refreshDone}>Refresh</button>
-          </div>
-          <div className="today-done-grid">
-            <div><strong>{summary.studyMinutes}</strong><span>Study min</span></div>
-            <div><strong>{summary.englishReps}</strong><span>English reps</span></div>
-            <div><strong>{summary.englishOutputMinutes}/{summary.englishInputMinutes}</strong><span>English out/in</span></div>
-            <div><strong>{movementMinutes}</strong><span>Move min</span></div>
-            <div><strong>{summary.adminMinutes}</strong><span>Admin min</span></div>
-          </div>
-          <div className="today-done-list">
-            {doneItems.length > 0 ? doneItems.slice(0, 8).map(item => (
-              <div key={item.id}>
-                <span>{item.time}</span>
-                <strong>{item.title}</strong>
-                <small>{item.meta}</small>
+          {expandedModule === 'note' && (
+            <section className="today-module-panel today-note-module">
+              <div className="today-note-lines">
+                {(todayNote?.lines?.length ? todayNote.lines : ['不用先规划完整一天。先开始一个小块。']).map(line => (
+                  <p key={line}>{line}</p>
+                ))}
               </div>
-            )) : (
-              <p>完成后才会记录。</p>
-            )}
-          </div>
-        </section>
+              {(todayNote?.caption || eveningNote) && (
+                <small>
+                  {todayNote?.caption}
+                  {todayNote?.caption && eveningNote ? ' · ' : ''}
+                  {eveningNote}
+                </small>
+              )}
+            </section>
+          )}
+
+          {expandedModule === 'done' && (
+            <section className="today-module-panel today-done-card">
+              <div className="today-done-header">
+                <div>
+                  <span className="today-soft-label">Done</span>
+                  <h3>看得见的进展。</h3>
+                </div>
+                <button type="button" className="btn btn-secondary" onClick={refreshDone}>Refresh</button>
+              </div>
+              <div className="today-done-grid">
+                <div><strong>{summary.studyMinutes}</strong><span>Study min</span></div>
+                <div><strong>{summary.englishReps}</strong><span>English reps</span></div>
+                <div><strong>{summary.englishOutputMinutes}/{summary.englishInputMinutes}</strong><span>English out/in</span></div>
+                <div><strong>{movementMinutes}</strong><span>Move min</span></div>
+                <div><strong>{summary.adminMinutes}</strong><span>Admin min</span></div>
+              </div>
+              <div className="today-done-list">
+                {doneItems.length > 0 ? doneItems.slice(0, 8).map(item => (
+                  <div key={item.id}>
+                    <span>{item.time}</span>
+                    <strong>{item.title}</strong>
+                    <small>{item.meta}</small>
+                  </div>
+                )) : (
+                  <p>完成后才会记录。</p>
+                )}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
-      {message && (
+      {message && !activeStudySession && (
         <div className="start-now-message">
           {message}
+        </div>
+      )}
+
+      {abandonConfirmOpen && (
+        <div className="today-active-confirm-backdrop" role="presentation" onMouseDown={() => setAbandonConfirmOpen(false)}>
+          <section
+            className="today-active-confirm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="today-active-confirm-title"
+            onMouseDown={event => event.stopPropagation()}
+          >
+            <h3 id="today-active-confirm-title">Abandon this session?</h3>
+            <p>This session will not count as completed focus time.</p>
+            <div className="today-active-confirm-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setAbandonConfirmOpen(false)}>
+                Keep focusing
+              </button>
+              <button type="button" className="today-active-confirm-abandon" onClick={confirmAbandonActiveStudySession}>
+                Abandon session
+              </button>
+            </div>
+          </section>
         </div>
       )}
 
