@@ -14420,6 +14420,23 @@ textarea:focus,
 .iris365-countdown-card-compact .iris365-countdown-stats-compact{grid-template-columns:repeat(3,minmax(0,1fr))}
 .plan-schedule-panel{margin:0 1rem 1.2rem;max-width:920px}
 .study-hero-card-compact{margin-top:1rem}
+.badge-task-kind{background:rgba(185,131,143,.12);color:rgba(74,58,48,.78)}
+.badge-calendar-scheduled{background:rgba(96,140,170,.14);color:rgba(44,74,98,.92);border:1px solid rgba(96,140,170,.22)}
+.task-schedule-backdrop{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(42,30,24,.28)}
+.task-schedule-modal{width:min(560px,100%);max-height:90vh;overflow:auto;padding:1.15rem 1.25rem;border-radius:22px;border:1px solid rgba(185,131,143,.24);background:linear-gradient(165deg,rgba(255,252,246,.98),rgba(247,238,229,.94));box-shadow:0 24px 60px rgba(90,62,52,.16)}
+.task-schedule-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.85rem}
+.task-schedule-header h3{margin:.15rem 0;font-size:1.05rem}
+.task-schedule-header p{margin:0;color:var(--text-2);font-size:.86rem}
+.task-schedule-status{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-bottom:.85rem;padding:.55rem .7rem;border-radius:14px;background:rgba(255,253,248,.88);font-size:.84rem;color:var(--text-2)}
+.task-schedule-notice{margin-bottom:.85rem;padding:.75rem .85rem;border-radius:14px;background:rgba(250,246,241,.92);border:1px solid rgba(185,131,143,.18)}
+.task-schedule-notice p{margin:0 0 .55rem;color:var(--text-2);font-size:.88rem}
+.task-schedule-notice-actions,.task-schedule-actions{display:flex;flex-wrap:wrap;gap:.45rem}
+.task-schedule-form{display:grid;gap:.75rem;margin-bottom:.85rem}
+.task-schedule-form label{display:grid;gap:.28rem;font-size:.82rem;color:var(--text-2)}
+.task-schedule-form input,.task-schedule-form textarea{width:100%;padding:.55rem .65rem;border:1px solid var(--border);border-radius:12px;background:#FFFCF9;color:var(--text)}
+.task-schedule-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
+.task-schedule-checkbox{display:flex!important;align-items:center;gap:.45rem}
+.task-schedule-success{display:grid;gap:.55rem;margin-top:.85rem;padding:.75rem .85rem;border-radius:14px;background:rgba(185,131,143,.1);font-size:.88rem;color:var(--text-2)}
 .study-hero-card-compact .study-target-number{font-size:1.6rem}
 .home-status-card-compact{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .active-session-compact-bar .btn-primary{margin-left:auto}

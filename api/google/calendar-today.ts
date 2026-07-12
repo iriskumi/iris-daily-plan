@@ -6,6 +6,7 @@ import type { CalendarEvent, IntegrationResult } from '../../src/types.js'
 const MELBOURNE_TIMEZONE = 'Australia/Melbourne'
 const TOKEN_COOKIE = 'iris_google_calendar_tokens'
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
 const TOKEN_STORAGE_WARNING =
   'Google Calendar tokens are stored in an encrypted HttpOnly cookie for this local/dev-safe version. Production token storage should use a database-backed session store.'
@@ -40,7 +41,9 @@ interface GoogleTokens {
 interface CalendarResponse extends IntegrationResult<CalendarEvent[]> {
   connected: boolean
   calendarConnected?: boolean
+  calendarWriteConnected?: boolean
   gmailConnected?: boolean
+  connectionStatus?: 'connected' | 'needs_reconnect' | 'not_connected' | 'unknown'
   accountEmail?: string
   warning?: string
   diagnostic?: ReturnType<typeof getDiagnostic>
@@ -185,8 +188,22 @@ function hasScope(tokens: GoogleTokens, scope: string): boolean {
 function scopeStatus(tokens: GoogleTokens) {
   return {
     calendarConnected: hasScope(tokens, CALENDAR_SCOPE),
+    calendarWriteConnected: hasScope(tokens, CALENDAR_EVENTS_SCOPE),
     gmailConnected: hasScope(tokens, GMAIL_SCOPE),
   }
+}
+
+function connectionStatusFromScopes(scopes: ReturnType<typeof scopeStatus>): CalendarResponse['connectionStatus'] {
+  if (scopes.calendarWriteConnected) return 'connected'
+  if (scopes.calendarConnected) return 'needs_reconnect'
+  return 'unknown'
+}
+
+async function verifyCalendarAccess(accessToken: string): Promise<boolean> {
+  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary?fields=id', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  return response.ok
 }
 
 function getRequestUrl(req: VercelRequest): URL {
@@ -307,14 +324,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const url = getRequestUrl(req)
     if (url.searchParams.get('status') === '1') {
       const scopes = scopeStatus(tokens)
+      const verified = await verifyCalendarAccess(tokens.access_token)
+      const connectionStatus: CalendarResponse['connectionStatus'] = verified
+        ? connectionStatusFromScopes(scopes)
+        : 'needs_reconnect'
       sendJson(res, {
-        success: true,
-        message: scopes.gmailConnected
-          ? 'Google Calendar and Gmail connected'
-          : 'Google Calendar connected. Gmail read-only access needs reconnect.',
+        success: verified,
+        message: verified
+          ? scopes.calendarWriteConnected
+            ? 'Google Calendar connected for import and task scheduling.'
+            : scopes.gmailConnected
+              ? 'Google Calendar connected for import. Reconnect to schedule tasks.'
+              : 'Google Calendar connected. Gmail and scheduling may need reconnect.'
+          : 'Google Calendar token needs reconnect.',
         data: [],
-        connected: true,
+        connected: verified,
         ...scopes,
+        connectionStatus,
         accountEmail: tokens.account_email,
         warning: TOKEN_STORAGE_WARNING,
         diagnostic: getDiagnostic(req),

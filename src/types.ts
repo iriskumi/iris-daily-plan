@@ -323,6 +323,12 @@ export interface Task {
   jobTitle?: string
   /** When set, task appears in that date's block queue. */
   scheduledForDate?: string
+  /** Optional Google Calendar link — set only after explicit Schedule. */
+  calendarEventId?: string
+  calendarEventUrl?: string
+  calendarStart?: string
+  calendarEnd?: string
+  calendarStatus?: 'scheduled'
 }
 
 export interface FocusBlock {
@@ -533,10 +539,30 @@ export interface CalendarEvent {
 export interface GoogleCalendarImportMeta {
   connected: boolean
   calendarConnected?: boolean
+  calendarWriteConnected?: boolean
   gmailConnected?: boolean
+  connectionStatus?: 'connected' | 'needs_reconnect' | 'not_connected' | 'unknown'
   lastImportedAt?: string
   accountEmail?: string
   warning?: string
+}
+
+export interface CreateCalendarEventInput {
+  summary: string
+  date: string
+  startTime?: string
+  durationMinutes: number
+  reminderMinutes: number
+  description?: string
+  taskId?: string
+  allDay?: boolean
+}
+
+export interface CreatedCalendarEvent {
+  id: string
+  htmlLink?: string
+  start: string
+  end: string
 }
 
 export interface EmailMessage {

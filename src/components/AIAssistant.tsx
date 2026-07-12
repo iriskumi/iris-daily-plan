@@ -19,6 +19,8 @@ import {
   connectGoogleCalendar,
   getGoogleCalendarStatus,
   importCalendarCommitments,
+  calendarStatusLabel,
+  testGoogleCalendarConnection,
 } from '../services/calendarService'
 import {
   loadBills,
@@ -127,6 +129,7 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     loadGoogleCalendarMeta(),
   )
   const [importingCalendar, setImportingCalendar] = useState(false)
+  const [testingCalendar, setTestingCalendar] = useState(false)
   const [expressionImportStatus, setExpressionImportStatus] = useState(() => getExpressionHubImportStatus())
   const [expressionImportJson, setExpressionImportJson] = useState('')
   const [expressionImportMessage, setExpressionImportMessage] = useState<string | null>(() => {
@@ -140,7 +143,8 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
   }, [])
 
   function googleScopeLine(meta: GoogleCalendarImportMeta): string {
-    return `Calendar: ${meta.calendarConnected ? 'connected' : 'not connected'} · Gmail: ${meta.gmailConnected ? 'connected' : 'not connected'}`
+    const write = meta.calendarWriteConnected ? 'scheduling enabled' : 'scheduling needs reconnect'
+    return `Calendar: ${meta.calendarConnected ? 'import ok' : 'import not connected'} · ${write} · Gmail: ${meta.gmailConnected ? 'connected' : 'not connected'}`
   }
 
   function gmailScanStatusLine(meta: GoogleCalendarImportMeta): string {
@@ -155,7 +159,9 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
       ...calendarMeta,
       connected: status.connected,
       calendarConnected: status.calendarConnected,
+      calendarWriteConnected: status.calendarWriteConnected,
       gmailConnected: status.gmailConnected,
+      connectionStatus: status.connectionStatus,
       accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       warning: status.warning,
     }
@@ -352,6 +358,25 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     setSelectedLeadIds([])
   }
 
+  async function handleTestCalendarConnection() {
+    setTestingCalendar(true)
+    const status = await testGoogleCalendarConnection()
+    const next = {
+      ...calendarMeta,
+      connected: status.connected,
+      calendarConnected: status.calendarConnected,
+      calendarWriteConnected: status.calendarWriteConnected,
+      gmailConnected: status.gmailConnected,
+      connectionStatus: status.connectionStatus,
+      accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
+      warning: status.warning ?? calendarMeta.warning,
+    }
+    setCalendarMeta(next)
+    saveGoogleCalendarMeta(next)
+    setActiveMsg(`Google Calendar: ${calendarStatusLabel(next)}`)
+    setTestingCalendar(false)
+  }
+
   async function handleImportCalendar() {
     setImportingCalendar(true)
     const result = await importCalendarCommitments()
@@ -372,7 +397,9 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
     const next = {
       connected: true,
       calendarConnected: status.calendarConnected,
+      calendarWriteConnected: status.calendarWriteConnected,
       gmailConnected: status.gmailConnected,
+      connectionStatus: status.connectionStatus,
       accountEmail: status.accountEmail ?? calendarMeta.accountEmail,
       lastImportedAt: importedAt,
       warning: status.warning ?? calendarMeta.warning,
@@ -426,12 +453,18 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
           <CalendarDays size={14} />
           Google Calendar
         </div>
+        <p className="text-xs text-muted" style={{ lineHeight: 1.6, marginBottom: '0.75rem' }}>
+          Used for optional task scheduling and calendar import reminders.
+        </p>
         <div className="scope-status-list">
-          <div className={`scope-status ${calendarMeta.calendarConnected ? 'connected' : 'not-connected'}`}>
-            Calendar {calendarMeta.calendarConnected ? 'connected' : 'not connected'}
+          <div className={`scope-status ${calendarMeta.connectionStatus === 'connected' ? 'connected' : 'not-connected'}`}>
+            Status: {calendarStatusLabel(calendarMeta)}
           </div>
-          <div className={`scope-status ${calendarMeta.gmailConnected ? 'connected' : 'not-connected'}`}>
-            Gmail {calendarMeta.gmailConnected ? 'connected' : 'not connected'}
+          <div className={`scope-status ${calendarMeta.calendarConnected ? 'connected' : 'not-connected'}`}>
+            Import {calendarMeta.calendarConnected ? 'available' : 'not available'}
+          </div>
+          <div className={`scope-status ${calendarMeta.calendarWriteConnected ? 'connected' : 'not-connected'}`}>
+            Task scheduling {calendarMeta.calendarWriteConnected ? 'available' : 'needs reconnect'}
           </div>
         </div>
         {calendarMeta.lastImportedAt && (
@@ -445,7 +478,10 @@ export default function AIAssistant({ onGeneratePlan }: Props) {
         <div className="calendar-actions">
           <button className="btn btn-secondary" onClick={connectGoogleCalendar}>
             <CalendarDays size={14} />
-            Connect Google Calendar
+            Connect / reconnect
+          </button>
+          <button className="btn btn-secondary" onClick={handleTestCalendarConnection} disabled={testingCalendar}>
+            {testingCalendar ? 'Testing…' : 'Test connection'}
           </button>
           <button
             className="btn btn-primary"

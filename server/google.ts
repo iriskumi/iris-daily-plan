@@ -26,8 +26,9 @@ export interface GoogleTokens {
 }
 
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+export const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
-export const GOOGLE_OAUTH_SCOPE = `${CALENDAR_SCOPE} ${GMAIL_SCOPE} openid email`
+export const GOOGLE_OAUTH_SCOPE = `${CALENDAR_SCOPE} ${CALENDAR_EVENTS_SCOPE} ${GMAIL_SCOPE} openid email`
 export const TOKEN_COOKIE = 'iris_google_calendar_tokens'
 export const STATE_COOKIE = 'iris_google_calendar_state'
 export const TOKEN_STORAGE_WARNING =

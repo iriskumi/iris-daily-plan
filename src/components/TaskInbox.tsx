@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, X, Check, CalendarPlus, BookOpen } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check, CalendarPlus, BookOpen, CalendarDays } from 'lucide-react'
 import type {
   Task,
-  TaskCategory,
   TaskArea,
   TaskEnergy,
   TaskMode,
@@ -18,10 +17,10 @@ import {
   unscheduleTaskFromToday,
 } from '../queueTaskHelpers'
 import {
-  TASK_AREAS,
   TASK_ENERGIES,
   TASK_MODES,
   TASK_STATUSES,
+  areaFromCategory,
   categoryFromArea,
   createInboxTask,
   isActiveTask,
@@ -30,25 +29,15 @@ import {
 } from '../focusBlocks'
 import { DURATION_GROUPS, isStandardDuration, longBlockHint } from '../durations'
 import { getDaysUntil } from '../planner'
-
-const CATEGORIES: { id: TaskCategory; label: string }[] = [
-  { id: 'assessment', label: 'Assessment' },
-  { id: 'cyber-study', label: 'Cyber Study' },
-  { id: 'job-search', label: 'Job Search' },
-  { id: 'work-shift', label: 'Work / Holmesglen' },
-  { id: 'admin-life', label: 'Admin / Life' },
-  { id: 'ai', label: 'AI' },
-  { id: 'english-practice', label: 'English Practice' },
-  { id: 'japanese-practice', label: 'Japanese Practice' },
-  { id: 'exercise', label: 'Exercise' },
-  { id: 'recovery', label: 'Recovery' },
-  { id: 'finance-bills', label: 'Finance / Bills' },
-  { id: 'consulting-freelance', label: 'Consulting / Freelance' },
-]
-
-function categoryLabel(id: TaskCategory) {
-  return CATEGORIES.find(c => c.id === id)?.label ?? id
-}
+import {
+  areasForTaskKind,
+  defaultAreaForKind,
+  taskKindFromTask,
+  taskKindLabel,
+  type TaskKind,
+} from '../taskTaxonomy'
+import { formatScheduledChipLabel } from '../taskCalendarDefaults'
+import TaskScheduleModal from './TaskScheduleModal'
 
 function deadlineTag(deadline?: string): { text: string; cls: string } | null {
   if (!deadline) return null
@@ -70,10 +59,12 @@ type TaskFormData = Pick<
   'title' | 'area' | 'energy' | 'mode' | 'estimatedMinutes' | 'nextTinyAction' | 'status'
 > & {
   deadline?: string
+  taskKind?: TaskKind
 }
 
 const emptyForm = (): TaskFormData => ({
   title: '',
+  taskKind: 'study-work',
   area: 'Cyber',
   energy: 'Medium',
   mode: 'Focus',
@@ -89,12 +80,31 @@ interface TaskFormProps {
   onCancel: () => void
 }
 
-function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
-  const [form, setForm] = useState({ ...emptyForm(), ...initial })
+function TaskForm({ initial, onSave, onCancel, isEdit = false }: TaskFormProps & { isEdit?: boolean }) {
+  const [form, setForm] = useState(() => ({
+    ...emptyForm(),
+    ...initial,
+    taskKind: initial?.taskKind ?? taskKindFromTask({
+      area: initial?.area,
+      category: categoryFromArea(initial?.area ?? 'Other'),
+    }),
+    area: initial?.area ?? defaultAreaForKind(initial?.taskKind ?? 'study-work'),
+  }))
   const suggestedTinyAction = tinyActionForTask(form.title, form.area ?? 'Other')
+  const areaOptions = areasForTaskKind(form.taskKind ?? 'study-work')
 
   function f<K extends keyof typeof form>(key: K, val: (typeof form)[K]) {
     setForm(prev => ({ ...prev, [key]: val }))
+  }
+
+  function handleKindChange(kind: TaskKind) {
+    setForm(prev => ({
+      ...prev,
+      taskKind: kind,
+      area: areasForTaskKind(kind).includes(prev.area as TaskArea) ? prev.area : defaultAreaForKind(kind),
+      mode: kind === 'life' && prev.area === 'Admin' ? 'Admin' : prev.mode,
+      nextTinyAction: prev.nextTinyAction?.trim() ? prev.nextTinyAction : tinyActionForArea(defaultAreaForKind(kind)),
+    }))
   }
 
   function handleAreaChange(area: TaskArea) {
@@ -140,14 +150,30 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
         />
       </div>
 
+      <div className="form-group">
+        <label>Type</label>
+        <div className="btn-group">
+          {(['study-work', 'life'] as const).map(kind => (
+            <button
+              key={kind}
+              type="button"
+              className={`btn-option ${form.taskKind === kind ? 'selected' : ''}`}
+              onClick={() => handleKindChange(kind)}
+            >
+              {taskKindLabel(kind)}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="form-row">
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Area</label>
+          <label>Area / tag (optional)</label>
           <select
             value={form.area}
             onChange={e => handleAreaChange(e.target.value as TaskArea)}
           >
-            {TASK_AREAS.map(area => (
+            {areaOptions.map(area => (
               <option key={area} value={area}>
                 {area}
               </option>
@@ -188,6 +214,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
             </div>
           )}
         </div>
+        {!isEdit ? null : (
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Mode</label>
           <div className="btn-group">
@@ -199,6 +226,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
             )}
           </div>
         </div>
+        )}
       </div>
 
       <div className="form-group mt-1">
@@ -213,6 +241,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
         </div>
       </div>
 
+      {isEdit && (
       <div className="form-group">
         <label>Status</label>
         <div className="btn-group">
@@ -224,6 +253,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
           )}
         </div>
       </div>
+      )}
 
       <div className="form-group">
         <label>Next tiny action</label>
@@ -263,7 +293,7 @@ function TaskForm({ initial, onSave, onCancel }: TaskFormProps) {
 }
 
 const ALL_FILTER = 'all'
-type Filter = TaskCategory | 'all' | 'done' | 'archived'
+type Filter = TaskKind | typeof ALL_FILTER | 'done' | 'archived'
 
 export default function TaskInbox() {
   const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
@@ -271,6 +301,7 @@ export default function TaskInbox() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [scheduleTask, setScheduleTask] = useState<Task | null>(null)
   const today = getLocalDateKey()
 
   function persist(updated: Task[]) {
@@ -370,11 +401,32 @@ export default function TaskInbox() {
     setFilter('archived')
   }
 
+  function removeCalendarLink(taskId: string) {
+    persist(tasks.map(task => task.id === taskId
+      ? {
+          ...task,
+          calendarEventId: undefined,
+          calendarEventUrl: undefined,
+          calendarStart: undefined,
+          calendarEnd: undefined,
+          calendarStatus: undefined,
+          updatedAt: new Date().toISOString(),
+        }
+      : task))
+    setActionMessage('Removed local calendar link. Google Calendar event was not deleted.')
+  }
+
+  function applyCalendarSchedule(taskId: string, patch: Pick<Task, 'calendarEventId' | 'calendarEventUrl' | 'calendarStart' | 'calendarEnd' | 'calendarStatus'>) {
+    persist(tasks.map(task => task.id === taskId
+      ? { ...task, ...patch, updatedAt: new Date().toISOString() }
+      : task))
+  }
+
   const filtered = tasks.filter(t => {
     if (filter === 'done') return t.done || t.status === 'Done'
     if (filter === 'archived') return t.status === 'Archived'
     if (filter === ALL_FILTER) return isActiveTask(t)
-    return isActiveTask(t) && t.category === filter
+    return isActiveTask(t) && taskKindFromTask(t) === filter
   })
 
   const pendingCount = tasks.filter(isActiveTask).length
@@ -393,7 +445,7 @@ export default function TaskInbox() {
               <span style={{ width: `${Math.round(doneRatio * 100)}%` }} />
             </div>
             <p className="page-subtitle">
-              {pendingCount} pending · {doneCount} done · Add to today → Start in Study
+              {pendingCount} pending · {doneCount} done · Study/Work or Life → Add to today → Start in Study
             </p>
           </div>
           <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -428,19 +480,18 @@ export default function TaskInbox() {
         >
           All pending
         </button>
-        {CATEGORIES.map(c => {
-          const count = tasks.filter(t => isActiveTask(t) && t.category === c.id).length
-          if (count === 0) return null
-          return (
-            <button
-              key={c.id}
-              className={`filter-chip ${filter === c.id ? 'active' : ''}`}
-              onClick={() => setFilter(c.id)}
-            >
-              {c.label} ({count})
-            </button>
-          )
-        })}
+        <button
+          className={`filter-chip ${filter === 'study-work' ? 'active' : ''}`}
+          onClick={() => setFilter('study-work')}
+        >
+          Study / Work ({tasks.filter(t => isActiveTask(t) && taskKindFromTask(t) === 'study-work').length})
+        </button>
+        <button
+          className={`filter-chip ${filter === 'life' ? 'active' : ''}`}
+          onClick={() => setFilter('life')}
+        >
+          Life ({tasks.filter(t => isActiveTask(t) && taskKindFromTask(t) === 'life').length})
+        </button>
         {doneCount > 0 && (
           <button
             className={`filter-chip ${filter === 'done' ? 'active' : ''}`}
@@ -472,7 +523,7 @@ export default function TaskInbox() {
               ? 'Nothing completed yet'
               : filter === ALL_FILTER
                 ? 'Task inbox is clear'
-                : `No ${categoryLabel(filter as TaskCategory)} tasks`}
+                : `No ${taskKindLabel(filter as TaskKind)} tasks`}
           </h3>
           <p>
             {filter === ALL_FILTER
@@ -487,12 +538,19 @@ export default function TaskInbox() {
             const isLargeTask = task.estimatedMinutes >= 90
             const totalEstimateLabel = `${task.estimatedMinutes} min total`
             const inTodayQueue = isTaskScheduledForDate(task, today)
+            const scheduledLabel = formatScheduledChipLabel(task.calendarStart)
+            const kind = taskKindFromTask(task)
 
             return (
               <div key={task.id}>
                 {editingId === task.id ? (
                   <TaskForm
-                    initial={task}
+                    isEdit
+                    initial={{
+                      ...task,
+                      taskKind: kind,
+                      area: task.area ?? areaFromCategory(task.category),
+                    }}
                     onSave={data => updateTask(task.id, data)}
                     onCancel={() => setEditingId(null)}
                   />
@@ -505,8 +563,9 @@ export default function TaskInbox() {
                     <div className="task-content">
                       <div className="task-title">{task.title}</div>
                       <div className="task-meta">
+                        <span className="badge badge-task-kind">{taskKindLabel(kind)}</span>
                         <span className={`badge badge-${task.category}`}>
-                          {task.area ?? categoryLabel(task.category)}
+                          {task.area ?? areaFromCategory(task.category)}
                         </span>
                         <span className="badge">
                           {task.energy ?? 'Medium'}
@@ -519,6 +578,9 @@ export default function TaskInbox() {
                         </span>
                         {inTodayQueue && (
                           <span className="badge badge-today-queue">In today</span>
+                        )}
+                        {scheduledLabel && (
+                          <span className="badge badge-calendar-scheduled">Calendar · {scheduledLabel}</span>
                         )}
                         {isLargeTask && (
                           <span className="badge">
@@ -573,6 +635,22 @@ export default function TaskInbox() {
                               Open in Study
                             </button>
                           )}
+                          <button type="button" className="btn btn-secondary task-action-btn" onClick={() => setScheduleTask(task)}>
+                            <CalendarDays size={13} />
+                            {task.calendarStatus === 'scheduled' ? 'Reschedule' : 'Schedule'}
+                          </button>
+                          {task.calendarStatus === 'scheduled' && (
+                            <>
+                              {task.calendarEventUrl && (
+                                <a className="btn btn-secondary task-action-btn" href={task.calendarEventUrl} target="_blank" rel="noreferrer">
+                                  Open event
+                                </a>
+                              )}
+                              <button type="button" className="btn btn-secondary task-action-btn" onClick={() => removeCalendarLink(task.id)}>
+                                Remove calendar link
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -601,6 +679,26 @@ export default function TaskInbox() {
             )
           })}
         </div>
+      )}
+
+      {scheduleTask && (
+        <TaskScheduleModal
+          task={scheduleTask}
+          open={Boolean(scheduleTask)}
+          onClose={() => setScheduleTask(null)}
+          onScheduled={patch => {
+            applyCalendarSchedule(scheduleTask.id, patch)
+            setActionMessage(`Scheduled "${scheduleTask.title}" in Google Calendar.`)
+          }}
+          onAddToToday={() => {
+            addTaskToToday(scheduleTask.id)
+            setScheduleTask(null)
+          }}
+          onOpenInStudy={() => {
+            openTaskInStudy(scheduleTask)
+            setScheduleTask(null)
+          }}
+        />
       )}
     </div>
   )
