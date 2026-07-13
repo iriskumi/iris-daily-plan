@@ -6972,6 +6972,19 @@ textarea {
   line-height: 1.55;
 }
 
+.iris365-proof-source {
+  display: block;
+  margin-top: -0.2rem;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.iris365-proof-source.active {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 .iris365-proof-anchor details {
   color: var(--text-2);
   font-size: 12px;
@@ -7024,6 +7037,12 @@ textarea {
   background: var(--accent-bg);
 }
 
+.iris365-save-pill.error {
+  color: #8A4A3D;
+  border-color: rgba(173, 87, 64, 0.36);
+  background: rgba(255, 238, 231, 0.74);
+}
+
 .iris365-checkbox-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7073,6 +7092,18 @@ textarea {
   color: var(--text-2);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.iris365-recording-helper {
+  margin: 0.75rem 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.iris365-recording-helper.error {
+  color: #8A4A3D;
+  font-weight: 600;
 }
 
 .iris365-foundation-row {

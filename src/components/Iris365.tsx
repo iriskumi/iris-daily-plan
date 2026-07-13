@@ -9,6 +9,7 @@ import {
   calculateDaysRemaining,
   calculateFoundationScore,
   calculateFoundationStatus,
+  foundationStatusForScore,
   calculateIris365Stats,
   determineCurrentPhase,
   emptyIris365MonthlyReview,
@@ -32,6 +33,7 @@ import {
   saveIris365WeeklyReview,
   updateIris365DopamineSwapLog,
 } from '../iris365Storage'
+import { getIris365DailyAnchorSync } from '../iris365Sync'
 import type {
   Iris365DopamineFeedbackReason,
   Iris365DopamineOutcome,
@@ -244,6 +246,13 @@ function formatShortDate(date: string): string {
   })
 }
 
+function formatSaveTime(value?: string): string {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
+}
+
 function ratingOptions(label: string, value: number, onChange: (value: number) => void) {
   return (
     <div className="iris365-rating" role="group" aria-label={label}>
@@ -275,6 +284,13 @@ function foundationCopy(status: ReturnType<typeof calculateFoundationStatus>): s
   if (status === 'Valid day') return 'Two anchors held. The day counts.'
   if (status === 'Recovery day') return 'One anchor held. That still matters.'
   return 'Pattern spotted, not failure. Reduce friction and keep the next step small.'
+}
+
+function proofSourceLine(key: Iris365ProofKey, manualDone: boolean, sync: ReturnType<typeof getIris365DailyAnchorSync>): string {
+  if (key === 'body' && sync.bodyMovedAuto) return `Auto from Exercise · ${sync.bodyMovedMinutes} min`
+  if (key === 'english' && sync.englishOutputAuto) return `Auto from English Output Journey · ${sync.englishOutputReps} rep${sync.englishOutputReps === 1 ? '' : 's'}`
+  if (manualDone) return 'Manual proof'
+  return 'Not recorded yet'
 }
 
 function getMainGrowthTask(entry: Iris365Entry): string {
@@ -700,14 +716,26 @@ export default function Iris365() {
   const [swapFeedbackMessage, setSwapFeedbackMessage] = useState('')
   const [rejectSelectorOpen, setRejectSelectorOpen] = useState(false)
   const [suggestionMode, setSuggestionMode] = useState<'primary' | 'plan-b'>('primary')
+  const [entrySaveState, setEntrySaveState] = useState<{
+    status: 'idle' | 'saved' | 'error'
+    savedAt?: string
+    message?: string
+  }>(() => ({
+    status: store.entries[today] ? 'saved' : 'idle',
+    savedAt: store.entries[today]?.updatedAt,
+  }))
 
   const dayNumber = calculateCurrentDayNumber(IRIS_365_START_DATE, today)
   const daysRemaining = calculateDaysRemaining(IRIS_365_START_DATE, today)
   const preStart = isBeforeIris365Start(today, IRIS_365_START_DATE)
   const phase = determineCurrentPhase(Math.max(1, dayNumber))
   const progress = iris365ProgressPercent(dayNumber)
-  const foundationScore = calculateFoundationScore(entry)
-  const foundationStatus = calculateFoundationStatus(entry)
+  const anchorSync = getIris365DailyAnchorSync(today)
+  const bodyMovedDone = entry.bodyMoved || anchorSync.bodyMovedAuto
+  const englishOutputDone = entry.englishOutput || anchorSync.englishOutputAuto
+  const oneRealThingDone = entry.oneRealThingDone
+  const foundationScore = [bodyMovedDone, englishOutputDone, oneRealThingDone].filter(Boolean).length
+  const foundationStatus = foundationStatusForScore(foundationScore)
   const stats = useMemo(() => calculateIris365Stats(store.entries, today), [store.entries, today])
   const recentEntries = useMemo(() => recentIris365Entries(store.entries, 7), [store.entries])
   const weekStart = getIris365WeekStart(today)
@@ -719,6 +747,7 @@ export default function Iris365() {
   const dopamineStats = getIris365DopamineWeekStats(store, today)
   const filteredProofItems = store.proofItems.filter(item => proofCategoryFilter === 'All' || item.category === proofCategoryFilter)
   const savedToday = Boolean(store.entries[today])
+  const entrySavedTime = formatSaveTime(entrySaveState.savedAt ?? entry.updatedAt)
   const dopamineFeedback = swapUrge && swapState
     ? buildDopamineFeedbackPreferences(store.dopamineSwapLibrary, swapUrge, swapState)
     : null
@@ -728,14 +757,24 @@ export default function Iris365() {
 
   function updateEntry(patch: Partial<Iris365Entry>) {
     if (preStart) return
+    const updatedAt = new Date().toISOString()
     const next = {
       ...entry,
       ...patch,
       date: today,
-      updatedAt: new Date().toISOString(),
+      updatedAt,
     }
-    setEntry(next)
-    setStore(saveIris365Entry(next, store))
+    try {
+      const nextStore = saveIris365Entry(next, store)
+      setEntry(next)
+      setStore(nextStore)
+      setEntrySaveState({ status: 'saved', savedAt: updatedAt })
+    } catch (error) {
+      setEntrySaveState({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Could not save Iris365. Try again.',
+      })
+    }
   }
 
   function updateStimulusPattern(key: Iris365HighStimulusPatternKey, status: Iris365HighStimulusPatternStatus) {
@@ -992,12 +1031,17 @@ export default function Iris365() {
               <div className="iris365-daily-proof-grid">
                 {DAILY_PROOF_ORDER.map(key => {
                   const proof = entry.proofs[key]
+                  const proofCompleted = key === 'body'
+                    ? proof.completed || anchorSync.bodyMovedAuto
+                    : key === 'english'
+                      ? proof.completed || anchorSync.englishOutputAuto
+                      : proof.completed
                   return (
-                    <article key={key} className={`iris365-proof-anchor ${proof.completed ? 'done' : ''}`}>
+                    <article key={key} className={`iris365-proof-anchor ${proofCompleted ? 'done' : ''}`}>
                       <label>
                         <input
                           type="checkbox"
-                          checked={proof.completed}
+                          checked={proofCompleted}
                           onChange={event => {
                             const completed = event.target.checked
                             updateEntry({
@@ -1010,6 +1054,9 @@ export default function Iris365() {
                         />
                         <span>{proof.label}</span>
                       </label>
+                      <small className={`iris365-proof-source ${proofCompleted ? 'active' : ''}`}>
+                        {proofSourceLine(key, proof.completed, anchorSync)}
+                      </small>
                       <p>{proof.description}</p>
                       <details>
                         <summary>Minimum / standard / push</summary>
@@ -1045,8 +1092,12 @@ export default function Iris365() {
                 <div className="section-label">Foundation first</div>
                 <div className="card-title">{formatShortDate(today)}</div>
               </div>
-              <span className={`iris365-save-pill ${savedToday ? 'saved' : ''}`}>
-                {savedToday ? 'Saved' : 'Not saved yet'}
+              <span className={`iris365-save-pill ${savedToday ? 'saved' : ''} ${entrySaveState.status === 'error' ? 'error' : ''}`}>
+                {entrySaveState.status === 'error'
+                  ? 'Save failed'
+                  : savedToday
+                    ? `Saved${entrySavedTime ? ` ${entrySavedTime}` : ''}`
+                    : 'Not saved yet'}
               </span>
             </div>
 
@@ -1064,6 +1115,11 @@ export default function Iris365() {
                     <small>{foundationCopy(foundationStatus)}</small>
                   </div>
                 </div>
+                <p className={`iris365-recording-helper ${entrySaveState.status === 'error' ? 'error' : ''}`}>
+                  {entrySaveState.status === 'error'
+                    ? `保存失败：${entrySaveState.message}`
+                    : '勾选后会保存到今天的 Iris365 记录，用来计算当天基础锚点。不会算作 Study Session。'}
+                </p>
 
                 <DailyRhythmLog
                   className="iris365-rhythm-inline"
@@ -1074,25 +1130,33 @@ export default function Iris365() {
                 />
 
                 <div className="iris365-foundation-grid">
-                  {FOUNDATION_FIELDS.map(item => (
-                    <label key={item.key} className="iris365-check-row iris365-foundation-row">
-                      <input
-                        type="checkbox"
-                        checked={entry[item.key]}
-                        onChange={event => {
-                          const completed = event.target.checked
-                          updateEntry({
-                            ...foundationPatch(item.key, completed),
-                            ...(item.key !== 'sleepRhythmProtected' ? { proofs: updateProofCompletion(entry, item.proofKey, completed) } : {}),
-                          })
-                        }}
-                      />
-                      <span>
-                        <strong>{item.label}</strong>
-                        <small>{item.hint}</small>
-                      </span>
-                    </label>
-                  ))}
+                  {FOUNDATION_FIELDS.map(item => {
+                    const checked = item.key === 'bodyMoved' ? bodyMovedDone : entry[item.key]
+                    return (
+                      <label key={item.key} className="iris365-check-row iris365-foundation-row">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={event => {
+                            const completed = event.target.checked
+                            updateEntry({
+                              ...foundationPatch(item.key, completed),
+                              ...(item.key !== 'sleepRhythmProtected' ? { proofs: updateProofCompletion(entry, item.proofKey, completed) } : {}),
+                            })
+                          }}
+                        />
+                        <span>
+                          <strong>{item.label}</strong>
+                          <small>{item.hint}</small>
+                          {item.key === 'bodyMoved' && (
+                            <small className={`iris365-proof-source ${bodyMovedDone ? 'active' : ''}`}>
+                              {proofSourceLine('body', entry.bodyMoved, anchorSync)}
+                            </small>
+                          )}
+                        </span>
+                      </label>
+                    )
+                  })}
                 </div>
               </>
             )}
@@ -1111,32 +1175,40 @@ export default function Iris365() {
                   </div>
                 </div>
                 <div className="iris365-growth-grid">
-                  {GROWTH_FIELDS.map(item => (
-                    <label key={item.key} className="iris365-check-row">
-                      <input
-                        type="checkbox"
-                        checked={entry[item.key]}
-                        onChange={event => {
-                          const completed = event.target.checked
-                          updateEntry({
-                            [item.key]: completed,
-                            skillTouches: {
-                              ...entry.skillTouches,
-                              ...(item.key === 'englishOutput' || item.key === 'shadowing' ? { english: completed } : {}),
-                              ...(item.key === 'cyberAiProject' ? { cyber: completed, aiAutomation: completed } : {}),
-                              ...(item.key === 'jobApplication' || item.key === 'workPrep' ? { career: completed } : {}),
-                              ...(item.key === 'studyCoursework' ? { data: completed } : {}),
-                              ...(item.key === 'lifeAdmin' ? { lifeSystem: completed } : {}),
-                            },
-                          })
-                        }}
-                      />
-                      <span>
-                        <strong>{item.label}</strong>
-                        <small>{item.hint}</small>
-                      </span>
-                    </label>
-                  ))}
+                  {GROWTH_FIELDS.map(item => {
+                    const checked = item.key === 'englishOutput' ? englishOutputDone : entry[item.key]
+                    return (
+                      <label key={item.key} className="iris365-check-row">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={event => {
+                            const completed = event.target.checked
+                            updateEntry({
+                              [item.key]: completed,
+                              skillTouches: {
+                                ...entry.skillTouches,
+                                ...(item.key === 'englishOutput' || item.key === 'shadowing' ? { english: completed } : {}),
+                                ...(item.key === 'cyberAiProject' ? { cyber: completed, aiAutomation: completed } : {}),
+                                ...(item.key === 'jobApplication' || item.key === 'workPrep' ? { career: completed } : {}),
+                                ...(item.key === 'studyCoursework' ? { data: completed } : {}),
+                                ...(item.key === 'lifeAdmin' ? { lifeSystem: completed } : {}),
+                              },
+                            })
+                          }}
+                        />
+                        <span>
+                          <strong>{item.label}</strong>
+                          <small>{item.hint}</small>
+                          {item.key === 'englishOutput' && (
+                            <small className={`iris365-proof-source ${englishOutputDone ? 'active' : ''}`}>
+                              {proofSourceLine('english', entry.englishOutput, anchorSync)}
+                            </small>
+                          )}
+                        </span>
+                      </label>
+                    )
+                  })}
                 </div>
                 <label className="iris365-single-field">
                   What was the real thing today?
