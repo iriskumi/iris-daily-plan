@@ -36,6 +36,7 @@ import * as timerEngine from '../timerEngine'
 import type { TimerSession } from '../timerEngineTypes'
 import type { DayBlock } from '../types'
 import HeroImageViewport from './HeroImageViewport'
+import DailyRhythmLog from './DailyRhythmLog'
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 
@@ -713,6 +714,8 @@ export default function StartNowDashboard({
               </button>
             </div>
           </section>
+
+          <DailyRhythmLog />
 
           <div className="today-progress-strip" aria-label="Today progress">
             {progressItems.map(item => (

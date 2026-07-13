@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarDays, CheckCircle2, Leaf, Plus, ShieldCheck, TrendingUp } from 'lucide-react'
 import { getLocalDateKey } from '../focus'
+import DailyRhythmLog from './DailyRhythmLog'
 import {
   addIris365DopamineSwapLog,
   addIris365ProofItem,
@@ -1064,6 +1065,14 @@ export default function Iris365() {
                   </div>
                 </div>
 
+                <DailyRhythmLog
+                  className="iris365-rhythm-inline"
+                  wakeTime={entry.wakeTime}
+                  sleepTime={entry.sleepTime}
+                  onWakeTimeChange={value => updateEntry({ wakeTime: value })}
+                  onSleepTimeChange={value => updateEntry({ sleepTime: value })}
+                />
+
                 <div className="iris365-foundation-grid">
                   {FOUNDATION_FIELDS.map(item => (
                     <label key={item.key} className="iris365-check-row iris365-foundation-row">
@@ -1188,14 +1197,6 @@ export default function Iris365() {
                   </div>
                 </div>
                 <div className="iris365-detail-grid">
-                  <label>
-                    Sleep time
-                    <input value={entry.sleepTime} onChange={event => updateEntry({ sleepTime: event.target.value })} placeholder="23:00" />
-                  </label>
-                  <label>
-                    Wake time
-                    <input value={entry.wakeTime} onChange={event => updateEntry({ wakeTime: event.target.value })} placeholder="07:30" />
-                  </label>
                   <label>
                     Movement type
                     <input value={entry.movementType} onChange={event => updateEntry({ movementType: event.target.value })} placeholder="Walk, stretch, gym, chores" />

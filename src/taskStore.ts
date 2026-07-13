@@ -198,6 +198,11 @@ export function ensureStudyTemplateTaskInTaskStore(
   template: StudyTaskTemplate,
   durationMinutes: number,
   activeSession?: StudyActiveSession,
+  overrides?: {
+    title?: string
+    noteDestination?: string
+    studyMethod?: string
+  },
 ): string {
   const store = mutableTaskStore()
   const now = new Date().toISOString()
@@ -206,16 +211,16 @@ export function ensureStudyTemplateTaskInTaskStore(
   const task: UnifiedTask = {
     id: taskId,
     templateId: template.id,
-    title: template.title,
+    title: overrides?.title?.trim() || template.title,
     context: 'study',
     category: template.category,
     status: 'in-progress',
     energy: template.energy,
     estimatedMinutes: durationMinutes,
     source: 'study-template-instance',
-    noteDestination: template.noteDestination,
+    noteDestination: overrides?.noteDestination?.trim() || template.noteDestination,
     resourceSuggestion: template.resourceSuggestion,
-    studyMethod: template.studyMethod,
+    studyMethod: overrides?.studyMethod?.trim() || template.studyMethod,
     subtasks: subtasksFromTitles(taskId, template.subtasks),
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,

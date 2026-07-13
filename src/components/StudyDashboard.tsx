@@ -62,6 +62,7 @@ import type {
   StudyCategory,
   StudyDailyReview,
   StudySessionRecord,
+  StudyTaskTemplate,
 } from '../studyTypes'
 import type { Iris365ProofCategory, Iris365ProofItem } from '../iris365Types'
 import type { EnglishListeningDrawMode, EnglishListeningDrawResult } from '../englishListeningDraw'
@@ -76,6 +77,24 @@ const COURSERA_CATEGORY: StudyCategory = 'Coursera AI Pathway'
 
 type StudyPickerOption = StudyCategory | 'Custom'
 const STUDY_PICKER_OPTIONS: StudyPickerOption[] = ['Custom', ...STUDY_CATEGORIES]
+
+const EMPTY_CUSTOM_TASK = {
+  title: '',
+  category: 'English Output' as StudyCategory,
+  duration: '25',
+  noteDestination: 'Obsidian/Study/Inbox.md',
+  notes: '',
+}
+
+function customTaskFromTemplate(template: StudyTaskTemplate) {
+  return {
+    title: template.title,
+    category: template.category,
+    duration: String(template.defaultDuration),
+    noteDestination: template.noteDestination,
+    notes: template.studyMethod,
+  }
+}
 
 type StudyProofDraft = Pick<Iris365ProofItem, 'date' | 'category' | 'title' | 'description' | 'linkOrFile' | 'sourceSessionId'>
 
@@ -377,13 +396,7 @@ export default function StudyDashboard() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [customHours, setCustomHours] = useState(() => String(target.targetMinutes / 60))
   const [copied, setCopied] = useState<string | null>(null)
-  const [customTask, setCustomTask] = useState({
-    title: '',
-    category: 'English Output' as StudyCategory,
-    duration: '25',
-    noteDestination: 'Obsidian/Study/Inbox.md',
-    notes: '',
-  })
+  const [customTask, setCustomTask] = useState({ ...EMPTY_CUSTOM_TASK })
   const [customTimerMinutes, setCustomTimerMinutes] = useState('25')
   const [notionStatus, setNotionStatus] = useState<string | null>(null)
   const [notionUrl, setNotionUrl] = useState<string | null>(null)
@@ -438,17 +451,16 @@ export default function StudyDashboard() {
   const outputLongTermPercent = Math.min(100, (outputJourney.totalReps / ENGLISH_OUTPUT_LONG_TERM_TARGET) * 100)
   const latestListeningDraw = latestEnglishListeningDraw(listeningDrawState)
   const listeningDrawRedrawsRemaining = Math.max(0, listeningDrawState.redrawLimit - listeningDrawState.redrawsUsed)
-  const hasSelectedCustomTask = selectedPicker === 'Custom' && customTask.title.trim().length > 0
-  const hasSelectedTask = Boolean(selectedQueueTask || selectedTemplate || hasSelectedCustomTask)
+  const hasSelectedEditableTask = Boolean(
+    (selectedPicker === 'Custom' || selectedTemplate) && customTask.title.trim(),
+  )
+  const hasSelectedTask = Boolean(selectedQueueTask || hasSelectedEditableTask)
   const selectedTaskTitle = selectedQueueTask?.title
-    ?? selectedTemplate?.title
-    ?? (hasSelectedCustomTask ? customTask.title.trim() : null)
+    ?? (hasSelectedEditableTask ? customTask.title.trim() : null)
   const selectedTaskCategory = selectedQueueTask?.category
-    ?? selectedTemplate?.category
-    ?? (hasSelectedCustomTask ? customTask.category : null)
+    ?? (hasSelectedEditableTask ? customTask.category : null)
   const previewDuration = selectedQueueTask?.durationMinutes
-    ?? selectedTemplate?.defaultDuration
-    ?? (hasSelectedCustomTask ? (Number(customTask.duration) || 25) : (Number(customTimerMinutes) || 25))
+    ?? (hasSelectedEditableTask ? (Number(customTask.duration) || 25) : (Number(customTimerMinutes) || 25))
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowMs(Date.now()), 1000)
@@ -520,8 +532,19 @@ export default function StudyDashboard() {
     setSelectedQueueTask(null)
     setSessionStartMessage(null)
     if (picker === 'Custom') {
-      setCustomTimerMinutes(customTask.duration || '25')
+      setCustomTask({ ...EMPTY_CUSTOM_TASK })
+      setCustomTimerMinutes('25')
+      return
     }
+    setCustomTask({ ...EMPTY_CUSTOM_TASK, category: picker })
+  }
+
+  function selectTemplate(template: StudyTaskTemplate) {
+    setSelectedTemplateId(template.id)
+    setSelectedQueueTask(null)
+    setSessionStartMessage(null)
+    setCustomTask(customTaskFromTemplate(template))
+    setCustomTimerMinutes(String(template.defaultDuration))
   }
 
   async function copyText(label: string, text: string) {
@@ -532,16 +555,17 @@ export default function StudyDashboard() {
 
   function templateSummary() {
     if (!selectedTemplate) return ''
+    const title = customTask.title.trim() || selectedTemplate.title
     return [
-      `# ${selectedTemplate.title}`,
+      `# ${title}`,
       '',
-      `Category: ${selectedTemplate.category}`,
-      `Duration: ${selectedTemplate.defaultDuration} min`,
+      `Category: ${customTask.category || selectedTemplate.category}`,
+      `Duration: ${customTask.duration || selectedTemplate.defaultDuration} min`,
       `Energy: ${selectedTemplate.energy}`,
-      `Note: ${selectedTemplate.noteDestination}`,
+      `Note: ${customTask.noteDestination || selectedTemplate.noteDestination}`,
       '',
       `Resource: ${selectedTemplate.resourceSuggestion}`,
-      `Method: ${selectedTemplate.studyMethod}`,
+      `Method: ${customTask.notes.trim() || selectedTemplate.studyMethod}`,
       '',
       'Subtasks:',
       ...selectedTemplate.subtasks.map(subtask => `- ${subtask}`),
@@ -639,6 +663,10 @@ export default function StudyDashboard() {
       showChooseTaskMessage()
       return
     }
+    const title = customTask.title.trim() || selectedTemplate.title
+    const noteDestination = customTask.noteDestination.trim() || selectedTemplate.noteDestination
+    const notes = customTask.notes.trim() || selectedTemplate.studyMethod
+    const category = customTask.category || selectedTemplate.category
     const start = Date.now()
     const sessionId = crypto.randomUUID()
     const timerSession = timerEngine.start(
@@ -650,24 +678,28 @@ export default function StudyDashboard() {
     const session = studySessionWithTimer({
       id: sessionId,
       taskTemplateId: selectedTemplate.id,
-      title: selectedTemplate.title,
-      category: selectedTemplate.category,
+      title,
+      category,
       sessionStartTime: start,
       durationMinutes,
       expectedEndTime: start + durationMinutes * 60_000,
       pausedAccumulatedMs: 0,
       status: 'running',
-      noteDestination: selectedTemplate.noteDestination,
-      notes: selectedTemplate.studyMethod,
+      noteDestination,
+      notes,
       resourceUsed: selectedTemplate.resourceSuggestion,
     }, timerSession)
     logStudySessionStart({
       requestedTaskId: selectedTemplate.id,
       resolvedTaskId: selectedTemplate.id,
-      resolvedTitle: selectedTemplate.title,
+      resolvedTitle: title,
       source: 'study-template',
     })
-    ensureStudyTemplateTaskInTaskStore(selectedTemplate, durationMinutes, session)
+    ensureStudyTemplateTaskInTaskStore(selectedTemplate, durationMinutes, session, {
+      title,
+      noteDestination,
+      studyMethod: notes,
+    })
     persistActiveSession(session)
     setSessionStartMessage(null)
   }
@@ -784,11 +816,11 @@ export default function StudyDashboard() {
       startCustomSessionWithDuration(durationMinutes)
       return
     }
-    if (!selectedTemplate) {
-      showChooseTaskMessage()
+    if (selectedTemplate) {
+      startTemplateSession(durationMinutes)
       return
     }
-    startTemplateSession(durationMinutes)
+    showChooseTaskMessage()
   }
 
   function startListeningDrawSession(draw: EnglishListeningDrawResult) {
@@ -1020,6 +1052,71 @@ export default function StudyDashboard() {
     }
   }
 
+  function renderTaskEditForm(mode: 'custom' | 'library') {
+    return (
+      <div className="study-custom-picker-inline">
+        <div className="form-group">
+          <label htmlFor="study-picker-custom-title">Task title</label>
+          <input
+            id="study-picker-custom-title"
+            value={customTask.title}
+            onChange={event => setCustomTask(prev => ({ ...prev, title: event.target.value }))}
+            placeholder={mode === 'library' ? 'Adjust the title if needed' : 'e.g. Write cyber assessment intro'}
+          />
+        </div>
+        <div className="study-custom-picker-row">
+          <div className="form-group">
+            <label htmlFor="study-picker-custom-category">Category</label>
+            <select
+              id="study-picker-custom-category"
+              value={customTask.category}
+              onChange={event => setCustomTask(prev => ({
+                ...prev,
+                category: event.target.value as StudyCategory,
+              }))}
+            >
+              {STUDY_CATEGORIES.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="study-picker-custom-duration">Default duration</label>
+            <select
+              id="study-picker-custom-duration"
+              value={customTask.duration}
+              onChange={event => {
+                const duration = event.target.value
+                setCustomTask(prev => ({ ...prev, duration }))
+                setCustomTimerMinutes(duration)
+              }}
+            >
+              <option value="25">25 min</option>
+              <option value="50">50 min</option>
+              <option value="75">75 min</option>
+              <option value="90">90 min</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="study-picker-custom-notes">Notes / method</label>
+          <textarea
+            id="study-picker-custom-notes"
+            value={customTask.notes}
+            onChange={event => setCustomTask(prev => ({ ...prev, notes: event.target.value }))}
+            placeholder="What to open first, or how to run this block."
+            rows={2}
+          />
+        </div>
+        {mode === 'custom' ? (
+          <p className="hub-support-copy">Add a title, then start the timer below. Obsidian path is in the full form further down.</p>
+        ) : (
+          <p className="hub-support-copy">Library defaults are pre-filled. Tweak anything, then start focus below.</p>
+        )}
+      </div>
+    )
+  }
+
   function renderTaskPickerStep() {
     if (selectedQueueTask) {
       return (
@@ -1053,76 +1150,29 @@ export default function StudyDashboard() {
           ))}
         </div>
         {selectedPicker === 'Custom' ? (
-          <div className="study-custom-picker-inline">
-            <div className="form-group">
-              <label htmlFor="study-picker-custom-title">Task title</label>
-              <input
-                id="study-picker-custom-title"
-                value={customTask.title}
-                onChange={event => setCustomTask(prev => ({ ...prev, title: event.target.value }))}
-                placeholder="e.g. Write cyber assessment intro"
-              />
-            </div>
-            <div className="study-custom-picker-row">
-              <div className="form-group">
-                <label htmlFor="study-picker-custom-category">Category</label>
-                <select
-                  id="study-picker-custom-category"
-                  value={customTask.category}
-                  onChange={event => setCustomTask(prev => ({
-                    ...prev,
-                    category: event.target.value as StudyCategory,
-                  }))}
-                >
-                  {STUDY_CATEGORIES.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="study-picker-custom-duration">Default duration</label>
-                <select
-                  id="study-picker-custom-duration"
-                  value={customTask.duration}
-                  onChange={event => {
-                    const duration = event.target.value
-                    setCustomTask(prev => ({ ...prev, duration }))
-                    setCustomTimerMinutes(duration)
-                  }}
-                >
-                  <option value="25">25 min</option>
-                  <option value="50">50 min</option>
-                  <option value="75">75 min</option>
-                  <option value="90">90 min</option>
-                </select>
-              </div>
-            </div>
-            <p className="hub-support-copy">Add a title, then start the timer below. Notes and Obsidian path are in the full form further down.</p>
-          </div>
+          renderTaskEditForm('custom')
         ) : (
-        <div className="study-template-list study-template-list-compact">
-          {visibleTemplates.map(template => (
-            <button
-              key={template.id}
-              type="button"
-              className={`study-template-card study-template-card-compact ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
-              onClick={() => {
-                setSelectedTemplateId(template.id)
-                setSelectedQueueTask(null)
-                setSessionStartMessage(null)
-                setCustomTimerMinutes(String(template.defaultDuration))
-              }}
-            >
-              <div className="study-template-header">
-                <div>
-                  <h3>{template.title}</h3>
-                  <p>{template.defaultDuration} min · {template.energy} energy</p>
-                </div>
-                {selectedTemplate?.id === template.id && <span>Selected</span>}
-              </div>
-            </button>
-          ))}
-        </div>
+          <>
+            <div className="study-template-list study-template-list-compact">
+              {visibleTemplates.map(template => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={`study-template-card study-template-card-compact ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
+                  onClick={() => selectTemplate(template)}
+                >
+                  <div className="study-template-header">
+                    <div>
+                      <h3>{template.title}</h3>
+                      <p>{template.defaultDuration} min · {template.energy} energy</p>
+                    </div>
+                    {selectedTemplate?.id === template.id && <span>Selected</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {selectedTemplate && renderTaskEditForm('library')}
+          </>
         )}
       </>
     )
