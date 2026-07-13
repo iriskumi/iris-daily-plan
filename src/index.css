@@ -15353,3 +15353,23 @@ textarea:focus,
     text-align: left;
   }
 }
+
+.media-tab-page .life-log-card.selected {
+  border-color: var(--accent-border);
+  background: linear-gradient(180deg, rgba(244, 231, 227, 0.28) 0%, var(--color-card-elevated) 100%);
+}
+
+.media-tab-page .life-log-action-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.media-form-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}

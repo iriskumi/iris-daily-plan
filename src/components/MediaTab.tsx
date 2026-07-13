@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BookOpen, Copy, ExternalLink, Plus } from 'lucide-react'
+import { BookOpen, Copy, ExternalLink, Pencil, Plus, X } from 'lucide-react'
 import {
   addMediaEntry,
   loadMediaLog,
@@ -11,6 +11,7 @@ import {
   MEDIA_TYPES,
   MEDIA_USEFULNESS,
   mediaObsidianMarkdown,
+  updateMediaEntry,
   type MediaLogEntry,
 } from '../mediaLogStorage'
 
@@ -30,26 +31,54 @@ function matchesFilter(entry: MediaLogEntry, filter: MediaFilter) {
   return true
 }
 
-const initialDraft = {
+type MediaDraft = {
+  title: string
+  type: string
+  language: string
+  status: string
+  mood: string[]
+  usefulness: string[]
+  sourcePlatform: string
+  link: string
+  notes: string
+}
+
+const initialDraft: MediaDraft = {
   title: '',
   type: 'Audiobook',
   language: 'English',
   status: 'Want to try',
-  mood: [] as string[],
-  usefulness: [] as string[],
+  mood: [],
+  usefulness: [],
   sourcePlatform: 'Other',
   link: '',
   notes: '',
 }
 
+function draftFromEntry(entry: MediaLogEntry): MediaDraft {
+  return {
+    title: entry.title,
+    type: entry.type,
+    language: entry.language,
+    status: entry.status,
+    mood: [...entry.mood],
+    usefulness: [...entry.usefulness],
+    sourcePlatform: entry.sourcePlatform ?? 'Other',
+    link: entry.link ?? '',
+    notes: entry.notes ?? '',
+  }
+}
+
 export default function MediaTab() {
   const [store, setStore] = useState(() => loadMediaLog())
-  const [draft, setDraft] = useState(initialDraft)
+  const [draft, setDraft] = useState<MediaDraft>(initialDraft)
   const [filter, setFilter] = useState<MediaFilter>('All')
   const [message, setMessage] = useState('')
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
 
   const entries = useMemo(() => store.entries.filter(entry => matchesFilter(entry, filter)), [filter, store.entries])
+  const isEditing = Boolean(editingEntryId)
 
   function toggleList(key: 'mood' | 'usefulness', value: string) {
     setDraft(prev => ({
@@ -58,15 +87,49 @@ export default function MediaTab() {
     }))
   }
 
-  function addEntry() {
+  function resetForm() {
+    setDraft(initialDraft)
+    setEditingEntryId(null)
+    setShowForm(false)
+  }
+
+  function openAddForm() {
+    setDraft(initialDraft)
+    setEditingEntryId(null)
+    setShowForm(true)
+    window.setTimeout(() => {
+      document.getElementById('media-entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
+  }
+
+  function startEdit(entry: MediaLogEntry) {
+    setDraft(draftFromEntry(entry))
+    setEditingEntryId(entry.id)
+    setShowForm(true)
+    window.setTimeout(() => {
+      document.getElementById('media-entry-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
+  }
+
+  function saveEntry() {
     if (!draft.title.trim()) {
       setMessage('Add a title first.')
       return
     }
+    if (editingEntryId) {
+      const result = updateMediaEntry(editingEntryId, draft, store)
+      if (!result) {
+        setMessage('Could not find that entry to update.')
+        return
+      }
+      setStore(result.store)
+      resetForm()
+      setMessage(`${result.entry.title} updated.`)
+      return
+    }
     const result = addMediaEntry(draft, store)
     setStore(result.store)
-    setDraft(initialDraft)
-    setShowAddForm(false)
+    resetForm()
     setMessage(`${result.entry.title} saved.`)
   }
 
@@ -103,15 +166,15 @@ export default function MediaTab() {
             <h3 className="media-section-title">{entries.length} item{entries.length === 1 ? '' : 's'}</h3>
             <p className="page-subtitle media-helper">Was it actually good for me?</p>
           </div>
-          <button className="btn-primary" type="button" onClick={() => setShowAddForm(value => !value)}>
+          <button className="btn-primary" type="button" onClick={() => (showForm && !isEditing ? resetForm() : openAddForm())}>
             <Plus size={14} />
-            {showAddForm ? 'Hide form' : 'Add entry'}
+            {showForm && !isEditing ? 'Hide form' : 'Add entry'}
           </button>
         </div>
         <div className="life-filter-row">{MEDIA_FILTERS.map(item => <button key={item} type="button" className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div>
         <div className="life-card-list">
           {entries.length === 0 ? <p className="life-empty">No media here yet.</p> : entries.map(entry => (
-            <article className="life-log-card" key={entry.id}>
+            <article className={`life-log-card ${editingEntryId === entry.id ? 'selected' : ''}`} key={entry.id}>
               <div>
                 <h3>{entry.title}</h3>
                 <p>{entry.type} · {entry.language} · {entry.status} · {entry.sourcePlatform}</p>
@@ -119,6 +182,10 @@ export default function MediaTab() {
                 <div className="life-tag-row">{[...entry.mood, ...entry.usefulness].map(tag => <span key={tag}>{tag}</span>)}</div>
               </div>
               <div className="life-log-actions">
+                <button type="button" className="life-log-action-edit" onClick={() => startEdit(entry)}>
+                  <Pencil size={13} />
+                  Edit
+                </button>
                 <button type="button" onClick={() => navigator.clipboard.writeText(`${entry.title} — ${entry.type} — ${entry.status}`)}>Copy quick note</button>
                 <button type="button" onClick={() => copyMediaNote(entry)}>Copy Obsidian note</button>
               </div>
@@ -127,15 +194,26 @@ export default function MediaTab() {
         </div>
       </section>
 
-      {showAddForm && (
-      <section className="life-system-card media-form-card">
+      {showForm && (
+      <section className="life-system-card media-form-card" id="media-entry-form">
         <div className="life-card-heading">
           <div>
-            <div className="section-label">Add media entry</div>
-            <h3 className="media-form-title">记录一个娱乐条目</h3>
-            <p className="media-helper media-helper-cn">书、剧、综艺、有声书、播客、电影都可以。随手记一下就好。</p>
+            <div className="section-label">{isEditing ? 'Edit media entry' : 'Add media entry'}</div>
+            <h3 className="media-form-title">{isEditing ? draft.title || 'Edit entry' : '记录一个娱乐条目'}</h3>
+            <p className="media-helper media-helper-cn">
+              {isEditing ? 'Update anything, then save.' : '书、剧、综艺、有声书、播客、电影都可以。随手记一下就好。'}
+            </p>
           </div>
-          <button className="btn-primary" type="button" onClick={addEntry}><Plus size={14} />Save</button>
+          <div className="media-form-heading-actions">
+            <button className="btn-secondary" type="button" onClick={resetForm}>
+              <X size={14} />
+              Cancel
+            </button>
+            <button className="btn-primary" type="button" onClick={saveEntry}>
+              <Plus size={14} />
+              {isEditing ? 'Save changes' : 'Save'}
+            </button>
+          </div>
         </div>
         <div className="life-form-grid">
           <label className="life-field wide">Title<input value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} placeholder="Fisk, Puckboy, podcast episode..." /></label>

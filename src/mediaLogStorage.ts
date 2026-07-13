@@ -119,6 +119,32 @@ export function addMediaEntry(input: Omit<MediaLogEntry, 'id' | 'createdAt' | 'u
   return { entry, store: nextStore }
 }
 
+export function updateMediaEntry(
+  id: string,
+  input: Omit<MediaLogEntry, 'id' | 'createdAt' | 'updatedAt'>,
+  store = loadMediaLog(),
+) {
+  const index = store.entries.findIndex(entry => entry.id === id)
+  if (index < 0) return null
+  const existing = store.entries[index]
+  const now = new Date().toISOString()
+  const entry: MediaLogEntry = {
+    ...existing,
+    ...input,
+    id: existing.id,
+    title: input.title.trim(),
+    mood: normalizeList(input.mood),
+    usefulness: normalizeList(input.usefulness),
+    createdAt: existing.createdAt,
+    updatedAt: now,
+  }
+  const entries = [...store.entries]
+  entries[index] = entry
+  const nextStore = { entries }
+  saveMediaLog(nextStore)
+  return { entry, store: nextStore }
+}
+
 export function mediaObsidianMarkdown(entry: MediaLogEntry) {
   const destination = entry.language === 'Japanese' ? '02 Japanese 日语/Media Notes/' : '01 English 英语/Media Notes/'
   return {
