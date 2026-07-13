@@ -7006,13 +7006,19 @@ textarea {
 .iris365-stats-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
+  gap: clamp(1rem, 2vw, 1.25rem);
 }
 
-.iris365-stats-card > h3,
-.iris365-stats-card > .card-title-row {
-  grid-column: 1 / -1;
-  margin: 0;
+.iris365-stat-panel {
+  min-width: 0;
+}
+
+.iris365-stat-panel .card-title-row {
+  margin: 0 0 0.85rem;
+}
+
+.iris365-stat-panel .iris365-stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .iris365-foundation-card {
@@ -10374,6 +10380,7 @@ textarea:focus,
   }
 
   .iris365-layout,
+  .iris365-stats-card,
   .iris365-countdown-card,
   .block-queue-header,
   .block-queue-next,

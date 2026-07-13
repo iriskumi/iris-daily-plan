@@ -1509,30 +1509,34 @@ export default function Iris365() {
         </div>
 
         <aside className="iris365-stats-card">
-          <div className="card-title-row">
-            <TrendingUp size={16} />
-            <h3>Foundation stats</h3>
-          </div>
-          <div className="iris365-stat-grid">
-            {FOUNDATION_STATS.map(([key, label]) => (
-              <div key={key}>
-                <span>{stats[key]}</span>
-                <small>{label}</small>
-              </div>
-            ))}
-          </div>
-          <div className="card-title-row iris365-growth-stat-title">
-            <ShieldCheck size={16} />
-            <h3>Growth stats</h3>
-          </div>
-          <div className="iris365-stat-grid">
-            {GROWTH_STATS.map(([key, label]) => (
-              <div key={key}>
-                <span>{stats[key]}</span>
-                <small>{label}</small>
-              </div>
-            ))}
-          </div>
+          <section className="iris365-stat-panel">
+            <div className="card-title-row">
+              <TrendingUp size={16} />
+              <h3>Foundation stats</h3>
+            </div>
+            <div className="iris365-stat-grid">
+              {FOUNDATION_STATS.map(([key, label]) => (
+                <div key={key}>
+                  <span>{stats[key]}</span>
+                  <small>{label}</small>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="iris365-stat-panel">
+            <div className="card-title-row iris365-growth-stat-title">
+              <ShieldCheck size={16} />
+              <h3>Growth stats</h3>
+            </div>
+            <div className="iris365-stat-grid">
+              {GROWTH_STATS.map(([key, label]) => (
+                <div key={key}>
+                  <span>{stats[key]}</span>
+                  <small>{label}</small>
+                </div>
+              ))}
+            </div>
+          </section>
         </aside>
       </section>
 
