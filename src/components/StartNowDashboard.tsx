@@ -1,4 +1,4 @@
-import { BookOpen, CheckCircle2, ChevronDown, ClipboardList, Copy, Dumbbell, Folder, Image as ImageIcon, ListChecks, Mic, Pause, Pencil, Play, StickyNote, Target, Trash2, X } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronDown, ClipboardList, Clock3, Copy, Dumbbell, Folder, Image as ImageIcon, ListChecks, Mic, Monitor, Pause, Pencil, Play, StickyNote, Target, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ACTIVE_SESSION_CHANGED_EVENT,
@@ -39,8 +39,18 @@ import HeroImageViewport from './HeroImageViewport'
 import DailyRhythmLog from './DailyRhythmLog'
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
+const TODAY_ENTRY_STORAGE_KEY = 'iris-today-entry-records'
+const DAILY_SERIOUS_MINUTES_TARGET = 480
+const DAILY_SERIOUS_TASK_TARGET = 5
 
 export type TodayStartModule = 'note' | 'done' | 'queue'
+
+interface TodayEntryRecord {
+  date: string
+  firstOpenedAt: string
+  lastOpenedAt: string
+  openCount: number
+}
 
 interface StartNowDashboardProps {
   onOpenStudy?: () => void
@@ -191,6 +201,67 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
 }
 
+function loadTodayEntryRecords(): Record<string, TodayEntryRecord> {
+  if (typeof localStorage === 'undefined') return {}
+  try {
+    const raw = localStorage.getItem(TODAY_ENTRY_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, TodayEntryRecord> : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveTodayEntryRecords(records: Record<string, TodayEntryRecord>): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(TODAY_ENTRY_STORAGE_KEY, JSON.stringify(records))
+}
+
+function recordTodayEntry(date: string, countOpen = true): TodayEntryRecord {
+  const records = loadTodayEntryRecords()
+  const nowIso = new Date().toISOString()
+  const existing = records[date]
+  const next: TodayEntryRecord = existing
+    ? {
+        ...existing,
+        lastOpenedAt: nowIso,
+        openCount: countOpen ? existing.openCount + 1 : existing.openCount,
+      }
+    : {
+        date,
+        firstOpenedAt: nowIso,
+        lastOpenedAt: nowIso,
+        openCount: 1,
+      }
+  saveTodayEntryRecords({ ...records, [date]: next })
+  return next
+}
+
+function timeWindowLabel(now: Date): string {
+  const hour = now.getHours()
+  if (hour < 10) return 'morning entry'
+  if (hour < 12) return 'deep work window'
+  if (hour < 14) return 'midday reset'
+  if (hour < 17) return 'afternoon block'
+  if (hour < 21) return 'evening useful block'
+  return 'shutdown window'
+}
+
+function timeWindowRecommendation(now: Date, hasQueueTask: boolean): string {
+  const hour = now.getHours()
+  if (hasQueueTask) {
+    if (hour < 12) return 'Start the next queue task while attention is still fresh.'
+    if (hour < 17) return 'Pick one serious 25-minute block before the day gets vague.'
+    if (hour < 21) return 'Use the next queue task as a contained evening block.'
+    return "Choose a small finishable task, or set tomorrow's first block."
+  }
+  if (hour < 12) return 'Add one serious task to the queue, then start a 25-minute block.'
+  if (hour < 17) return 'Open Study and make one concrete task count before the next reset.'
+  if (hour < 21) return 'Choose a lighter Study or admin task that still counts.'
+  return 'Do a short review or prepare tomorrow’s first task.'
+}
+
 export default function StartNowDashboard({
   onOpenStudy,
   onOpenExercise,
@@ -217,6 +288,7 @@ export default function StartNowDashboard({
   const [processingHeroImage, setProcessingHeroImage] = useState(false)
   const [abandonConfirmOpen, setAbandonConfirmOpen] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  const [todayEntry, setTodayEntry] = useState<TodayEntryRecord>(() => recordTodayEntry(today))
   const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
   const [completionToast, setCompletionToast] = useState<string | null>(null)
   const outputJourney = useMemo(() => loadEnglishOutputJourney(), [studySessions, completionToast])
@@ -301,6 +373,19 @@ export default function StartNowDashboard({
       window.removeEventListener('storage', refresh)
     }
   }, [])
+
+  useEffect(() => {
+    const touchEntry = () => setTodayEntry(recordTodayEntry(today, false))
+    const handleVisibility = () => {
+      if (!document.hidden) touchEntry()
+    }
+    window.addEventListener('focus', touchEntry)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('focus', touchEntry)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [today])
 
   const irisDay = useMemo(() => getIris365DayNumber(), [])
 
@@ -545,6 +630,15 @@ export default function StartNowDashboard({
     { label: 'Move', value: `${movementMinutes}m`, highlight: movementMinutes > 0 },
     { label: 'Sessions', value: String(summary.completed.length), highlight: summary.completed.length > 0 },
   ]
+  const seriousMinutesToday = sessionMinutesToday
+  const seriousTasksToday = summary.completed.length
+  const seriousMinutesRemaining = Math.max(0, DAILY_SERIOUS_MINUTES_TARGET - seriousMinutesToday)
+  const seriousTasksRemaining = Math.max(0, DAILY_SERIOUS_TASK_TARGET - seriousTasksToday)
+  const seriousMinutesProgress = Math.min(100, Math.round((seriousMinutesToday / DAILY_SERIOUS_MINUTES_TARGET) * 100))
+  const seriousTaskProgress = Math.min(100, Math.round((seriousTasksToday / DAILY_SERIOUS_TASK_TARGET) * 100))
+  const currentTime = new Date(now)
+  const todayEntryWindow = timeWindowLabel(currentTime)
+  const todayEntryRecommendation = timeWindowRecommendation(currentTime, Boolean(nextBlock))
 
   const moduleRows = [
     { id: 'note' as const, icon: <StickyNote size={16} />, label: 'Note', badge: 'today' },
@@ -716,6 +810,59 @@ export default function StartNowDashboard({
           </section>
 
           <DailyRhythmLog />
+
+          <section className="today-entry-card" aria-label="Today entry recommendation">
+            <div className="today-entry-card-main">
+              <div className="today-entry-kicker">
+                <Monitor size={16} />
+                <span>Day entry</span>
+                <small>{todayEntryWindow}</small>
+              </div>
+              <h3>Open the day from here.</h3>
+              <p>{todayEntryRecommendation}</p>
+              <div className="today-entry-targets" aria-label="Daily serious work targets">
+                <div>
+                  <span>8h evidence</span>
+                  <strong>{seriousMinutesToday}/{DAILY_SERIOUS_MINUTES_TARGET} min</strong>
+                  <i><b style={{ width: `${seriousMinutesProgress}%` }} /></i>
+                  <small>{seriousMinutesRemaining > 0 ? `${seriousMinutesRemaining} min left` : 'Target reached'}</small>
+                </div>
+                <div>
+                  <span>5 serious tasks</span>
+                  <strong>{seriousTasksToday}/{DAILY_SERIOUS_TASK_TARGET}</strong>
+                  <i><b style={{ width: `${seriousTaskProgress}%` }} /></i>
+                  <small>{seriousTasksRemaining > 0 ? `${seriousTasksRemaining} left` : 'Target reached'}</small>
+                </div>
+              </div>
+            </div>
+            <aside className="today-entry-next">
+              <div className="today-entry-time">
+                <Clock3 size={15} />
+                <span>First opened {timeLabel(todayEntry.firstOpenedAt)}</span>
+                <small>Last seen {timeLabel(todayEntry.lastOpenedAt)}</small>
+              </div>
+              <div className="today-entry-task">
+                <span>Recommended now</span>
+                <strong>{nextBlock ? nextBlock.title : 'Choose one Study task'}</strong>
+                <small>{nextBlock ? `${labelFromToken(nextBlock.area)} · ${Math.min(nextBlock.estimatedMinutes, 50)} min` : 'No queue task selected yet'}</small>
+              </div>
+              <div className="today-entry-actions">
+                <button type="button" className="btn btn-primary" onClick={handleNextUsefulThing}>
+                  <Play size={14} />
+                  {nextBlock ? 'Start 25 min' : 'Open Study'}
+                </button>
+                {nextBlock ? (
+                  <button type="button" className="btn btn-secondary" onClick={() => openQueueBlockInStudy(nextBlock)}>
+                    Custom in Study
+                  </button>
+                ) : onOpenPlan ? (
+                  <button type="button" className="btn btn-secondary" onClick={onOpenPlan}>
+                    Open queue
+                  </button>
+                ) : null}
+              </div>
+            </aside>
+          </section>
 
           <div className="today-progress-strip" aria-label="Today progress">
             {progressItems.map(item => (
