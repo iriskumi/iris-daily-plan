@@ -297,6 +297,7 @@ export default function StartNowDashboard({
   const weekStudyBars = useMemo(() => {
     const keys = lastSevenDayKeys()
     return keys.map(dateKey => ({
+      key: dateKey,
       label: weekdayLabel(dateKey, today),
       value: loadStudySessionRecordsForDate(dateKey)
         .filter(session => session.status === 'completed')

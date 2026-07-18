@@ -15591,3 +15591,140 @@ textarea:focus,
   gap: 0.45rem;
   align-items: center;
 }
+
+/* Study is an action surface; long-form reference lives in Iris Study OS. */
+.study-action-page {
+  width: min(100%, 1120px);
+  margin-inline: auto;
+}
+
+.study-action-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.35rem;
+}
+
+.study-action-header > div {
+  max-width: 680px;
+}
+
+.study-action-header .page-title {
+  margin-bottom: 0.35rem;
+}
+
+.study-os-reference-link {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.study-action-page .study-focus-hero,
+.study-action-page .study-active-session-banner {
+  margin-bottom: 1rem;
+}
+
+.study-action-proof,
+.study-action-done {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-card-elevated);
+}
+
+.study-action-proof {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.study-action-proof h3,
+.study-action-done h3 {
+  margin: 0.16rem 0 0;
+}
+
+.study-action-proof p {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-muted);
+}
+
+.study-action-proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.study-action-done {
+  padding: 1rem 1.1rem;
+}
+
+.study-action-done-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.8rem;
+}
+
+.study-action-done-heading > span {
+  color: var(--accent-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.study-action-session-list {
+  border-top: 1px solid var(--color-border);
+}
+
+.study-action-session-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 54px;
+  padding: 0.72rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.study-action-session-list article:last-child {
+  border-bottom: 0;
+}
+
+.study-action-session-list article > div {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.study-action-session-list span,
+.study-action-session-list small {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.study-action-session-list button {
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .study-action-header,
+  .study-action-proof,
+  .study-action-done-heading,
+  .study-action-session-list article {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .study-os-reference-link,
+  .study-action-proof-actions .btn {
+    justify-content: center;
+    width: 100%;
+  }
+}

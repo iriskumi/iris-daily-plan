@@ -74,6 +74,7 @@ const QUICK_TARGETS = [3, 5, 6, 8]
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 const COURSERA_EXPIRY_DATE = '2026-09-23'
 const COURSERA_CATEGORY: StudyCategory = 'Coursera AI Pathway'
+const STUDY_OS_URL = 'file:///Users/iristong/Documents/Codex/2026-07-18/referenced-chatgpt-conversation-this-is-untrusted-2/outputs/iris-study-os/index.html'
 
 type StudyPickerOption = StudyCategory | 'Custom'
 const STUDY_PICKER_OPTIONS: StudyPickerOption[] = ['Custom', ...STUDY_CATEGORIES]
@@ -389,7 +390,11 @@ function restoreActiveStudySession(): StudyActiveSession | null {
   return studySessionWithTimer(session, timerSession)
 }
 
-export default function StudyDashboard() {
+interface StudyDashboardProps {
+  actionOnly?: boolean
+}
+
+export default function StudyDashboard({ actionOnly = false }: StudyDashboardProps) {
   const today = getLocalDateKey()
   const [target, setTarget] = useState<DailyStudyTarget>(() => loadDailyStudyTarget(today))
   const [selectedPicker, setSelectedPicker] = useState<StudyPickerOption>('Custom')
@@ -1109,7 +1114,11 @@ export default function StudyDashboard() {
           />
         </div>
         {mode === 'custom' ? (
-          <p className="hub-support-copy">Add a title, then start the timer below. Obsidian path is in the full form further down.</p>
+          <p className="hub-support-copy">
+            {actionOnly
+              ? 'Add a clear title, then start the timer below.'
+              : 'Add a title, then start the timer below. Obsidian path is in the full form further down.'}
+          </p>
         ) : (
           <p className="hub-support-copy">Library defaults are pre-filled. Tweak anything, then start focus below.</p>
         )}
@@ -1347,6 +1356,80 @@ export default function StudyDashboard() {
           Return to session
         </button>
       </section>
+    )
+  }
+
+  if (actionOnly) {
+    const recentCompletedSessions = [...completedSessions].reverse().slice(0, 4)
+    return (
+      <div className="page study-page study-action-page">
+        <header className="study-action-header">
+          <div>
+            <div className="section-label">Start action now</div>
+            <h2 className="page-title">Start a study block</h2>
+            <p className="page-subtitle">
+              Choose one task, start the timer, finish the block. Plans, materials, tools, and prompts live in Iris Study OS.
+            </p>
+          </div>
+          <a className="btn btn-secondary study-os-reference-link" href={STUDY_OS_URL} target="_blank" rel="noreferrer">
+            <BookOpen size={15} />
+            Open Iris Study OS
+          </a>
+        </header>
+
+        {activeSession ? renderActiveSessionCompactBanner() : renderStudyFocusHero()}
+
+        {pendingProofSession && (
+          <section className="study-action-proof" aria-label="Save completed study proof">
+            <div>
+              <div className="section-label">Block complete</div>
+              <h3>{pendingProofSession.title}</h3>
+              <p>{proofSessionMicrocopy(pendingProofSession)}</p>
+            </div>
+            <div className="study-action-proof-actions">
+              <button type="button" className="btn btn-primary" onClick={() => saveSessionAsProof(pendingProofSession)}>
+                Save tiny proof
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setPendingProofSession(null)}>
+                Done
+              </button>
+            </div>
+          </section>
+        )}
+
+        <section className="study-action-done" aria-label="Study blocks completed today">
+          <div className="study-action-done-heading">
+            <div>
+              <div className="section-label">Done today</div>
+              <h3>{summary.completedSessions} block{summary.completedSessions === 1 ? '' : 's'} · {formatHours(summary.completedMinutes)}</h3>
+            </div>
+            {proofsToday.length > 0 && <span>{proofsToday.length} proof{proofsToday.length === 1 ? '' : 's'} saved</span>}
+          </div>
+          {recentCompletedSessions.length > 0 ? (
+            <div className="study-action-session-list">
+              {recentCompletedSessions.map(record => {
+                const existingProof = findIris365ProofByStudySession(record.id, proofStore)
+                const canSaveProof = canSaveSessionAsProof(record)
+                return (
+                  <article key={record.id}>
+                    <div>
+                      <strong>{record.title}</strong>
+                      <span>{record.category} · {record.actualMinutes} min</span>
+                    </div>
+                    {canSaveProof && (
+                      existingProof
+                        ? <small>Proof saved</small>
+                        : <button type="button" onClick={() => saveSessionAsProof(record)}>Save proof</button>
+                    )}
+                  </article>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="study-muted-copy">No completed block yet. Pick one task above and start 25 minutes.</p>
+          )}
+        </section>
+      </div>
     )
   }
 

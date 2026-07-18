@@ -1,7 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import {
   ClipboardList,
-  BookOpen,
   CheckSquare,
   Briefcase,
   CreditCard,
@@ -159,13 +158,12 @@ type ExternalTaskImportDialog =
 
 const TABS: { id: Extract<Tab, 'today' | 'iris365' | 'study' | 'plan' | 'tasks' | 'exercise' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
-  { id: 'iris365', label: 'Iris 365', icon: <CalendarDays /> },
-  { id: 'study', label: 'Study', icon: <BookOpen /> },
-  { id: 'plan', label: 'Plan', icon: <Zap /> },
+  { id: 'study', label: 'Start', icon: <Play /> },
+  { id: 'plan', label: 'Queue', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
+  { id: 'iris365', label: 'Iris 365', icon: <CalendarDays /> },
   { id: 'exercise', label: 'Exercise', icon: <Sparkles /> },
   { id: 'media', label: 'Media', icon: <Heart /> },
-  { id: 'integrations', label: 'Integrations', icon: <Plug /> },
 ]
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
@@ -1134,7 +1132,7 @@ export default function App() {
           />
         )}
         {tab === 'iris365' && <Iris365 />}
-        {tab === 'study' && <StudyDashboard />}
+        {tab === 'study' && <StudyDashboard actionOnly />}
         {tab === 'plan' && (
           <PlanWorkspace
             plan={plan}

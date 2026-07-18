@@ -1,4 +1,5 @@
 interface WeekBarDay {
+  key: string
   label: string
   value: number
   isToday?: boolean
@@ -18,7 +19,7 @@ export default function WeekBars({ days, unit = '', maxValue, className = '' }: 
       {days.map(day => {
         const height = day.value > 0 ? Math.max(12, Math.round((day.value / peak) * 100)) : 4
         return (
-          <div key={day.label} className={`week-bar-col ${day.isToday ? 'today' : ''}`}>
+          <div key={day.key} className={`week-bar-col ${day.isToday ? 'today' : ''}`}>
             <div className="week-bar-track">
               <span className="week-bar-fill" style={{ height: `${height}%` }} title={`${day.value}${unit}`} />
             </div>
