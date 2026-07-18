@@ -95,6 +95,7 @@ import StudyDashboard from './components/StudyDashboard'
 import Iris365 from './components/Iris365'
 import MediaTab from './components/MediaTab'
 import ExerciseTab from './components/ExerciseTab'
+import StudyPlanImportDialog, { type StudyPlanImportDialogState } from './components/StudyPlanImportDialog'
 import irisBearIcon from './assets/iris-bear-icon.svg'
 import {
   TASK_AREAS,
@@ -123,6 +124,10 @@ import {
   type ExternalTaskImportDraft,
   type ExternalTaskImportPayload,
 } from './externalTaskImport'
+import {
+  clearStudyPlanImportUrl,
+  parseStudyPlanImportFromUrl,
+} from './studyPlanImport'
 import {
   loadActiveStudySession,
   STUDY_ACTIVE_SESSION_CHANGED_EVENT,
@@ -500,9 +505,17 @@ export default function App() {
   const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
   const [activeStudyNow, setActiveStudyNow] = useState(() => Date.now())
   const [externalTaskDialog, setExternalTaskDialog] = useState<ExternalTaskImportDialog | null>(null)
+  const [studyPlanDialog, setStudyPlanDialog] = useState<StudyPlanImportDialogState | null>(null)
+  const [studyPlanImportMessage, setStudyPlanImportMessage] = useState('')
 
   useEffect(() => {
     consumeExpressionHubUrlImport()
+    const studyPlanResult = parseStudyPlanImportFromUrl()
+    if (studyPlanResult) {
+      setStudyPlanDialog(studyPlanResult.ok
+        ? { status: 'preview', payload: studyPlanResult.payload }
+        : { status: 'error', message: studyPlanResult.error })
+    }
     const importResult = parseExternalTaskImportFromUrl()
     if (!importResult) return
     if (!importResult.ok) {
@@ -711,6 +724,18 @@ export default function App() {
     setExternalTaskDialog(null)
   }
 
+  function closeStudyPlanDialog() {
+    clearStudyPlanImportUrl()
+    setStudyPlanDialog(null)
+  }
+
+  function handleStudyPlanImported(message: string) {
+    clearStudyPlanImportUrl()
+    setStudyPlanDialog(null)
+    setStudyPlanImportMessage(message)
+    goToTab('today')
+  }
+
   function updateExternalTaskDraft(patch: Partial<ExternalTaskImportDraft>) {
     setExternalTaskDialog(current => {
       if (!current || current.status !== 'preview') return current
@@ -845,6 +870,16 @@ export default function App() {
         </div>
       )}
 
+      {studyPlanImportMessage && (
+        <div className="alert-banner study-plan-import-success" role="status">
+          <Check />
+          <span>{studyPlanImportMessage}</span>
+          <button type="button" className="btn-ghost" onClick={() => setStudyPlanImportMessage('')} aria-label="Dismiss study plan import message">
+            <X />
+          </button>
+        </div>
+      )}
+
       {showCompactActiveBar && activeStudySession && tab !== 'today' && (
         <div className="active-session-compact-bar">
           <span>Active</span>
@@ -975,6 +1010,14 @@ export default function App() {
             )}
           </section>
         </div>
+      )}
+
+      {studyPlanDialog && (
+        <StudyPlanImportDialog
+          dialog={studyPlanDialog}
+          onClose={closeStudyPlanDialog}
+          onImported={handleStudyPlanImported}
+        />
       )}
 
       <main>

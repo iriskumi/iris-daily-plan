@@ -16,6 +16,9 @@ import type {
   FocusBlockStatus,
   FocusSession,
   Task,
+  TaskArea,
+  TaskEnergy,
+  TaskMode,
   TaskStatus,
 } from './types'
 import { createInboxTask } from './focusBlocks'
@@ -374,6 +377,12 @@ export interface ExternalInboxTaskInput {
   title: string
   estimatedMinutes: number
   context: UnifiedTask['context']
+  area?: TaskArea
+  energy?: TaskEnergy
+  mode?: TaskMode
+  project?: string
+  tags?: string[]
+  nextTinyAction?: string
   notes?: string
   sourceUrl?: string
   externalCategory?: string
@@ -394,13 +403,17 @@ export function findExternalInboxTask(externalSource: string, sourceImportId: st
 export function createExternalInboxTask(input: ExternalInboxTaskInput): { task: Task; created: boolean } {
   const existing = findExternalInboxTask(input.externalSource, input.sourceImportId)
   if (existing) return { task: existing, created: false }
+  const isStudyImport = input.externalSource === 'iris-study-os'
+  const area = input.area ?? 'Job'
   const task = createInboxTask({
     title: input.title,
-    area: 'Job',
-    energy: input.estimatedMinutes > 45 ? 'High' : input.estimatedMinutes <= 25 ? 'Low' : 'Medium',
-    mode: input.estimatedMinutes <= 25 ? 'Admin' : 'Focus',
+    area,
+    energy: input.energy ?? (input.estimatedMinutes > 45 ? 'High' : input.estimatedMinutes <= 25 ? 'Low' : 'Medium'),
+    mode: input.mode ?? (input.estimatedMinutes <= 25 ? 'Admin' : 'Focus'),
     estimatedMinutes: input.estimatedMinutes,
-    nextTinyAction: 'Open the JD and highlight 3 requirements only.',
+    nextTinyAction: input.nextTinyAction ?? (isStudyImport
+      ? 'Open the named material and complete the minimum action.'
+      : 'Open the JD and highlight 3 requirements only.'),
   })
   const notes = [
     input.notes,
@@ -410,9 +423,15 @@ export function createExternalInboxTask(input: ExternalInboxTaskInput): { task: 
   ].filter(Boolean).join('\n')
   const externalTask: Task = {
     ...task,
-    project: input.company || 'Iris Job Search',
+    project: input.project || input.company || (isStudyImport ? 'Iris Study OS' : 'Iris Job Search'),
     notes,
-    tags: ['iris-job-search', 'job-search', `external-context:${input.context ?? 'work'}`, input.externalCategory].filter(Boolean) as string[],
+    tags: [
+      ...(input.tags ?? []),
+      isStudyImport ? 'iris-study-os' : 'iris-job-search',
+      isStudyImport ? 'study-plan' : 'job-search',
+      `external-context:${input.context ?? (isStudyImport ? 'study' : 'work')}`,
+      input.externalCategory,
+    ].filter(Boolean) as string[],
     externalSource: input.externalSource,
     sourceImportId: input.sourceImportId,
     sourceUrl: input.sourceUrl,
