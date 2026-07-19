@@ -15349,11 +15349,11 @@ textarea:focus,
 
 .today-active-timer {
   color: var(--focus-parfait-deep);
-  font-family: 'ELEYANG Plog', 'Cormorant Garamond', var(--font-display), serif !important;
+  font-family: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", var(--font-display), serif !important;
   font-size: 9.5rem;
   font-variant-numeric: tabular-nums lining-nums;
   font-weight: 400;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.015em;
   line-height: 0.92;
   text-align: left;
 }
@@ -15531,11 +15531,24 @@ textarea:focus,
 }
 
 .focus-state-artwork--paused .focus-state-sign-copy {
-  top: 14%;
-  right: 2%;
-  width: 47%;
-  color: #536f6d;
-  transform: rotate(-4deg);
+  top: 25%;
+  right: 4%;
+  width: 42%;
+  min-height: 18%;
+  color: #65545A;
+  transform: rotate(-10deg);
+}
+
+.focus-state-artwork--paused .focus-state-sign-copy strong {
+  font-size: clamp(0.9rem, 1.55vw, 1.12rem);
+  line-height: 1.15;
+}
+
+.focus-state-artwork--paused .focus-state-sign-copy small {
+  margin-top: 0.18rem;
+  font-size: clamp(0.58rem, 0.78vw, 0.68rem);
+  color: #806D73;
+  opacity: 0.82;
 }
 
 .focus-state-artwork--complete .focus-state-sign-copy {
