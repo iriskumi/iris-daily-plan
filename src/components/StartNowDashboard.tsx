@@ -137,6 +137,36 @@ function noteLabelFromDestination(value: string): string {
   return parts[parts.length - 1] || value
 }
 
+function compactMethodKeywords(value: string): string[] {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  const lower = normalized.toLowerCase()
+
+  if (/lesson|video section|course/.test(lower)) return ['One lesson', 'Minimal notes', 'Clear finish']
+  if (/shadow|pronunciation|clip/.test(lower)) return ['One clip', 'Shadow aloud', 'Save one phrase']
+  if (/review|notebooklm|notes/.test(lower)) return ['Open notes', 'Key points', 'One section']
+  if (/code|project|debug|build/.test(lower)) return ['Open project', 'One change', 'Save progress']
+  if (/write|assessment|report/.test(lower)) return ['One section', 'Rough first', 'Save draft']
+
+  const phrases = normalized
+    .split(/[.!?;]+/)
+    .map(phrase => phrase.trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map(phrase => {
+      if (phrase.length <= 28) return phrase
+      const words = phrase.split(' ')
+      let compact = ''
+      for (const word of words) {
+        const next = compact ? `${compact} ${word}` : word
+        if (next.length > 28) break
+        compact = next
+      }
+      return compact || phrase.slice(0, 28)
+    })
+
+  return phrases.length > 0 ? phrases : ['Open task', 'One useful step']
+}
+
 function formatTimer(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
   const minutes = Math.floor(totalSeconds / 60)
@@ -736,6 +766,7 @@ export default function StartNowDashboard({
     : 0
   const activeStudySource = activeStudySession?.source ? labelFromToken(activeStudySession.source) : 'Study'
   const activeStudyMethod = activeStudySession?.notes || activeStudySession?.resourceUsed || 'Follow the selected task method.'
+  const activeStudyMethodKeywords = compactMethodKeywords(activeStudyMethod)
   const activeStudyNoteDestination = activeStudySession?.noteDestination || 'Daily Study Log'
   const activeStudyNoteLabel = noteLabelFromDestination(activeStudyNoteDestination)
   const activeStudyStatusLabel = activeStudySession?.status === 'paused'
@@ -804,14 +835,16 @@ export default function StartNowDashboard({
               <div className="today-active-session-meta-item">
                 <ClipboardList size={18} />
                 <div>
-                  <span>Method</span>
-                  <strong>{activeStudyMethod}</strong>
+                  <span>Focus</span>
+                  <strong className="today-active-method-keywords">
+                    {activeStudyMethodKeywords.map(keyword => <span key={keyword}>{keyword}</span>)}
+                  </strong>
                 </div>
               </div>
               <div className="today-active-session-meta-item">
                 <Folder size={18} />
                 <div>
-                  <span>Note destination</span>
+                  <span>Note</span>
                   <strong title={activeStudyNoteDestination}>{activeStudyNoteLabel}</strong>
                 </div>
                 {activeStudyNoteDestination !== activeStudyNoteLabel && (

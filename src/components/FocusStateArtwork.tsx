@@ -1,9 +1,9 @@
 export type FocusVisualState = 'running' | 'paused' | 'complete'
 
 const FOCUS_ARTWORK: Record<FocusVisualState, string> = {
-  running: '/focus-states/focus-running.png',
-  paused: '/focus-states/focus-paused.png',
-  complete: '/focus-states/focus-complete.png',
+  running: '/focus-states/focus-running-character.png',
+  paused: '/focus-states/focus-paused-character.png',
+  complete: '/focus-states/focus-complete-character.png',
 }
 
 const FOCUS_SIGN_COPY: Record<FocusVisualState, { main: string; detail: string }> = {
@@ -21,12 +21,6 @@ export function FocusStateArtwork({ state }: FocusStateArtworkProps) {
 
   return (
     <div className={`focus-state-artwork focus-state-artwork--${state}`} aria-hidden="true">
-      <span className="focus-state-halo" />
-      <span className="focus-state-orbit focus-state-orbit--one" />
-      <span className="focus-state-orbit focus-state-orbit--two" />
-      <span className="focus-state-spark focus-state-spark--one" />
-      <span className="focus-state-spark focus-state-spark--two" />
-      <span className="focus-state-spark focus-state-spark--three" />
       <div className="focus-state-character">
         <img src={FOCUS_ARTWORK[state]} alt="" decoding="async" draggable={false} />
         <span className="focus-state-sign-copy">
