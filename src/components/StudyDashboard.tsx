@@ -74,7 +74,7 @@ const QUICK_TARGETS = [3, 5, 6, 8]
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 const COURSERA_EXPIRY_DATE = '2026-09-23'
 const COURSERA_CATEGORY: StudyCategory = 'Coursera AI Pathway'
-const STUDY_OS_URL = 'file:///Users/iristong/Documents/Codex/2026-07-18/referenced-chatgpt-conversation-this-is-untrusted-2/outputs/iris-study-os/index.html'
+const STUDY_OS_URL = 'https://iris-study-os.vercel.app/'
 
 type StudyPickerOption = StudyCategory | 'Custom'
 const STUDY_PICKER_OPTIONS: StudyPickerOption[] = ['Custom', ...STUDY_CATEGORIES]
