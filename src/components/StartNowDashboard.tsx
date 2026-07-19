@@ -35,11 +35,13 @@ import { removeTaskStoreSession, writeStudySessionToTaskStore } from '../taskSto
 import * as timerEngine from '../timerEngine'
 import type { TimerSession } from '../timerEngineTypes'
 import type { DayBlock } from '../types'
+import { FocusStateArtwork } from './FocusStateArtwork'
 import HeroImageViewport from './HeroImageViewport'
 import DailyRhythmLog from './DailyRhythmLog'
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
 const TODAY_ENTRY_STORAGE_KEY = 'iris-today-entry-records'
+const FOCUS_CELEBRATION_STORAGE_KEY = 'iris-focus-completion-celebration'
 const DAILY_SERIOUS_MINUTES_TARGET = 480
 const DAILY_SERIOUS_TASK_TARGET = 5
 
@@ -50,6 +52,44 @@ interface TodayEntryRecord {
   firstOpenedAt: string
   lastOpenedAt: string
   openCount: number
+}
+
+interface FocusCelebration {
+  title: string
+  minutes: number
+  expiresAt: number
+}
+
+let focusCelebrationCache: FocusCelebration | null = null
+
+function loadFocusCelebration(): FocusCelebration | null {
+  if (focusCelebrationCache && focusCelebrationCache.expiresAt > Date.now()) {
+    return focusCelebrationCache
+  }
+  focusCelebrationCache = null
+  if (typeof sessionStorage === 'undefined') return null
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(FOCUS_CELEBRATION_STORAGE_KEY) ?? 'null') as FocusCelebration | null
+    if (!parsed || parsed.expiresAt <= Date.now()) {
+      sessionStorage.removeItem(FOCUS_CELEBRATION_STORAGE_KEY)
+      return null
+    }
+    focusCelebrationCache = parsed
+    return parsed
+  } catch {
+    sessionStorage.removeItem(FOCUS_CELEBRATION_STORAGE_KEY)
+    return null
+  }
+}
+
+function saveFocusCelebration(celebration: FocusCelebration | null) {
+  focusCelebrationCache = celebration
+  if (typeof sessionStorage === 'undefined') return
+  if (!celebration) {
+    sessionStorage.removeItem(FOCUS_CELEBRATION_STORAGE_KEY)
+    return
+  }
+  sessionStorage.setItem(FOCUS_CELEBRATION_STORAGE_KEY, JSON.stringify(celebration))
 }
 
 interface StartNowDashboardProps {
@@ -291,6 +331,7 @@ export default function StartNowDashboard({
   const [todayEntry, setTodayEntry] = useState<TodayEntryRecord>(() => recordTodayEntry(today))
   const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
   const [completionToast, setCompletionToast] = useState<string | null>(null)
+  const [focusCelebration, setFocusCelebration] = useState<FocusCelebration | null>(() => loadFocusCelebration())
   const outputJourney = useMemo(() => loadEnglishOutputJourney(), [studySessions, completionToast])
   const englishRepsToday = englishOutputRepsForDate(outputJourney, today)
   const englishRepsWeek = englishOutputRepsForLastSevenDays(outputJourney)
@@ -387,6 +428,34 @@ export default function StartNowDashboard({
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [today])
+
+  useEffect(() => {
+    if (!activeStudySession || activeStudySession.status !== 'running') return
+    const activeTimer = timerFromStudySession(activeStudySession)
+    if (!timerEngine.isFinished(activeTimer, now)) return
+    completeActiveStudySession('completed', timerEngine.expectedEndTime(activeTimer, now))
+  }, [activeStudySession, now])
+
+  useEffect(() => {
+    if (!focusCelebration) return
+    const remainingMs = focusCelebration.expiresAt - Date.now()
+    if (remainingMs <= 0) {
+      saveFocusCelebration(null)
+      setFocusCelebration(null)
+      return
+    }
+    const timer = window.setTimeout(() => {
+      saveFocusCelebration(null)
+      setFocusCelebration(null)
+    }, remainingMs)
+    const scrollTimer = window.setTimeout(() => {
+      document.querySelector('[aria-label="Focus session completed"]')?.scrollIntoView({ block: 'start' })
+    }, 0)
+    return () => {
+      window.clearTimeout(timer)
+      window.clearTimeout(scrollTimer)
+    }
+  }, [focusCelebration])
 
   const irisDay = useMemo(() => getIris365DayNumber(), [])
 
@@ -510,9 +579,8 @@ export default function StartNowDashboard({
     persistActiveStudySession(studySessionWithTimer(activeStudySession, nextTimer))
   }
 
-  function completeActiveStudySession(status: StudySessionRecord['status']) {
+  function completeActiveStudySession(status: StudySessionRecord['status'], completedAtMs = Date.now()) {
     if (!activeStudySession) return
-    const completedAtMs = Date.now()
     const activeTimerSession = timerFromStudySession(activeStudySession)
     const endedTimer = status === 'completed'
       ? timerEngine.complete(activeTimerSession, completedAtMs)
@@ -547,6 +615,13 @@ export default function StartNowDashboard({
         markQueueBlockDoneFromSession(record.sourceImportId, today)
       }
       showCompletionToast(`+${record.actualMinutes} min · ${record.category}`)
+      const celebration = {
+        title: record.title,
+        minutes: record.actualMinutes,
+        expiresAt: Date.now() + 6500,
+      }
+      saveFocusCelebration(celebration)
+      setFocusCelebration(celebration)
     }
     persistActiveStudySession(null)
     setMessage(status === 'completed' ? 'Session completed.' : 'Session abandoned.')
@@ -664,10 +739,10 @@ export default function StartNowDashboard({
   const activeStudyNoteDestination = activeStudySession?.noteDestination || 'Daily Study Log'
   const activeStudyNoteLabel = noteLabelFromDestination(activeStudyNoteDestination)
   const activeStudyStatusLabel = activeStudySession?.status === 'paused'
-    ? 'PAUSED'
+    ? '已暂停'
     : activeStudyRemainingMs <= 5 * 60_000
-      ? 'FINAL 5 MIN'
-      : 'FOCUSING'
+      ? '最后 5 分钟'
+      : '专注中'
   const activeStudyStatusClass = activeStudySession?.status === 'paused'
     ? 'paused'
     : activeStudyRemainingMs <= 5 * 60_000
@@ -676,8 +751,29 @@ export default function StartNowDashboard({
 
   return (
     <section className="start-now-dashboard today-start-flow" aria-label="Today start flow">
-      {activeStudySession ? (
-        <section className="today-active-session-hero" aria-label="Active focus session">
+      {focusCelebration ? (
+        <section className="focus-completion-scene" aria-label="Focus session completed">
+          <FocusStateArtwork state="complete" />
+          <div className="focus-completion-copy">
+            <span className="focus-completion-kicker">SESSION COMPLETE</span>
+            <h2>干得好</h2>
+            <p>{focusCelebration.title}</p>
+            <strong>+{focusCelebration.minutes} min focused</strong>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                saveFocusCelebration(null)
+                setFocusCelebration(null)
+              }}
+            >
+              Done
+            </button>
+          </div>
+        </section>
+      ) : activeStudySession ? (
+        <section className={`today-active-session-hero ${activeStudyStatusClass}`} aria-label="Active focus session">
+          <FocusStateArtwork state={activeStudySession.status === 'paused' ? 'paused' : 'running'} />
           <div className="today-active-session-main">
             <span className={`today-active-status-dot ${activeStudyStatusClass}`}>{activeStudyStatusLabel}</span>
             <h2>{activeStudySession.title}</h2>
