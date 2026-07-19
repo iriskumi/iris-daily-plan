@@ -13952,6 +13952,54 @@ textarea:focus,
   padding: 0.9rem 0.95rem;
 }
 
+/* Creamy Pink Pale Today hero */
+.today-start-panel {
+  border-color: rgba(177, 103, 118, 0.24);
+  background:
+    linear-gradient(118deg, rgba(255, 253, 251, 0.62), rgba(255, 239, 242, 0.2)),
+    #fbb9c2;
+  box-shadow:
+    0 22px 52px rgba(135, 78, 92, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.today-start-panel::before {
+  opacity: 0.42;
+  background:
+    radial-gradient(circle, rgba(154, 84, 101, 0.24) 0 1px, transparent 1.4px),
+    linear-gradient(90deg, transparent 0 76%, rgba(255, 246, 247, 0.2) 76% 100%);
+  background-size: 18px 18px, auto;
+}
+
+.today-start-panel::after {
+  background: linear-gradient(100deg, transparent, rgba(255, 250, 248, 0.3), transparent);
+}
+
+.today-start-action-card,
+.today-start-action-card:hover,
+.today-start-action-card:focus-visible {
+  border-color: rgba(160, 91, 107, 0.25);
+  background: rgba(255, 252, 249, 0.82);
+  box-shadow: 0 14px 28px rgba(124, 75, 88, 0.07);
+}
+
+.today-start-action-card.primary {
+  border-color: rgba(151, 80, 98, 0.34);
+  background: rgba(255, 240, 242, 0.9);
+  box-shadow: 0 16px 34px rgba(124, 75, 88, 0.1);
+}
+
+.today-start-action-card:hover,
+.today-start-action-card:focus-visible {
+  border-color: rgba(145, 75, 92, 0.42);
+  background: rgba(255, 248, 247, 0.94);
+}
+
+.today-start-panel .start-action-card__icon {
+  background: rgba(251, 185, 194, 0.38);
+  color: #78505a;
+}
+
 .start-action-card__content {
   overflow: hidden;
 }
