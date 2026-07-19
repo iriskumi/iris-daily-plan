@@ -7,8 +7,8 @@ const FOCUS_ARTWORK: Record<FocusVisualState, string> = {
 }
 
 const FOCUS_SIGN_COPY: Record<FocusVisualState, { main: string; detail: string }> = {
-  running: { main: '只做这一小块', detail: '不用赶，专注就好' },
-  paused: { main: '暂停一下', detail: '准备好再继续' },
+  running: { main: '这一小块就好', detail: '慢慢来' },
+  paused: { main: '先休息一下', detail: '准备好再继续' },
   complete: { main: '干得好', detail: '今天又靠近一点' },
 }
 

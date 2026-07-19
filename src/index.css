@@ -15290,18 +15290,16 @@ textarea:focus,
   padding: 2.5rem clamp(2rem, 5vw, 5rem);
   overflow: hidden;
   scroll-margin-top: 7.5rem;
-  border-color: var(--focus-parfait-line);
-  background:
-    radial-gradient(circle at 12% 38%, rgba(128, 109, 115, 0.1), transparent 27rem),
-    linear-gradient(145deg, #FFF9FA 0%, var(--focus-parfait-pale) 56%, #F1E7EA 100%);
+  border-color: #E9DDE0;
+  background: linear-gradient(145deg, #FFFDFD 0%, #FBF6F7 68%, #F5ECEF 100%);
   text-align: left;
 }
 
 .today-active-session-main {
   position: relative;
   z-index: 5;
-  width: min(64%, 900px);
-  max-width: 900px;
+  width: min(61%, 860px);
+  max-width: 860px;
   margin-left: auto;
 }
 
@@ -15309,11 +15307,11 @@ textarea:focus,
   position: absolute;
   z-index: 1;
   top: 50%;
-  right: 62%;
+  right: 64%;
   left: auto;
-  width: clamp(340px, 28vw, 460px);
+  width: clamp(310px, 25vw, 420px);
   max-width: none;
-  opacity: 0.76;
+  opacity: 0.9;
   transform: translateY(-46%);
 }
 
@@ -15324,10 +15322,10 @@ textarea:focus,
 .today-active-session-hero h2 {
   max-width: 780px;
   margin: 1rem 0 0.55rem;
-  font-family: var(--font-workspace);
-  font-size: 2.25rem;
-  font-weight: 600;
-  line-height: 1.16;
+  font-family: 'Bricolage Grotesque', var(--font-workspace);
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.2;
   color: var(--focus-parfait-deep);
 }
 
@@ -15340,21 +15338,21 @@ textarea:focus,
   margin: 1.7rem 0 0;
   padding: 1.5rem 0 1.15rem;
   border: 0;
-  border-top: 1px solid var(--focus-parfait-line);
-  border-bottom: 1px solid var(--focus-parfait-line);
+  border-top: 1px solid #E8DDE0;
+  border-bottom: 1px solid #E8DDE0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
 .today-active-timer {
-  color: var(--focus-parfait-deep);
-  font-family: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "LXGW WenKai", var(--font-display), serif !important;
-  font-size: 9.5rem;
+  color: #725E65;
+  font-family: 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif !important;
+  font-size: 8.8rem;
   font-variant-numeric: tabular-nums lining-nums;
   font-weight: 400;
-  letter-spacing: 0.015em;
-  line-height: 0.92;
+  letter-spacing: 0.025em;
+  line-height: 0.9;
   text-align: left;
 }
 
@@ -15367,8 +15365,8 @@ textarea:focus,
 }
 
 .today-active-session-hero .today-active-status-dot {
-  border-color: var(--focus-parfait-line);
-  background: rgba(251, 246, 247, 0.92);
+  border-color: transparent;
+  background: #F3E7EA;
   color: var(--focus-parfait-deep);
   box-shadow: none;
 }
@@ -15386,6 +15384,7 @@ textarea:focus,
 .today-active-session-hero .today-active-progress {
   border-color: var(--focus-parfait-line);
   background: var(--focus-parfait-soft);
+  height: 0.42rem;
 }
 
 .today-active-session-hero .today-active-progress span {
@@ -15397,9 +15396,9 @@ textarea:focus,
   max-width: none;
   margin: 1.15rem 0 0;
   border-radius: 18px;
-  border-color: var(--focus-parfait-line);
-  background: rgba(255, 250, 251, 0.78);
-  box-shadow: none;
+  border-color: transparent;
+  background: rgba(255, 253, 253, 0.82);
+  box-shadow: 0 16px 42px rgba(101, 84, 90, 0.06);
 }
 
 .today-active-session-hero .today-active-session-meta-item + .today-active-session-meta-item {
@@ -15455,8 +15454,8 @@ textarea:focus,
 
 .today-active-session-hero .today-active-actions .btn-primary,
 .today-active-session-hero .today-active-actions .btn-primary:hover {
-  border-color: var(--focus-parfait);
-  background: var(--focus-parfait);
+  border-color: #B99AA4;
+  background: #B99AA4;
   color: #FFF9FA;
   box-shadow: 0 12px 28px rgba(101, 84, 90, 0.18);
 }
@@ -15504,7 +15503,7 @@ textarea:focus,
   width: 30%;
   min-height: 16%;
   color: #55443d;
-  font-family: "LXGW WenKai Screen Local", "LXGW WenKai Screen", "PingFang SC", sans-serif;
+  font-family: "Zen Kaku Gothic New", var(--font-cjk);
   text-align: center;
   transform-origin: center;
 }
@@ -15524,10 +15523,10 @@ textarea:focus,
 }
 
 .focus-state-artwork--running .focus-state-sign-copy {
-  top: 16%;
-  left: 8%;
-  width: 45%;
-  transform: rotate(-8deg);
+  top: 18%;
+  left: 7%;
+  width: 43%;
+  transform: rotate(-10deg);
 }
 
 .focus-state-artwork--paused .focus-state-sign-copy {
