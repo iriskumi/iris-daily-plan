@@ -149,7 +149,7 @@ function isGentleReturn(status: Iris365MorningGateStatus): boolean {
 }
 
 function hasEnglishEnvironment(entry: Iris365Entry, auto = false): boolean {
-  return Boolean(entry.englishEnvironmentType || entry.englishOutput || auto)
+  return Boolean(entry.englishEnvironmentItems?.length || entry.englishEnvironmentType || entry.englishOutput || auto)
 }
 
 function hasMovement(entry: Iris365Entry, auto = false): boolean {
@@ -194,6 +194,7 @@ export default function Iris365() {
   const [store, setStore] = useState(() => loadIris365Store())
   const [entry, setEntry] = useState<Iris365Entry>(() => loadIris365Entry(today, store))
   const [switchDraft, setSwitchDraft] = useState<SwitchDraft>(EMPTY_SWITCH_DRAFT)
+  const [englishDraft, setEnglishDraft] = useState({ type: '', title: '' })
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [startDateDraft, setStartDateDraft] = useState(store.settings.startDate || IRIS_365_START_DATE)
   const [saveMessage, setSaveMessage] = useState(store.entries[today] ? `已保存 ${formatTime(store.entries[today].updatedAt)}` : '选择后自动保存')
@@ -221,11 +222,14 @@ export default function Iris365() {
   const movementDone = hasMovement(entry, anchorSync.bodyMovedAuto)
   const switchDone = hasSwitch(entry)
   const foundationCount = [englishDone, switchDone, movementDone].filter(Boolean).length
+  const englishEnvironmentItems = entry.englishEnvironmentItems ?? []
   const morningStatusLabel = MORNING_STATUS_OPTIONS.find(option => option.value === entry.morningGateStatus)?.label ?? '还没记录'
   const morningFeelingLabel = MORNING_FEELINGS.find(option => option.value === entry.morningFeeling)?.label ?? '未记录'
   const morningChecklistLabels = MORNING_CHECKS.filter(item => entry.morningGateChecklist[item.key]).map(item => item.label)
   const englishEnvironmentLabel = englishDone
-    ? [entry.englishEnvironmentType || (anchorSync.englishOutputAuto ? 'Study 英语输出' : '英语环境'), entry.englishEnvironmentTitle].filter(Boolean).join(' · ')
+    ? englishEnvironmentItems.length > 0
+      ? englishEnvironmentItems.map(item => [item.type, item.title].filter(Boolean).join(' · ')).join('；')
+      : [entry.englishEnvironmentType || (anchorSync.englishOutputAuto ? 'Study 英语输出' : '英语环境'), entry.englishEnvironmentTitle].filter(Boolean).join(' · ')
     : '还没有记录'
   const movementLabel = movementDone
     ? [entry.movementKind, `${entry.movementMinutes || anchorSync.bodyMovedMinutes || 1} min`].filter(Boolean).join(' · ')
@@ -316,6 +320,34 @@ export default function Iris365() {
 
   function deleteSwitchLog(id: string) {
     updateEntry({ switchLogs: entry.switchLogs.filter(log => log.id !== id) })
+  }
+
+  function addEnglishEnvironmentItem() {
+    if (!englishDraft.type) return
+    const item = {
+      id: `english-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type: englishDraft.type,
+      title: englishDraft.title.trim(),
+      createdAt: new Date().toISOString(),
+    }
+    updateEntry({
+      englishEnvironmentItems: [...englishEnvironmentItems, item],
+      englishEnvironmentType: item.type,
+      englishEnvironmentTitle: item.title,
+      englishOutput: true,
+    })
+    setEnglishDraft({ type: '', title: '' })
+  }
+
+  function deleteEnglishEnvironmentItem(id: string) {
+    const remaining = englishEnvironmentItems.filter(item => item.id !== id)
+    const latest = remaining[remaining.length - 1]
+    updateEntry({
+      englishEnvironmentItems: remaining,
+      englishEnvironmentType: latest?.type ?? '',
+      englishEnvironmentTitle: latest?.title ?? '',
+      englishOutput: remaining.length > 0,
+    })
   }
 
   function changeStartDate() {
@@ -631,11 +663,24 @@ export default function Iris365() {
           <p className="iris365-support-copy">不需要“学习得很好”。只要让今天的一部分娱乐或输入发生在英语里。</p>
           <div className="iris365-soft-options">
             {ENGLISH_TYPES.map(type => {
-              const selected = entry.englishEnvironmentType === type
-              return <button key={type} type="button" disabled={dayNumber === 0} className={selected ? 'active' : ''} onClick={() => updateEntry({ englishEnvironmentType: selected ? '' : type, englishOutput: !selected })}>{type}</button>
+              const selected = englishDraft.type === type
+              return <button key={type} type="button" disabled={dayNumber === 0} className={selected ? 'active' : ''} onClick={() => setEnglishDraft({ ...englishDraft, type: selected ? '' : type })}>{type}</button>
             })}
           </div>
-          <label className="iris365-line-field"><span>今天的内容 <small>可选</small></span><input value={entry.englishEnvironmentTitle} disabled={dayNumber === 0} onChange={event => updateEntry({ englishEnvironmentTitle: event.target.value })} placeholder="剧名、播客、书或频道" /></label>
+          <div className="iris365-english-add-row">
+            <label className="iris365-line-field"><span>今天的内容 <small>可选</small></span><input value={englishDraft.title} disabled={dayNumber === 0} onChange={event => setEnglishDraft({ ...englishDraft, title: event.target.value })} placeholder="剧名、播客、书或频道" /></label>
+            <button type="button" className="btn btn-secondary" disabled={dayNumber === 0 || !englishDraft.type} onClick={addEnglishEnvironmentItem}><Plus size={15} /> Add English Entry</button>
+          </div>
+          {englishEnvironmentItems.length > 0 && (
+            <div className="iris365-english-list">
+              {englishEnvironmentItems.map(item => (
+                <article key={item.id}>
+                  <div><strong>{item.type}</strong><span>{item.title || '今天进入了一会儿英语环境'}</span></div>
+                  <button type="button" aria-label="删除这条英语环境记录" onClick={() => deleteEnglishEnvironmentItem(item.id)}><X size={14} /></button>
+                </article>
+              ))}
+            </div>
+          )}
           {anchorSync.englishOutputAuto && <small className="iris365-auto-note"><Check size={13} /> Study 已记录 {anchorSync.englishOutputReps} 次英语输出</small>}
         </section>
 
@@ -661,7 +706,7 @@ export default function Iris365() {
       <section className="iris365-foundation-summary">
         <div className="iris365-section-heading"><div><span className="section-label">Today’s foundation</span><h3>The System Is Still Running</h3><p className="iris365-heading-cn">今天的系统仍在运转</p></div><span className="iris365-foundation-count">{foundationCount} / 3</span></div>
         <div className="iris365-foundation-items">
-          <div className={englishDone ? 'done' : ''}>{englishDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>英语环境</strong><small>{englishDone ? entry.englishEnvironmentTitle || '今天有英语入口' : '还没有也没关系'}</small></span></div>
+          <div className={englishDone ? 'done' : ''}>{englishDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>英语环境</strong><small>{englishDone ? englishEnvironmentItems.length > 1 ? `今天记录了 ${englishEnvironmentItems.length} 个英语入口` : englishEnvironmentLabel : '还没有也没关系'}</small></span></div>
           <div className={switchDone ? 'done' : ''}>{switchDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>换轨练习</strong><small>{switchDone ? '延迟、切换或回来都算' : '看见冲动本身也是开始'}</small></span></div>
           <div className={movementDone ? 'done' : ''}>{movementDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>每天动一下</strong><small>{movementDone ? `${entry.movementMinutes || anchorSync.bodyMovedMinutes || 1} 分钟也算` : '做一点点就能点亮'}</small></span></div>
         </div>

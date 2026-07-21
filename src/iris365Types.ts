@@ -58,6 +58,13 @@ export interface Iris365SwitchLog {
   createdAt: string
 }
 
+export interface Iris365EnglishEnvironmentItem {
+  id: string
+  type: string
+  title: string
+  createdAt: string
+}
+
 export interface Iris365Entry {
   date: string
   dayNumber: number
@@ -103,6 +110,7 @@ export interface Iris365Entry {
   switchLogs: Iris365SwitchLog[]
   englishEnvironmentType: string
   englishEnvironmentTitle: string
+  englishEnvironmentItems: Iris365EnglishEnvironmentItem[]
   movementMinutes: number
   movementKind: string
   foundationNote: string

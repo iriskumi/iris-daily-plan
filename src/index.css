@@ -17454,6 +17454,66 @@ textarea {
   margin-top: 0.9rem;
 }
 
+.iris365-english-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: end;
+}
+
+.iris365-english-add-row .btn {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.iris365-english-list {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+  border-top: 1px solid rgba(229, 210, 220, 0.68);
+}
+
+.iris365-english-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.65rem;
+}
+
+.iris365-english-list article > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.iris365-english-list strong {
+  font-size: 0.8rem;
+}
+
+.iris365-english-list span {
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+}
+
+.iris365-english-list button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.iris365-english-list button:hover {
+  background: var(--color-surface-soft);
+  color: var(--color-text);
+}
+
 .iris365-auto-note {
   display: inline-flex;
   align-items: center;
@@ -17840,5 +17900,14 @@ textarea {
   .iris365-month-grid {
     grid-template-columns: repeat(7, minmax(34px, 1fr));
     gap: 0.32rem;
+  }
+
+  .iris365-english-add-row {
+    grid-template-columns: 1fr;
+  }
+
+  .iris365-english-add-row .btn {
+    width: 100%;
+    justify-content: center;
   }
 }

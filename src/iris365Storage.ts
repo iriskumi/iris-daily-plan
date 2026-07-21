@@ -1,6 +1,7 @@
 import { getLocalDateKey } from './focus'
 import type {
   Iris365Entry,
+  Iris365EnglishEnvironmentItem,
   Iris365DailyProof,
   Iris365DayType,
   Iris365DopamineOutcome,
@@ -305,6 +306,7 @@ export function emptyIris365Entry(date = getLocalDateKey()): Iris365Entry {
     switchLogs: [],
     englishEnvironmentType: '',
     englishEnvironmentTitle: '',
+    englishEnvironmentItems: [],
     movementMinutes: 0,
     movementKind: '',
     foundationNote: '',
@@ -340,6 +342,35 @@ function normaliseSwitchLogs(value: unknown): Iris365SwitchLog[] {
       createdAt: log.createdAt,
     }]
   })
+}
+
+function normaliseEnglishEnvironmentItems(
+  value: unknown,
+  legacyType: string | undefined,
+  legacyTitle: string | undefined,
+  date: string,
+  updatedAt: string | undefined,
+): Iris365EnglishEnvironmentItem[] {
+  if (Array.isArray(value)) {
+    return value.flatMap(item => {
+      if (!item || typeof item !== 'object') return []
+      const record = item as Partial<Iris365EnglishEnvironmentItem>
+      if (!record.id || !record.type) return []
+      return [{
+        id: record.id,
+        type: record.type,
+        title: record.title ?? '',
+        createdAt: record.createdAt ?? updatedAt ?? new Date().toISOString(),
+      }]
+    })
+  }
+  if (!legacyType && !legacyTitle) return []
+  return [{
+    id: `english-legacy-${date}`,
+    type: legacyType || '英语环境',
+    title: legacyTitle ?? '',
+    createdAt: updatedAt ?? new Date().toISOString(),
+  }]
 }
 
 function fallbackStore(): Iris365Store {
@@ -412,6 +443,13 @@ function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entr
     switchLogs: normaliseSwitchLogs(value.switchLogs),
     englishEnvironmentType: value.englishEnvironmentType ?? '',
     englishEnvironmentTitle: value.englishEnvironmentTitle ?? '',
+    englishEnvironmentItems: normaliseEnglishEnvironmentItems(
+      value.englishEnvironmentItems,
+      value.englishEnvironmentType,
+      value.englishEnvironmentTitle,
+      date,
+      value.updatedAt,
+    ),
     movementMinutes: Math.max(0, Math.round(Number(value.movementMinutes) || 0)),
     movementKind: value.movementKind ?? '',
     foundationNote: value.foundationNote ?? '',
