@@ -103,7 +103,18 @@ const SWITCH_ACTIONS = [
 ]
 
 const ENGLISH_TYPES = ['英语音频', '剧集 / 电影', 'Audiobook', 'Podcast', '英文阅读', '其他英语内容']
-const MOVEMENT_TYPES = ['散步', '拉伸', '家务', '力量训练', '跳舞', '其他活动']
+const MOVEMENT_TYPES = [
+  '散步',
+  '快走',
+  '慢跑',
+  '拉伸',
+  '视频跟练',
+  '力量训练',
+  'Hip-hop',
+  'K-pop',
+  '家务',
+  '其他活动',
+]
 
 interface SwitchDraft {
   trigger: string
