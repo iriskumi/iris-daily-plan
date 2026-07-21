@@ -14,6 +14,8 @@ import type {
   Iris365HighStimulusPatternKey,
   Iris365HighStimulusPatternStatus,
   Iris365MonthlyReview,
+  Iris365MorningFeeling,
+  Iris365MorningGateStatus,
   Iris365Phase,
   Iris365ProofKey,
   Iris365ProofCategory,
@@ -23,17 +25,27 @@ import type {
   Iris365Stats,
   Iris365Store,
   Iris365Streaks,
+  Iris365SwitchLog,
   Iris365WeeklyReview,
 } from './iris365Types'
 import type { StudySessionRecord } from './studyTypes'
 
 const STORAGE_KEY = 'iris-365'
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 const JOURNEY_DAYS = 365
-export const IRIS_365_START_DATE = '2026-07-13'
-export const IRIS_365_END_DATE = '2027-07-12'
+const LEGACY_PROGRAMME_START_DATE = '2026-07-13'
+const LEGACY_PROGRAMME_END_DATE = '2027-07-12'
+export const IRIS_365_START_DATE = '2026-07-21'
+export const IRIS_365_END_DATE = '2027-07-20'
 
 export const IRIS_365_DEFAULT_MOTTO = 'Build the foundation first. Small daily proof, not perfection.'
+
+function programmeEndDate(startDate: string): string {
+  const end = new Date(`${startDate}T00:00:00`)
+  if (Number.isNaN(end.getTime())) return IRIS_365_END_DATE
+  end.setDate(end.getDate() + JOURNEY_DAYS - 1)
+  return getLocalDateKey(end)
+}
 
 export const IRIS_365_PROOF_BLUEPRINTS: Record<Iris365ProofKey, Omit<Iris365DailyProof, 'completed' | 'note'>> = {
   body: {
@@ -180,29 +192,33 @@ export const IRIS_365_PHASES: Iris365Phase[] = [
     id: 1,
     startDay: 1,
     endDay: 30,
-    title: 'Stabilise the System',
-    focus: 'Protect the base: sleep, movement, English output, and one real-world task.',
+    title: '重设默认入口',
+    englishLabel: 'Reset the Defaults',
+    focus: '先保护起床、吃饭和睡前三个入口。识别冲动，练习延迟和换轨，不要求完美。',
   },
   {
     id: 2,
     startDay: 31,
     endDay: 90,
-    title: 'Build Output',
-    focus: 'Turn small practice into repeatable visible output.',
+    title: '建立新节奏',
+    englishLabel: 'Build the New Rhythm',
+    focus: '让英语内容和每日运动更容易自动出现，减少每次选择所需的意志力。',
   },
   {
     id: 3,
     startDay: 91,
     endDay: 180,
-    title: 'Portfolio and Proof',
-    focus: 'Collect evidence: projects, writing, interviews, and consistent study logs.',
+    title: '让它变得普通',
+    englishLabel: 'Make It Ordinary',
+    focus: '英语环境不再只是学习任务，运动不需要隆重准备，旧循环出现时也能较快回来。',
   },
   {
     id: 4,
     startDay: 181,
     endDay: 365,
-    title: 'Scale Up',
-    focus: 'Use the proof you built to reach bigger rooms and better opportunities.',
+    title: '生活在新系统里',
+    englishLabel: 'Live Inside the System',
+    focus: '重点是维持、调整和继续生活，而不是冲刺或补作业。',
   },
 ]
 
@@ -276,8 +292,53 @@ export function emptyIris365Entry(date = getLocalDateKey()): Iris365Entry {
     energy: 3,
     tinyWin: '',
     notes: '',
+    morningGateChecklist: {
+      water: false,
+      light: false,
+      leaveBed: false,
+      englishAudio: false,
+      gentleMovement: false,
+    },
+    morningGateStatus: 'unrecorded',
+    morningFeeling: '',
+    switchLogs: [],
+    englishEnvironmentType: '',
+    englishEnvironmentTitle: '',
+    movementMinutes: 0,
+    movementKind: '',
+    foundationNote: '',
     updatedAt: new Date().toISOString(),
   }
+}
+
+function normaliseMorningGateStatus(value: unknown): Iris365MorningGateStatus {
+  return ['protected', 'switched', 'delayed', 'interrupted', 'carried-away', 'unrecorded'].includes(String(value))
+    ? value as Iris365MorningGateStatus
+    : 'unrecorded'
+}
+
+function normaliseMorningFeeling(value: unknown): Iris365MorningFeeling {
+  return ['foggy', 'bored', 'anxious', 'stay-in-bed', 'avoid-day', 'automatic-reach', 'other', ''].includes(String(value))
+    ? value as Iris365MorningFeeling
+    : ''
+}
+
+function normaliseSwitchLogs(value: unknown): Iris365SwitchLog[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap(item => {
+    if (!item || typeof item !== 'object') return []
+    const log = item as Partial<Iris365SwitchLog>
+    if (!log.id || !log.createdAt) return []
+    return [{
+      id: log.id,
+      trigger: log.trigger ?? '',
+      oldImpulse: log.oldImpulse ?? '',
+      switchAction: log.switchAction ?? '',
+      replacement: log.replacement ?? '',
+      note: log.note ?? '',
+      createdAt: log.createdAt,
+    }]
+  })
 }
 
 function fallbackStore(): Iris365Store {
@@ -341,6 +402,18 @@ function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entr
     highStimulusTrigger: value.highStimulusTrigger ?? '',
     mood: clampRating(value.mood),
     energy: clampRating(value.energy),
+    morningGateChecklist: {
+      ...emptyIris365Entry(date).morningGateChecklist,
+      ...(value.morningGateChecklist ?? {}),
+    },
+    morningGateStatus: normaliseMorningGateStatus(value.morningGateStatus),
+    morningFeeling: normaliseMorningFeeling(value.morningFeeling),
+    switchLogs: normaliseSwitchLogs(value.switchLogs),
+    englishEnvironmentType: value.englishEnvironmentType ?? '',
+    englishEnvironmentTitle: value.englishEnvironmentTitle ?? '',
+    movementMinutes: Math.max(0, Math.round(Number(value.movementMinutes) || 0)),
+    movementKind: value.movementKind ?? '',
+    foundationNote: value.foundationNote ?? '',
     updatedAt: value.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -398,9 +471,15 @@ function normaliseMonthlyReview(value: Partial<Iris365MonthlyReview>, monthId: s
 }
 
 function normaliseSettings(value: Partial<Iris365Settings> | undefined): Iris365Settings {
+  const startDate = !value?.startDate || value.startDate === LEGACY_PROGRAMME_START_DATE
+    ? IRIS_365_START_DATE
+    : value.startDate
+  const endDate = !value?.endDate || value.endDate === LEGACY_PROGRAMME_END_DATE
+    ? programmeEndDate(startDate)
+    : value.endDate
   return {
-    startDate: value?.startDate ?? IRIS_365_START_DATE,
-    endDate: value?.endDate ?? IRIS_365_END_DATE,
+    startDate,
+    endDate,
     motto: value?.motto ?? IRIS_365_DEFAULT_MOTTO,
   }
 }
@@ -570,6 +649,18 @@ export function saveIris365Store(store: Iris365Store): Iris365Store {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   }
   return next
+}
+
+export function updateIris365StartDate(startDate: string, store = loadIris365Store()): Iris365Store {
+  return saveIris365Store({
+    ...store,
+    startDate,
+    settings: {
+      ...store.settings,
+      startDate,
+      endDate: programmeEndDate(startDate),
+    },
+  })
 }
 
 export function loadIris365Entry(date = getLocalDateKey(), store = loadIris365Store()): Iris365Entry {

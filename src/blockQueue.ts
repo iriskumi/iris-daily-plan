@@ -227,7 +227,7 @@ export function mergeQueueWithTasks(queue: DayBlockQueue, tasks: Task[]): DayBlo
   )
   const now = new Date().toISOString()
   const highestOrder = queue.blocks.reduce((max, block) => Math.max(max, block.order), -1)
-  let nextOrder = highestOrder + 1
+  const nextOrder = highestOrder + 1
   const eligibleTasks = tasksEligibleForQueueMerge(tasks, queue.date, queue.blocks)
   const migratedBlocks = eligibleTasks.map((task, index): DayBlock => {
     const existing = existingByTaskId.get(task.id)

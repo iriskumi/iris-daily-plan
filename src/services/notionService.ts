@@ -90,6 +90,23 @@ export interface NotionStudyDailyLogPayload {
   markdown: string
 }
 
+export interface NotionIris365LogPayload {
+  date: string
+  dayNumber: number
+  progressPercent: number
+  phaseEnglish: string
+  phaseChinese: string
+  morningGate: string
+  morningFeeling: string
+  morningChecklist: string[]
+  englishEnvironment: string
+  switchSummary: string[]
+  movement: string
+  foundationCount: number
+  foundationNote: string
+  markdown: string
+}
+
 export async function pushStudyDailyLogToNotion(
   payload: NotionStudyDailyLogPayload,
 ): Promise<IntegrationResult<NotionExportResult>> {
@@ -104,6 +121,25 @@ export async function pushStudyDailyLogToNotion(
     return {
       success: false,
       message: 'Study Daily Log push failed before reaching the API route.',
+      data: null,
+    }
+  }
+}
+
+export async function pushIris365LogToNotion(
+  payload: NotionIris365LogPayload,
+): Promise<IntegrationResult<NotionExportResult>> {
+  try {
+    const response = await fetch('/api/notion/push-iris365-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    return (await response.json()) as IntegrationResult<NotionExportResult>
+  } catch {
+    return {
+      success: false,
+      message: 'Iris 365 push failed before reaching the Notion API route.',
       data: null,
     }
   }

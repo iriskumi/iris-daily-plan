@@ -27,6 +27,35 @@ export interface Iris365Phase {
   endDay: number
   title: string
   focus: string
+  englishLabel?: string
+}
+
+export type Iris365MorningGateStatus =
+  | 'protected'
+  | 'switched'
+  | 'delayed'
+  | 'interrupted'
+  | 'carried-away'
+  | 'unrecorded'
+
+export type Iris365MorningFeeling =
+  | 'foggy'
+  | 'bored'
+  | 'anxious'
+  | 'stay-in-bed'
+  | 'avoid-day'
+  | 'automatic-reach'
+  | 'other'
+  | ''
+
+export interface Iris365SwitchLog {
+  id: string
+  trigger: string
+  oldImpulse: string
+  switchAction: string
+  replacement: string
+  note: string
+  createdAt: string
 }
 
 export interface Iris365Entry {
@@ -68,6 +97,15 @@ export interface Iris365Entry {
   energy: number
   tinyWin: string
   notes: string
+  morningGateChecklist: Record<'water' | 'light' | 'leaveBed' | 'englishAudio' | 'gentleMovement', boolean>
+  morningGateStatus: Iris365MorningGateStatus
+  morningFeeling: Iris365MorningFeeling
+  switchLogs: Iris365SwitchLog[]
+  englishEnvironmentType: string
+  englishEnvironmentTitle: string
+  movementMinutes: number
+  movementKind: string
+  foundationNote: string
   updatedAt: string
 }
 
