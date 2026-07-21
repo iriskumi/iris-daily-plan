@@ -31,7 +31,8 @@ import type {
 import type { StudySessionRecord } from './studyTypes'
 
 const STORAGE_KEY = 'iris-365'
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
+export const IRIS_365_SCHEMA_VERSION = SCHEMA_VERSION
 const JOURNEY_DAYS = 365
 const LEGACY_PROGRAMME_START_DATE = '2026-07-13'
 const LEGACY_PROGRAMME_END_DATE = '2027-07-12'
@@ -470,11 +471,12 @@ function normaliseMonthlyReview(value: Partial<Iris365MonthlyReview>, monthId: s
   }
 }
 
-function normaliseSettings(value: Partial<Iris365Settings> | undefined): Iris365Settings {
-  const startDate = !value?.startDate || value.startDate === LEGACY_PROGRAMME_START_DATE
+function normaliseSettings(value: Partial<Iris365Settings> | undefined, sourceSchemaVersion: number): Iris365Settings {
+  const resetForNewProgramme = sourceSchemaVersion < SCHEMA_VERSION
+  const startDate = resetForNewProgramme || !value?.startDate || value.startDate === LEGACY_PROGRAMME_START_DATE
     ? IRIS_365_START_DATE
     : value.startDate
-  const endDate = !value?.endDate || value.endDate === LEGACY_PROGRAMME_END_DATE
+  const endDate = resetForNewProgramme || !value?.endDate || value.endDate === LEGACY_PROGRAMME_END_DATE
     ? programmeEndDate(startDate)
     : value.endDate
   return {
@@ -580,6 +582,7 @@ function clampRating(value: unknown): number {
 function normaliseStore(value: unknown): Iris365Store {
   if (!value || typeof value !== 'object') return fallbackStore()
   const parsed = value as Partial<Iris365Store>
+  const sourceSchemaVersion = Number(parsed.schemaVersion) || 0
   const now = new Date().toISOString()
   const entries = Object.entries(parsed.entries ?? {}).reduce<Record<string, Iris365Entry>>((acc, [date, entry]) => {
     if (entry && typeof entry === 'object') acc[date] = normaliseEntry(entry as Partial<Iris365Entry>, date)
@@ -618,7 +621,7 @@ function normaliseStore(value: unknown): Iris365Store {
   return {
     schemaVersion: SCHEMA_VERSION,
     startDate: IRIS_365_START_DATE,
-    settings: normaliseSettings(parsed.settings),
+    settings: normaliseSettings(parsed.settings, sourceSchemaVersion),
     entries,
     proofItems,
     weeklyReviews,

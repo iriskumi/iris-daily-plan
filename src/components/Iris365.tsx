@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowRight,
   CalendarDays,
@@ -22,6 +22,7 @@ import {
   calculateCurrentDayNumber,
   calculateDaysRemaining,
   determineCurrentPhase,
+  IRIS_365_SCHEMA_VERSION,
   IRIS_365_START_DATE,
   iris365ProgressPercent,
   loadIris365Entry,
@@ -201,6 +202,14 @@ export default function Iris365() {
   const [notionStatus, setNotionStatus] = useState('')
   const [notionUrl, setNotionUrl] = useState('')
   const [selectedVisualDate, setSelectedVisualDate] = useState(today)
+
+  useEffect(() => {
+    if (store.schemaVersion >= IRIS_365_SCHEMA_VERSION) return
+    const migratedStore = loadIris365Store()
+    setStore(migratedStore)
+    setEntry(loadIris365Entry(today, migratedStore))
+    setStartDateDraft(migratedStore.settings.startDate)
+  }, [store.schemaVersion, today])
 
   const startDate = store.settings.startDate || IRIS_365_START_DATE
   const dayNumber = calculateCurrentDayNumber(startDate, today)
