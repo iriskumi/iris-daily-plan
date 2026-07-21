@@ -17,6 +17,7 @@ import type {
   Iris365MonthlyReview,
   Iris365MorningFeeling,
   Iris365MorningGateStatus,
+  Iris365MovementItem,
   Iris365Phase,
   Iris365ProofKey,
   Iris365ProofCategory,
@@ -307,6 +308,7 @@ export function emptyIris365Entry(date = getLocalDateKey()): Iris365Entry {
     englishEnvironmentType: '',
     englishEnvironmentTitle: '',
     englishEnvironmentItems: [],
+    movementItems: [],
     movementMinutes: 0,
     movementKind: '',
     foundationNote: '',
@@ -373,6 +375,37 @@ function normaliseEnglishEnvironmentItems(
   }]
 }
 
+function normaliseMovementItems(
+  value: unknown,
+  legacyMinutes: unknown,
+  legacyKind: string | undefined,
+  date: string,
+  updatedAt: string | undefined,
+): Iris365MovementItem[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => {
+      if (!item || typeof item !== 'object') return []
+      const record = item as Partial<Iris365MovementItem>
+      const minutes = Math.max(0, Math.round(Number(record.minutes) || 0))
+      if (!minutes || !record.kind) return []
+      return [{
+        id: record.id ?? `movement-${date}-${index}`,
+        minutes,
+        kind: record.kind,
+        createdAt: record.createdAt ?? updatedAt ?? new Date().toISOString(),
+      }]
+    })
+  }
+  const minutes = Math.max(0, Math.round(Number(legacyMinutes) || 0))
+  if (!minutes && !legacyKind) return []
+  return [{
+    id: `movement-legacy-${date}`,
+    minutes: minutes || 1,
+    kind: legacyKind || '其他活动',
+    createdAt: updatedAt ?? new Date().toISOString(),
+  }]
+}
+
 function fallbackStore(): Iris365Store {
   const now = new Date().toISOString()
   return {
@@ -408,6 +441,16 @@ function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entr
     ...defaultHighStimulusPatterns(),
     ...(value.highStimulusPatterns ?? {}),
   }
+  const movementItems = normaliseMovementItems(
+    value.movementItems,
+    value.movementMinutes,
+    value.movementKind,
+    date,
+    value.updatedAt,
+  )
+  const movementMinutes = movementItems.reduce((total, item) => total + item.minutes, 0)
+  const movementKind = movementItems[movementItems.length - 1]?.kind ?? value.movementKind ?? ''
+  const movementRecorded = bodyMoved || movementItems.length > 0
   return {
     ...emptyIris365Entry(date),
     ...value,
@@ -421,10 +464,10 @@ function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entr
     englishOutputDetail: value.englishOutputDetail ?? {},
     skillTouches: value.skillTouches ?? {},
     sleepRhythmProtected,
-    bodyMoved,
+    bodyMoved: movementRecorded,
     oneRealThingDone,
     sleepProtected: sleepRhythmProtected,
-    movement: bodyMoved,
+    movement: movementRecorded,
     realityTask: oneRealThingDone,
     highStimulusPatterns,
     realThingToday: value.realThingToday ?? '',
@@ -450,8 +493,9 @@ function normaliseEntry(value: Partial<Iris365Entry>, date: string): Iris365Entr
       date,
       value.updatedAt,
     ),
-    movementMinutes: Math.max(0, Math.round(Number(value.movementMinutes) || 0)),
-    movementKind: value.movementKind ?? '',
+    movementItems,
+    movementMinutes,
+    movementKind,
     foundationNote: value.foundationNote ?? '',
     updatedAt: value.updatedAt ?? new Date().toISOString(),
   }

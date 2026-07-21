@@ -153,7 +153,7 @@ function hasEnglishEnvironment(entry: Iris365Entry, auto = false): boolean {
 }
 
 function hasMovement(entry: Iris365Entry, auto = false): boolean {
-  return Boolean(entry.movementMinutes > 0 || entry.bodyMoved || auto)
+  return Boolean(entry.movementItems?.length || entry.movementMinutes > 0 || entry.bodyMoved || auto)
 }
 
 function hasSwitch(entry: Iris365Entry): boolean {
@@ -195,6 +195,7 @@ export default function Iris365() {
   const [entry, setEntry] = useState<Iris365Entry>(() => loadIris365Entry(today, store))
   const [switchDraft, setSwitchDraft] = useState<SwitchDraft>(EMPTY_SWITCH_DRAFT)
   const [englishDraft, setEnglishDraft] = useState({ type: '', title: '' })
+  const [movementDraft, setMovementDraft] = useState({ minutes: 0, kind: '' })
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [startDateDraft, setStartDateDraft] = useState(store.settings.startDate || IRIS_365_START_DATE)
   const [saveMessage, setSaveMessage] = useState(store.entries[today] ? `已保存 ${formatTime(store.entries[today].updatedAt)}` : '选择后自动保存')
@@ -223,6 +224,9 @@ export default function Iris365() {
   const switchDone = hasSwitch(entry)
   const foundationCount = [englishDone, switchDone, movementDone].filter(Boolean).length
   const englishEnvironmentItems = entry.englishEnvironmentItems ?? []
+  const movementItems = entry.movementItems ?? []
+  const movementMinutes = movementItems.reduce((total, item) => total + item.minutes, 0)
+  const displayedMovementMinutes = movementMinutes || anchorSync.bodyMovedMinutes || entry.movementMinutes || 0
   const morningStatusLabel = MORNING_STATUS_OPTIONS.find(option => option.value === entry.morningGateStatus)?.label ?? '还没记录'
   const morningFeelingLabel = MORNING_FEELINGS.find(option => option.value === entry.morningFeeling)?.label ?? '未记录'
   const morningChecklistLabels = MORNING_CHECKS.filter(item => entry.morningGateChecklist[item.key]).map(item => item.label)
@@ -232,7 +236,9 @@ export default function Iris365() {
       : [entry.englishEnvironmentType || (anchorSync.englishOutputAuto ? 'Study 英语输出' : '英语环境'), entry.englishEnvironmentTitle].filter(Boolean).join(' · ')
     : '还没有记录'
   const movementLabel = movementDone
-    ? [entry.movementKind, `${entry.movementMinutes || anchorSync.bodyMovedMinutes || 1} min`].filter(Boolean).join(' · ')
+    ? movementItems.length > 0
+      ? movementItems.map(item => `${item.kind} · ${item.minutes} min`).join('；')
+      : [entry.movementKind, `${displayedMovementMinutes || 1} min`].filter(Boolean).join(' · ')
     : '还没有记录'
   const switchSummary = entry.switchLogs.map(log => [
     `${log.trigger} · ${log.oldImpulse}`,
@@ -347,6 +353,37 @@ export default function Iris365() {
       englishEnvironmentType: latest?.type ?? '',
       englishEnvironmentTitle: latest?.title ?? '',
       englishOutput: remaining.length > 0,
+    })
+  }
+
+  function addMovementItem() {
+    if (!movementDraft.minutes || !movementDraft.kind) return
+    const item = {
+      id: `movement-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      minutes: movementDraft.minutes,
+      kind: movementDraft.kind,
+      createdAt: new Date().toISOString(),
+    }
+    const items = [...movementItems, item]
+    updateEntry({
+      movementItems: items,
+      movementMinutes: items.reduce((total, movementItem) => total + movementItem.minutes, 0),
+      movementKind: item.kind,
+      bodyMoved: true,
+      movement: true,
+    })
+    setMovementDraft({ minutes: 0, kind: '' })
+  }
+
+  function deleteMovementItem(id: string) {
+    const remaining = movementItems.filter(item => item.id !== id)
+    const latest = remaining[remaining.length - 1]
+    updateEntry({
+      movementItems: remaining,
+      movementMinutes: remaining.reduce((total, item) => total + item.minutes, 0),
+      movementKind: latest?.kind ?? '',
+      bodyMoved: remaining.length > 0,
+      movement: remaining.length > 0,
     })
   }
 
@@ -689,16 +726,30 @@ export default function Iris365() {
           <p className="iris365-support-copy">一两分钟也算。目标是让“我每天会动一下”变成普通事实。</p>
           <div className="iris365-minute-options">
             {[1, 3, 5, 10, 20, 30].map(minutes => {
-              const selected = entry.movementMinutes === minutes
-              return <button key={minutes} type="button" disabled={dayNumber === 0} className={selected ? 'active' : ''} onClick={() => updateEntry({ movementMinutes: selected ? 0 : minutes, bodyMoved: selected ? Boolean(entry.movementKind) : true, movement: selected ? Boolean(entry.movementKind) : true })}>{minutes} min</button>
+              const selected = movementDraft.minutes === minutes
+              return <button key={minutes} type="button" disabled={dayNumber === 0} className={selected ? 'active' : ''} onClick={() => setMovementDraft({ ...movementDraft, minutes: selected ? 0 : minutes })}>{minutes} min</button>
             })}
           </div>
           <div className="iris365-soft-options">
             {MOVEMENT_TYPES.map(type => {
-              const selected = entry.movementKind === type
-              return <button key={type} type="button" disabled={dayNumber === 0} className={selected ? 'active' : ''} onClick={() => updateEntry({ movementKind: selected ? '' : type, bodyMoved: selected ? entry.movementMinutes > 0 : true, movement: selected ? entry.movementMinutes > 0 : true })}>{type}</button>
+              const selected = movementDraft.kind === type
+              return <button key={type} type="button" disabled={dayNumber === 0} className={selected ? 'active' : ''} onClick={() => setMovementDraft({ ...movementDraft, kind: selected ? '' : type })}>{type}</button>
             })}
           </div>
+          <div className="iris365-movement-add-row">
+            <small>{movementItems.length > 0 ? `今天 ${movementItems.length} 条 · 共 ${movementMinutes} 分钟` : '选择时长和活动，再记下这一条。'}</small>
+            <button type="button" className="btn btn-secondary" disabled={dayNumber === 0 || !movementDraft.minutes || !movementDraft.kind} onClick={addMovementItem}><Plus size={15} /> 记下这次活动</button>
+          </div>
+          {movementItems.length > 0 && (
+            <div className="iris365-movement-list">
+              {movementItems.map(item => (
+                <article key={item.id}>
+                  <div><strong>{item.kind}</strong><span>{item.minutes} min · {formatTime(item.createdAt)}</span></div>
+                  <button type="button" aria-label="删除这条活动记录" onClick={() => deleteMovementItem(item.id)}><X size={14} /></button>
+                </article>
+              ))}
+            </div>
+          )}
           {anchorSync.bodyMovedAuto && <small className="iris365-auto-note"><Check size={13} /> Exercise 已记录 {anchorSync.bodyMovedMinutes} 分钟</small>}
         </section>
       </div>
@@ -708,7 +759,7 @@ export default function Iris365() {
         <div className="iris365-foundation-items">
           <div className={englishDone ? 'done' : ''}>{englishDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>英语环境</strong><small>{englishDone ? englishEnvironmentItems.length > 1 ? `今天记录了 ${englishEnvironmentItems.length} 个英语入口` : englishEnvironmentLabel : '还没有也没关系'}</small></span></div>
           <div className={switchDone ? 'done' : ''}>{switchDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>换轨练习</strong><small>{switchDone ? '延迟、切换或回来都算' : '看见冲动本身也是开始'}</small></span></div>
-          <div className={movementDone ? 'done' : ''}>{movementDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>每天动一下</strong><small>{movementDone ? `${entry.movementMinutes || anchorSync.bodyMovedMinutes || 1} 分钟也算` : '做一点点就能点亮'}</small></span></div>
+          <div className={movementDone ? 'done' : ''}>{movementDone ? <Check size={16} /> : <CircleDot size={16} />}<span><strong>每天动一下</strong><small>{movementDone ? movementItems.length > 1 ? `${movementItems.length} 次活动 · 共 ${movementMinutes} 分钟` : `${displayedMovementMinutes || 1} 分钟也算` : '做一点点就能点亮'}</small></span></div>
         </div>
         <label className="iris365-line-field"><span>今天想留给明天的一句话 <small>可选</small></span><input value={entry.foundationNote} disabled={dayNumber === 0} onChange={event => updateEntry({ foundationNote: event.target.value })} placeholder="不补作业。明天从一个更容易的入口回来。" /></label>
         <div className="iris365-export-row">

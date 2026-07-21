@@ -65,6 +65,13 @@ export interface Iris365EnglishEnvironmentItem {
   createdAt: string
 }
 
+export interface Iris365MovementItem {
+  id: string
+  minutes: number
+  kind: string
+  createdAt: string
+}
+
 export interface Iris365Entry {
   date: string
   dayNumber: number
@@ -111,6 +118,7 @@ export interface Iris365Entry {
   englishEnvironmentType: string
   englishEnvironmentTitle: string
   englishEnvironmentItems: Iris365EnglishEnvironmentItem[]
+  movementItems: Iris365MovementItem[]
   movementMinutes: number
   movementKind: string
   foundationNote: string

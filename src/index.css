@@ -17466,14 +17466,34 @@ textarea {
   white-space: nowrap;
 }
 
-.iris365-english-list {
+.iris365-movement-add-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.iris365-movement-add-row small {
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.iris365-movement-add-row .btn {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.iris365-english-list,
+.iris365-movement-list {
   display: grid;
   gap: 0.4rem;
   margin-top: 0.8rem;
   border-top: 1px solid rgba(229, 210, 220, 0.68);
 }
 
-.iris365-english-list article {
+.iris365-english-list article,
+.iris365-movement-list article {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -17481,21 +17501,25 @@ textarea {
   padding-top: 0.65rem;
 }
 
-.iris365-english-list article > div {
+.iris365-english-list article > div,
+.iris365-movement-list article > div {
   display: grid;
   gap: 0.12rem;
 }
 
-.iris365-english-list strong {
+.iris365-english-list strong,
+.iris365-movement-list strong {
   font-size: 0.8rem;
 }
 
-.iris365-english-list span {
+.iris365-english-list span,
+.iris365-movement-list span {
   color: var(--color-text-muted);
   font-size: 0.76rem;
 }
 
-.iris365-english-list button {
+.iris365-english-list button,
+.iris365-movement-list button {
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
@@ -17509,7 +17533,8 @@ textarea {
   cursor: pointer;
 }
 
-.iris365-english-list button:hover {
+.iris365-english-list button:hover,
+.iris365-movement-list button:hover {
   background: var(--color-surface-soft);
   color: var(--color-text);
 }
@@ -17907,6 +17932,16 @@ textarea {
   }
 
   .iris365-english-add-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .iris365-movement-add-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .iris365-movement-add-row .btn {
     width: 100%;
     justify-content: center;
   }
