@@ -93,6 +93,7 @@ import PomodoroTimer from './components/PomodoroTimer'
 import StudyDashboard from './components/StudyDashboard'
 import Iris365 from './components/Iris365'
 import MediaTab from './components/MediaTab'
+import ExerciseTab from './components/ExerciseTab'
 import StudyPlanImportDialog, { type StudyPlanImportDialogState } from './components/StudyPlanImportDialog'
 import irisBearIcon from './assets/iris-bear-icon.svg'
 import {
@@ -155,13 +156,12 @@ type ExternalTaskImportDialog =
       message: string
     }
 
-const TABS: { id: Extract<Tab, 'today' | 'iris365' | 'study' | 'plan' | 'tasks' | 'media' | 'integrations'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Extract<Tab, 'today' | 'iris365' | 'study' | 'plan' | 'tasks' | 'integrations'>; label: string; icon: ReactNode }[] = [
   { id: 'today', label: 'Today', icon: <ClipboardList /> },
   { id: 'iris365', label: 'Iris 365', icon: <CalendarDays /> },
-  { id: 'study', label: 'Start', icon: <Play /> },
+  { id: 'study', label: 'Focus', icon: <Play /> },
   { id: 'plan', label: 'Queue', icon: <Zap /> },
   { id: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
-  { id: 'media', label: 'Media', icon: <Heart /> },
 ]
 
 const STUDY_TIMER_ENGINE_KEY = 'iris-study-timer-engine-active'
@@ -532,9 +532,10 @@ export default function App() {
     const handleOpenTab = (event: Event) => {
       const detail = (event as CustomEvent<{ tab?: Tab; focus?: string }>).detail
       if (!detail?.tab) return
-      const requestedTab = detail.tab === 'exercise' ? 'iris365' : detail.tab
-      if (detail.tab === 'exercise' && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('iris365-focus-target', 'movement')
+      const isFoundationTab = detail.tab === 'exercise' || detail.tab === 'media'
+      const requestedTab = isFoundationTab && detail.focus !== 'archive' ? 'iris365' : detail.tab
+      if (isFoundationTab && detail.focus !== 'archive' && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('iris365-focus-target', detail.tab === 'exercise' ? 'movement' : 'english')
       }
       setTab(requestedTab)
       if (detail.focus === 'active-session') {
@@ -715,9 +716,9 @@ export default function App() {
   const showCompactActiveBar = Boolean(activeStudySession && tab !== 'today' && tab !== 'study')
 
   function goToTab(nextTab: Tab) {
-    if (nextTab === 'exercise') {
+    if (nextTab === 'exercise' || nextTab === 'media') {
       if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('iris365-focus-target', 'movement')
+        sessionStorage.setItem('iris365-focus-target', nextTab === 'exercise' ? 'movement' : 'english')
       }
       setTab('iris365')
     } else {
@@ -1166,6 +1167,7 @@ export default function App() {
             standalone
           />
         )}
+        {tab === 'exercise' && <ExerciseTab />}
         {tab === 'media' && <MediaTab />}
         {tab === 'integrations' && <AIAssistant onGeneratePlan={handleGeneratePlan} />}
         {tab === 'settings' && <Settings onSettingsChange={setAppSettings} />}

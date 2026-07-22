@@ -910,16 +910,16 @@ export default function StartNowDashboard({
               </button>
             </div>
             <div className="today-start-panel-copy">
-              <span className="today-soft-label">Today</span>
-              <h2>Start</h2>
-              <p>先开始一个小块。</p>
+              <span className="today-soft-label">Organized life</span>
+              <h2>Start one real thing</h2>
+              <p>学习、日语、Admin 或求职，先专注一个小块。</p>
             </div>
             <div className="today-start-actions">
               <button type="button" className="today-start-action-card primary" onClick={openStudyStart}>
                 <span className="start-action-card__icon"><BookOpen size={20} /></span>
                 <span className="start-action-card__content">
-                  <span className="start-action-card__label">Study</span>
-                  <span className="start-action-card__helper">Start a focus session</span>
+                  <span className="start-action-card__label">Focus</span>
+                  <span className="start-action-card__helper">Choose one task and begin</span>
                 </span>
               </button>
               <button type="button" className="today-start-action-card" onClick={openEnglishStart}>
@@ -933,7 +933,7 @@ export default function StartNowDashboard({
                 <span className="start-action-card__icon"><Dumbbell size={20} /></span>
                 <span className="start-action-card__content">
                   <span className="start-action-card__label">Movement</span>
-                  <span className="start-action-card__helper">Protect the body anchor</span>
+                  <span className="start-action-card__helper">Return to Iris 365</span>
                 </span>
               </button>
             </div>

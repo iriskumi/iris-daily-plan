@@ -6718,8 +6718,28 @@ textarea {
   max-width: 1240px;
 }
 
+#iris365-switch,
+#iris365-english,
 #iris365-movement {
   scroll-margin-top: 7rem;
+}
+
+.iris365-reference-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.iris365-reference-link:hover {
+  color: var(--accent);
 }
 
 .iris365-countdown-card,

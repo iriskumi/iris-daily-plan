@@ -227,10 +227,10 @@ export default function Iris365() {
   useEffect(() => {
     if (typeof sessionStorage === 'undefined') return
     const target = sessionStorage.getItem('iris365-focus-target')
-    if (target !== 'movement') return
+    if (target !== 'movement' && target !== 'english' && target !== 'switch') return
     sessionStorage.removeItem('iris365-focus-target')
     const scrollTimer = window.setTimeout(() => {
-      document.getElementById('iris365-movement')?.scrollIntoView({
+      document.getElementById(`iris365-${target}`)?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       })
@@ -455,6 +455,12 @@ export default function Iris365() {
     setPushingNotion(false)
     setNotionStatus(result.message)
     setNotionUrl(result.data?.pageUrl ?? '')
+  }
+
+  function openReferenceArchive(tab: 'exercise' | 'media') {
+    window.dispatchEvent(new CustomEvent('iris-open-tab', {
+      detail: { tab, focus: 'archive' },
+    }))
   }
 
   return (
@@ -688,7 +694,7 @@ export default function Iris365() {
         </label>
       </section>
 
-      <section className="iris365-foundation-section iris365-switch-log">
+      <section className="iris365-foundation-section iris365-switch-log" id="iris365-switch">
         <div className="iris365-section-heading">
           <div>
             <span className="section-label">Switch Log</span>
@@ -720,7 +726,7 @@ export default function Iris365() {
       </section>
 
       <div className="iris365-two-column">
-        <section className="iris365-foundation-section iris365-english-environment">
+        <section className="iris365-foundation-section iris365-english-environment" id="iris365-english">
           <div className="iris365-section-heading"><div><span className="section-label">English Environment</span><h3>Choose an English Doorway</h3><p className="iris365-heading-cn">今天把哪个入口换成英语？</p></div><Headphones size={20} /></div>
           <p className="iris365-support-copy">不需要“学习得很好”。只要让今天的一部分娱乐或输入发生在英语里。</p>
           <div className="iris365-soft-options">
@@ -744,6 +750,9 @@ export default function Iris365() {
             </div>
           )}
           {anchorSync.englishOutputAuto && <small className="iris365-auto-note"><Check size={13} /> Study 已记录 {anchorSync.englishOutputReps} 次英语输出</small>}
+          <button type="button" className="iris365-reference-link" onClick={() => openReferenceArchive('media')}>
+            Saved English / Japanese media <ArrowRight size={14} />
+          </button>
         </section>
 
         <section className="iris365-foundation-section iris365-movement" id="iris365-movement">
@@ -776,6 +785,9 @@ export default function Iris365() {
             </div>
           )}
           {anchorSync.bodyMovedAuto && <small className="iris365-auto-note"><Check size={13} /> Exercise 已记录 {anchorSync.bodyMovedMinutes} 分钟</small>}
+          <button type="button" className="iris365-reference-link" onClick={() => openReferenceArchive('exercise')}>
+            Movement history &amp; routines <ArrowRight size={14} />
+          </button>
         </section>
       </div>
 
@@ -845,7 +857,12 @@ export function Iris365HomeSummary({ onOpenIris365 }: Iris365HomeSummaryProps = 
   const startDate = store.settings.startDate || IRIS_365_START_DATE
   const dayNumber = calculateCurrentDayNumber(startDate, today)
   const daysRemaining = calculateDaysRemaining(startDate, today)
-  const foundationCount = [hasEnglishEnvironment(entry), hasSwitch(entry), hasMovement(entry)].filter(Boolean).length
+  const anchorSync = getIris365DailyAnchorSync(today)
+  const foundationCount = [
+    hasEnglishEnvironment(entry, anchorSync.englishOutputAuto),
+    hasSwitch(entry),
+    hasMovement(entry, anchorSync.bodyMovedAuto),
+  ].filter(Boolean).length
 
   return (
     <section className="iris365-home-card iris365-home-foundation-card">
