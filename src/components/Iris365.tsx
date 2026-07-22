@@ -224,6 +224,20 @@ export default function Iris365() {
     setStartDateDraft(migratedStore.settings.startDate)
   }, [store.schemaVersion, today])
 
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return
+    const target = sessionStorage.getItem('iris365-focus-target')
+    if (target !== 'movement') return
+    sessionStorage.removeItem('iris365-focus-target')
+    const scrollTimer = window.setTimeout(() => {
+      document.getElementById('iris365-movement')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 100)
+    return () => window.clearTimeout(scrollTimer)
+  }, [])
+
   const startDate = store.settings.startDate || IRIS_365_START_DATE
   const dayNumber = calculateCurrentDayNumber(startDate, today)
   const daysRemaining = calculateDaysRemaining(startDate, today)
@@ -732,7 +746,7 @@ export default function Iris365() {
           {anchorSync.englishOutputAuto && <small className="iris365-auto-note"><Check size={13} /> Study 已记录 {anchorSync.englishOutputReps} 次英语输出</small>}
         </section>
 
-        <section className="iris365-foundation-section iris365-movement">
+        <section className="iris365-foundation-section iris365-movement" id="iris365-movement">
           <div className="iris365-section-heading"><div><span className="section-label">Movement</span><h3>Move a Little Today</h3><p className="iris365-heading-cn">今天让身体动一下</p></div><Footprints size={20} /></div>
           <p className="iris365-support-copy">一两分钟也算。目标是让“我每天会动一下”变成普通事实。</p>
           <div className="iris365-minute-options">

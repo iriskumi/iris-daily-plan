@@ -558,9 +558,9 @@ export default function StartNowDashboard({
 
   function openExerciseLog() {
     if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem('iris-exercise-focus-target', 'movement-log')
+      sessionStorage.setItem('iris365-focus-target', 'movement')
     }
-    setMessage('Exercise log opened. Nothing counts until you save a movement.')
+    setMessage('Movement opened in Iris 365. Nothing counts until you save an activity.')
     onOpenExercise?.()
   }
 
@@ -932,8 +932,8 @@ export default function StartNowDashboard({
               <button type="button" className="today-start-action-card" onClick={openExerciseLog}>
                 <span className="start-action-card__icon"><Dumbbell size={20} /></span>
                 <span className="start-action-card__content">
-                  <span className="start-action-card__label">Exercise</span>
-                  <span className="start-action-card__helper">Log movement</span>
+                  <span className="start-action-card__label">Movement</span>
+                  <span className="start-action-card__helper">Protect the body anchor</span>
                 </span>
               </button>
             </div>

@@ -6718,6 +6718,10 @@ textarea {
   max-width: 1240px;
 }
 
+#iris365-movement {
+  scroll-margin-top: 7rem;
+}
+
 .iris365-countdown-card,
 .iris365-checkin-card,
 .iris365-daily-system-card,
