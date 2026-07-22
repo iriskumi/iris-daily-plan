@@ -500,6 +500,7 @@ export default function App() {
   const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const [activeStudySession, setActiveStudySession] = useState<StudyActiveSession | null>(() => restoreActiveStudySession())
   const [activeStudyNow, setActiveStudyNow] = useState(() => Date.now())
+  const [iris365FocusTarget, setIris365FocusTarget] = useState<'movement' | 'english' | 'switch' | null>(null)
   const [externalTaskDialog, setExternalTaskDialog] = useState<ExternalTaskImportDialog | null>(null)
   const [studyPlanDialog, setStudyPlanDialog] = useState<StudyPlanImportDialogState | null>(null)
   const [studyPlanImportMessage, setStudyPlanImportMessage] = useState('')
@@ -534,8 +535,8 @@ export default function App() {
       if (!detail?.tab) return
       const isFoundationTab = detail.tab === 'exercise' || detail.tab === 'media'
       const requestedTab = isFoundationTab && detail.focus !== 'archive' ? 'iris365' : detail.tab
-      if (isFoundationTab && detail.focus !== 'archive' && typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('iris365-focus-target', detail.tab === 'exercise' ? 'movement' : 'english')
+      if (isFoundationTab && detail.focus !== 'archive') {
+        setIris365FocusTarget(detail.tab === 'exercise' ? 'movement' : 'english')
       }
       setTab(requestedTab)
       if (detail.focus === 'active-session') {
@@ -717,9 +718,7 @@ export default function App() {
 
   function goToTab(nextTab: Tab) {
     if (nextTab === 'exercise' || nextTab === 'media') {
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('iris365-focus-target', nextTab === 'exercise' ? 'movement' : 'english')
-      }
+      setIris365FocusTarget(nextTab === 'exercise' ? 'movement' : 'english')
       setTab('iris365')
     } else {
       setTab(nextTab)
@@ -1141,7 +1140,12 @@ export default function App() {
             }}
           />
         )}
-        {tab === 'iris365' && <Iris365 />}
+        {tab === 'iris365' && (
+          <Iris365
+            focusTarget={iris365FocusTarget}
+            onFocusHandled={() => setIris365FocusTarget(null)}
+          />
+        )}
         {tab === 'study' && <StudyDashboard actionOnly />}
         {tab === 'plan' && (
           <PlanWorkspace

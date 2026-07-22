@@ -23,11 +23,21 @@ import {
   removeStudySessionEnglishOutputRep,
 } from '../englishOutputJourney'
 import { deleteExerciseEntry, loadExerciseLog } from '../exerciseStorage'
+import {
+  ORGANIZED_LIFE_AREAS,
+  addOrganizedLifeManualEntry,
+  buildOrganizedLifeEvidence,
+  calculateRelaxedRhythm,
+  deleteOrganizedLifeManualEntry,
+  loadOrganizedLifeManualEntries,
+  type OrganizedLifeArea,
+} from '../organizedLifeEvidence'
 import { markQueueBlockDoneFromSession } from '../queueTaskHelpers'
 import { createStudyHandoffFromQueueBlock, saveStudyTaskHandoff } from '../studyHandoff'
 import WeekBars, { lastSevenDayKeys, weekdayLabel } from './WeekBars'
 import { getLocalDateKey } from '../focus'
 import { IRIS365_MOMENTUM_START_DATE } from '../iris365MomentumStorage'
+import { loadIris365Store } from '../iris365Storage'
 import { addStudySessionRecord, clearActiveStudySession, loadActiveStudySession, loadStudySessionRecords, loadStudySessionRecordsForDate, saveActiveStudySession, saveStudySessionRecords, STUDY_ACTIVE_SESSION_CHANGED_EVENT } from '../studyStorage'
 import { addStudySessionEnglishOutputRep } from '../englishOutputJourney'
 import type { StudyActiveSession, StudySessionRecord } from '../studyTypes'
@@ -348,6 +358,8 @@ export default function StartNowDashboard({
   const [message, setMessage] = useState<string | null>(null)
   const [studySessions, setStudySessions] = useState(() => loadStudySessionRecordsForDate(today))
   const [exerciseEntries, setExerciseEntries] = useState(() => loadExerciseLog().entries.filter(entry => entry.date === today))
+  const [manualEvidenceEntries, setManualEvidenceEntries] = useState(() => loadOrganizedLifeManualEntries())
+  const [manualEvidenceDraft, setManualEvidenceDraft] = useState<{ area: OrganizedLifeArea; title: string }>({ area: 'Study', title: '' })
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(() => restoreActiveSession())
   const [heroImage, setHeroImage] = useState<TodayHeroImageSettings>(() =>
     loadAppearanceSettings().todayHeroImage ?? DEFAULT_TODAY_HERO_IMAGE,
@@ -378,29 +390,39 @@ export default function StartNowDashboard({
   }, [today, studySessions, completionToast])
   const summary = studyDoneSummary(studySessions)
   const movementMinutes = exerciseEntries.reduce((sum, entry) => sum + entry.durationMinutes, 0)
-  const doneItems = [
-    ...summary.completed.map(session => ({
-      id: session.id,
-      kind: 'study' as const,
-      time: timeLabel(session.completedAt),
-      title: session.title,
-      meta: `${session.actualMinutes} min · ${session.category}`,
-    })),
-    ...exerciseEntries.map(entry => ({
-      id: entry.id,
-      kind: 'exercise' as const,
-      time: timeLabel(entry.createdAt),
-      title: `${entry.movementType} movement`,
-      meta: `${entry.durationMinutes} min · Movement`,
-    })),
-  ].sort((a, b) => b.time.localeCompare(a.time))
+  const allEvidence = useMemo(() => buildOrganizedLifeEvidence(
+    loadStudySessionRecords(),
+    loadExerciseLog().entries,
+    manualEvidenceEntries,
+    loadIris365Store().entries,
+  ), [studySessions, exerciseEntries, manualEvidenceEntries])
+  const todayEvidence = allEvidence.filter(item => item.date === today)
+  const evidenceAreaCounts = todayEvidence.reduce<Partial<Record<OrganizedLifeArea, number>>>((counts, item) => ({
+    ...counts,
+    [item.area]: (counts[item.area] ?? 0) + 1,
+  }), {})
+  const relaxedRhythm = calculateRelaxedRhythm(allEvidence, today)
+  const doneItems = todayEvidence.map(item => ({
+    id: item.sourceId,
+    kind: item.source === 'study-session'
+      ? 'study' as const
+      : item.source === 'movement'
+        ? 'exercise' as const
+        : item.source === 'iris365-movement'
+          ? 'iris365-movement' as const
+          : 'manual' as const,
+    time: timeLabel(item.createdAt),
+    title: item.title,
+    meta: [item.minutes ? `${item.minutes} min` : '', item.area].filter(Boolean).join(' · '),
+  }))
 
   function refreshDone() {
     setStudySessions(loadStudySessionRecordsForDate(today))
     setExerciseEntries(loadExerciseLog().entries.filter(entry => entry.date === today))
+    setManualEvidenceEntries(loadOrganizedLifeManualEntries())
   }
 
-  function deleteDoneItem(item: { id: string; kind: 'study' | 'exercise'; title: string }) {
+  function deleteDoneItem(item: { id: string; kind: 'study' | 'exercise' | 'iris365-movement' | 'manual'; title: string }) {
     const confirmed = window.confirm(`Delete "${item.title}" from today’s completed list? This will remove its counted minutes.`)
     if (!confirmed) return
     if (item.kind === 'study') {
@@ -411,9 +433,26 @@ export default function StartNowDashboard({
       showCompletionToast('Completed Study session deleted.')
       return
     }
+    if (item.kind === 'manual') {
+      setManualEvidenceEntries(deleteOrganizedLifeManualEntry(item.id, manualEvidenceEntries))
+      showCompletionToast('Manual evidence removed.')
+      return
+    }
     deleteExerciseEntry(item.id)
     refreshDone()
     showCompletionToast('Movement entry deleted.')
+  }
+
+  function addManualEvidence() {
+    if (!manualEvidenceDraft.title.trim()) return
+    const result = addOrganizedLifeManualEntry({
+      date: today,
+      area: manualEvidenceDraft.area,
+      title: manualEvidenceDraft.title,
+    }, manualEvidenceEntries)
+    setManualEvidenceEntries(result.entries)
+    setManualEvidenceDraft(current => ({ ...current, title: '' }))
+    showCompletionToast('One real entry saved.')
   }
 
   useEffect(() => {
@@ -729,7 +768,7 @@ export default function StartNowDashboard({
     setHeroDraft(prev => ({ ...prev, zoom: 1, offsetX: 0, offsetY: 0 }))
   }
 
-  const doneCount = summary.completed.length + exerciseEntries.length
+  const doneCount = todayEvidence.length
   const progressItems = [
     { label: 'Study', value: `${summary.studyMinutes}m`, highlight: summary.studyMinutes > 0 },
     { label: 'English', value: `${englishRepsToday} rep${englishRepsToday === 1 ? '' : 's'}`, highlight: englishRepsToday > 0 },
@@ -1019,13 +1058,26 @@ export default function StartNowDashboard({
       {!activeStudySession && (
         <section className="today-done-evidence" aria-label="Today completed evidence">
           <div className="today-done-evidence-header">
-            <span className="today-soft-label">Done</span>
-            <h3>{doneCount > 0 ? `${doneCount} completed today` : 'Nothing logged yet'}</h3>
+            <span className="today-soft-label">Daily evidence</span>
+            <h3>{doneCount > 0 ? `${doneCount} real ${doneCount === 1 ? 'entry' : 'entries'} today` : 'What became real today?'}</h3>
             <p className="today-done-evidence-sub">
               {sessionMinutesToday > 0 ? `${sessionMinutesToday} session min · ` : ''}
-              {doneCount > 0 ? 'Real timed work and movement only.' : 'Complete a session or log movement.'}
+              {doneCount > 0 ? 'Small finished things are enough.' : 'Complete a session, log movement, or add one thing done outside the timer.'}
             </p>
           </div>
+          <div className="today-evidence-rhythm" aria-label="Relaxed evidence rhythm">
+            <span><strong>{relaxedRhythm.activeDaysThisWeek}</strong><small>active days / 7</small></span>
+            <span><strong>{relaxedRhythm.currentRhythm}</strong><small>relaxed streak</small></span>
+            <span><strong>{relaxedRhythm.bestRhythm}</strong><small>best rhythm</small></span>
+            <p>中间休息一天不会打断这条轨迹。回来就还在继续。</p>
+          </div>
+          {Object.keys(evidenceAreaCounts).length > 0 && (
+            <div className="today-evidence-areas" aria-label="Today evidence by area">
+              {Object.entries(evidenceAreaCounts).map(([area, count]) => (
+                <span key={area}><strong>{count}</strong>{area}</span>
+              ))}
+            </div>
+          )}
           {doneCount > 0 ? (
             <>
               <div className="today-done-chips">
@@ -1036,14 +1088,16 @@ export default function StartNowDashboard({
                       <strong>{item.title}</strong>
                       <small>{item.meta}</small>
                     </div>
-                    <button
-                      type="button"
-                      className="today-done-delete"
-                      aria-label={`Delete completed item ${item.title}`}
-                      onClick={() => deleteDoneItem(item)}
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    {item.kind !== 'iris365-movement' && (
+                      <button
+                        type="button"
+                        className="today-done-delete"
+                        aria-label={`Delete completed item ${item.title}`}
+                        onClick={() => deleteDoneItem(item)}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
                   </article>
                 ))}
               </div>
@@ -1052,6 +1106,27 @@ export default function StartNowDashboard({
           ) : (
             <WeekBars days={weekStudyBars} unit="m" className="today-week-bars muted" />
           )}
+          <div className="today-evidence-manual">
+            <select
+              aria-label="Evidence area"
+              value={manualEvidenceDraft.area}
+              onChange={event => setManualEvidenceDraft(current => ({ ...current, area: event.target.value as OrganizedLifeArea }))}
+            >
+              {ORGANIZED_LIFE_AREAS.map(area => <option key={area}>{area}</option>)}
+            </select>
+            <input
+              aria-label="What did you finish?"
+              value={manualEvidenceDraft.title}
+              onChange={event => setManualEvidenceDraft(current => ({ ...current, title: event.target.value }))}
+              onKeyDown={event => {
+                if (event.key === 'Enter') addManualEvidence()
+              }}
+              placeholder="计时器外完成了什么？"
+            />
+            <button type="button" className="btn btn-secondary" disabled={!manualEvidenceDraft.title.trim()} onClick={addManualEvidence}>
+              Add entry
+            </button>
+          </div>
         </section>
       )}
 

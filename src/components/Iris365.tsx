@@ -200,7 +200,12 @@ function evidenceCount(entry?: Iris365Entry): number {
   return [hasEnglishEnvironment(entry), hasSwitch(entry), hasMovement(entry)].filter(Boolean).length
 }
 
-export default function Iris365() {
+interface Iris365Props {
+  focusTarget?: 'movement' | 'english' | 'switch' | null
+  onFocusHandled?: () => void
+}
+
+export default function Iris365({ focusTarget, onFocusHandled }: Iris365Props) {
   const today = getLocalDateKey()
   const [store, setStore] = useState(() => loadIris365Store())
   const [entry, setEntry] = useState<Iris365Entry>(() => loadIris365Entry(today, store))
@@ -225,18 +230,16 @@ export default function Iris365() {
   }, [store.schemaVersion, today])
 
   useEffect(() => {
-    if (typeof sessionStorage === 'undefined') return
-    const target = sessionStorage.getItem('iris365-focus-target')
-    if (target !== 'movement' && target !== 'english' && target !== 'switch') return
-    sessionStorage.removeItem('iris365-focus-target')
+    if (!focusTarget) return
     const scrollTimer = window.setTimeout(() => {
-      document.getElementById(`iris365-${target}`)?.scrollIntoView({
-        behavior: 'smooth',
+      document.getElementById(`iris365-${focusTarget}`)?.scrollIntoView({
+        behavior: 'auto',
         block: 'start',
       })
-    }, 100)
+      onFocusHandled?.()
+    }, 180)
     return () => window.clearTimeout(scrollTimer)
-  }, [])
+  }, [focusTarget, onFocusHandled])
 
   const startDate = store.settings.startDate || IRIS_365_START_DATE
   const dayNumber = calculateCurrentDayNumber(startDate, today)
